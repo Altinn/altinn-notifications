@@ -430,10 +430,29 @@ public class ContactPointService(
         OrganizationContactPoints? organizationContactPoints = organizationContactPointsList
             .Find(e => string.Equals(e.OrganizationNumber, recipient.OrganizationNumber, StringComparison.OrdinalIgnoreCase));
 
-        if (organizationContactPoints != null)
+        if (organizationContactPoints is null)
         {
-            applyContactPoints(recipient, organizationContactPoints);
+            return;
         }
+
+        applyContactPoints(recipient, organizationContactPoints);
+
+        RemoveDuplicateAddressInfoEntries(recipient);
+    }
+
+    private static void RemoveDuplicateAddressInfoEntries(Recipient recipient)
+    {
+        var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        recipient.AddressInfo = [.. recipient.AddressInfo
+            .Where(x => x switch
+            {
+                // HashSet.Add returns false for values already seen, so only the first occurrence is kept.
+                EmailAddressPoint email => seenEmails.Add(email.EmailAddress),
+                SmsAddressPoint sms => seenMobiles.Add(sms.MobileNumber),
+                _ => true
+            })];
     }
 
     private static void ApplyExternalIdentityContactPoints(
@@ -700,92 +719,35 @@ public class ContactPointService(
                 .Where(e => !string.IsNullOrWhiteSpace(e))
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-            // Keep only user contact points with unique and valid contact details.
+            // Keep only user contact points with valid contact details.
             contactPoint.UserContactPoints = [..
-                NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
-                .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
+                NormalizeUserMobileNumbers(contactPoint.UserContactPoints)
                 .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || MobileNumberHelper.IsValidMobileNumber(userContact.MobileNumber))
                 ];
         });
     }
 
     /// <summary>
-    /// Scans a collection of <see cref="UserContactPoints"/> and clears duplicate contact fields within the list.
-    /// Only the first occurrence of each unique email address or mobile number is retained across the collection.
-    /// Subsequent duplicates have the corresponding field set to an empty string.
+    /// Normalizes the mobile number of each <see cref="UserContactPoints"/> by ensuring a country code is present on valid numbers.
+    /// Values are not removed or deduplicated here, so that the preferred/fallback channel selection sees the original contact details.
+    /// Duplicates are removed after channel selection.
     /// </summary>
     /// <param name="userContacts">
-    /// The collection of user contact points to process for internal deduplication.
+    /// The collection of user contact points whose mobile numbers should be normalized.
     /// </param>
     /// <returns>
-    /// A sequence of <see cref="UserContactPoints"/> where duplicate email and mobile number values have been nullified.
+    /// The same <see cref="UserContactPoints"/> instances, with mobile numbers normalized in place.
     /// </returns>
-    private static IEnumerable<UserContactPoints> NullifyDuplicateContactAddress(IEnumerable<UserContactPoints> userContacts)
+    private static IEnumerable<UserContactPoints> NormalizeUserMobileNumbers(IEnumerable<UserContactPoints> userContacts)
     {
-        var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         foreach (var userContact in userContacts)
         {
-            if (!string.IsNullOrWhiteSpace(userContact.Email))
-            {
-                var duplicateEmail = !seenEmails.Add(userContact.Email);
-                if (duplicateEmail)
-                {
-                    userContact.Email = string.Empty;
-                }
-            }
-
             if (!string.IsNullOrWhiteSpace(userContact.MobileNumber))
             {
                 userContact.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContact.MobileNumber);
-
-                var duplicateMobileNumber = !seenMobiles.Add(userContact.MobileNumber);
-                if (duplicateMobileNumber)
-                {
-                    userContact.MobileNumber = string.Empty;
-                }
             }
 
             yield return userContact;
         }
-    }
-
-    /// <summary>
-    /// Scans the specified <see cref="UserContactPoints"/> for contact details (email and mobile number) 
-    /// that are already present in the specified <see cref="OrganizationContactPoints"/>. 
-    /// If a match is found, the corresponding field in the user contact is cleared (set to an empty string).
-    /// </summary>
-    /// <param name="userContact">
-    /// The user contact information to evaluate and modify if duplicates are found.
-    /// </param>
-    /// <param name="organizationContactPoints">
-    /// The organization's official contact point data containing email addresses and mobile numbers.
-    /// </param>
-    /// <returns>
-    /// The same <see cref="UserContactPoints"/> instance with duplicate email and/or mobile number fields cleared.
-    /// If both fields become empty, the caller is responsible for removing the contact from the list.
-    /// </returns>
-    private static UserContactPoints NullifyDuplicateContactAddress(UserContactPoints userContact, OrganizationContactPoints organizationContactPoints)
-    {
-        var isDuplicateEmail =
-            !string.IsNullOrWhiteSpace(userContact.Email) &&
-            organizationContactPoints.EmailList.Any(e => string.Equals(e, userContact.Email, StringComparison.OrdinalIgnoreCase));
-
-        if (isDuplicateEmail)
-        {
-            userContact.Email = string.Empty;
-        }
-
-        var isDuplicateMobileNumber =
-            !string.IsNullOrWhiteSpace(userContact.MobileNumber) &&
-            organizationContactPoints.MobileNumberList.Any(m => string.Equals(m, userContact.MobileNumber, StringComparison.OrdinalIgnoreCase));
-
-        if (isDuplicateMobileNumber)
-        {
-            userContact.MobileNumber = string.Empty;
-        }
-
-        return userContact;
     }
 }

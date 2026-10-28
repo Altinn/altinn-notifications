@@ -1449,6 +1449,39 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenUserContactPointsDuplicateOrganizationAndEachOther_ShouldNotAddDuplicateAddressPoints()
+        {
+            // Arrange
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: ["org@example.com"],
+                organizationMobileNumbers: ["+4799999999"],
+                userContactPoints:
+                [
+                    (Email: "org@example.com", MobileNumber: "+4799999999"),
+                    (Email: "user@example.com", MobileNumber: "+4795555555"),
+                    (Email: "USER@example.com", MobileNumber: "+4795555555")
+                ]);
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+
+            var emails = recipient.AddressInfo.OfType<EmailAddressPoint>().Select(e => e.EmailAddress).ToList();
+            Assert.Equal(2, emails.Count);
+            Assert.Contains("org@example.com", emails);
+            Assert.Contains("user@example.com", emails, StringComparer.OrdinalIgnoreCase);
+
+            var mobileNumbers = recipient.AddressInfo.OfType<SmsAddressPoint>().Select(e => e.MobileNumber).ToList();
+            Assert.Equal(2, mobileNumbers.Count);
+            Assert.Contains("+4799999999", mobileNumbers);
+            Assert.Contains("+4795555555", mobileNumbers);
+        }
+
+        [Fact]
         public async Task AddPreferredContactPoints_WhenUsingOrganizationNumberAndSmsPreferred_ShouldEnrichRecipientsWithMobileNumberWhenNoEmailAddressAvailable()
         {
             // Arrange
