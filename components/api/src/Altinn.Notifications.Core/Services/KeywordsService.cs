@@ -102,14 +102,7 @@ public class KeywordsService : IKeywordsService
         List<string> organizationNumbers,
         List<string> nationalIdentityNumbers)
     {
-        if (organizationNumbers.Count == 0 && nationalIdentityNumbers.Count == 0)
-        {
-            return ([], []);
-        }
-
-        var partyDetails = await _registerClient.QueryPartyDetails(
-            organizationNumbers.Distinct().ToList(),
-            nationalIdentityNumbers.Distinct().ToList());
+        var partyDetails = await _registerClient.GetPartyDetails(organizationNumbers, nationalIdentityNumbers);
 
         var organizationDetails = partyDetails
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber) && organizationNumbers.Contains(e.OrganizationNumber))
