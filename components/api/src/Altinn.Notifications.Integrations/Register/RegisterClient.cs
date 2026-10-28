@@ -101,7 +101,7 @@ public class RegisterClient : IRegisterClient
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            throw new PlatformDependencyException("RegisterClient", "GetParties", ex);
+            throw new PlatformDependencyException(nameof(RegisterClient), nameof(GetParties), ex);
         }
     }
 

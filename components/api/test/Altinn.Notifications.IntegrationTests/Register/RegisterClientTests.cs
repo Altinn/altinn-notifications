@@ -37,13 +37,13 @@ public class RegisterClientTests
     [InlineData(HttpStatusCode.PartialContent)]
     public async Task QueryPartyDetails_WithMatchingParties_ReturnsPartyDetails(HttpStatusCode statusCode)
     {
-        var registerClient = CreateRegisterClient(new DelegatingHandlerStub(async (request, token) =>
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub(async (request, cancellationToken) =>
         {
             Assert.Equal(HttpMethod.Post, request!.Method);
             Assert.Equal("/register/api/v2/internal/parties/query", request.RequestUri!.AbsolutePath);
             Assert.Equal("valid-token", Assert.Single(request.Headers.GetValues("PlatformAccessToken")));
 
-            using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
+            using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
             var data = body.RootElement.GetProperty("data");
             Assert.Equal(2, data.GetArrayLength());
             Assert.Equal("urn:altinn:organization:identifier-no:123456785", data[0].GetString());
