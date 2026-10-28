@@ -112,9 +112,10 @@ namespace Altinn.Notifications.Core.Services
             {
                 // Warning level is used to avoid global filtering
                 // The log message will be picked up by a Grafana table
+                // Add colon to interval label to avoid azure monitor formatting. Will be removed in Grafana table.
                 if (row.Count > 0)
                 {
-                    _logger.LogWarning("Orders not due distribution for {Timestamp} {IntervalLabel}: {Count} {Index}", timestamp, row.IntervalLabel, row.Count, i++);
+                    _logger.LogWarning("Orders not due distribution for {Timestamp} {IntervalLabel}: {Count} {Index}", timestamp, $":{row.IntervalLabel}", row.Count, i++);
                 }
             }
         }
@@ -207,7 +208,7 @@ namespace Altinn.Notifications.Core.Services
 
                 DateOnly startDate = today.AddDays(startOffset);
                 DateOnly endDate = today.AddDays(endOffset);
-                table.Add(($"({startDate:yyyy-MM-dd} - {endDate:yyyy-MM-dd})", bucketCount));
+                table.Add(($"{startDate:yyyy-MM-dd} - {endDate:yyyy-MM-dd}", bucketCount));
                 startOffset = endOffset + 1;
                 if (isNext30Bucket)
                 {
