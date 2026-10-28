@@ -83,7 +83,7 @@ The repository does not publish GitHub releases or version tags today (the `vX.X
 
 ## Example
 
-[#1944](https://github.com/Altinn/altinn-notifications/pull/1944) (issue [#1880](https://github.com/Altinn/altinn-notifications/issues/1880)) fixes the DWH metrics export (string UUIDs, millisecond timestamps, order shipment id). Following this ADR, it adds `get_*_metrics_v2` and `*_metrics_recent_v2` with new pg_cron refresh jobs, switches the code to them and leaves the v1 functions and views in place. Rollback class: *patch*. The v1 objects and their pg_cron jobs are removed no earlier than 30 days after release, in cleanup issue #TBD.
+[#1944](https://github.com/Altinn/altinn-notifications/pull/1944) (issue [#1880](https://github.com/Altinn/altinn-notifications/issues/1880)) fixes the DWH metrics export (string UUIDs, millisecond timestamps, order shipment id). Following this ADR, its migration `v1.12` adds `get_*_metrics_v2` and the `*_metrics_recent_v2` views, created `WITH NO DATA`. The code switches to them, and the v1 functions and views stay in place. The initial populate and the new pg_cron refresh jobs are done by hand after deploy. Rollback class: *patch*. The v1 objects and their pg_cron jobs are removed no earlier than 30 days after #1944 is deployed, in [#1995](https://github.com/Altinn/altinn-notifications/issues/1995).
 
 ## References
 
