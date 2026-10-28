@@ -29,7 +29,8 @@ namespace Altinn.Notifications.Core.Services
                 { EmailNotificationResultType.Failed_Quarantined, "The email was quarantined (as spam, bulk mail, or phising)." },
                 { EmailNotificationResultType.Failed_TTL, "The email was in indefinite state Succeeded for too long (TTL), and was subsequently set to failed." },
                 { EmailNotificationResultType.Failed_InvalidSasUrl, "The email was not sent because one or more attachment SAS URLs are invalid, expired, or inaccessible." },
-                { EmailNotificationResultType.Failed_PayloadTooLarge, "The email was not sent because the total size of the attachments exceeds the allowed limit." }
+                { EmailNotificationResultType.Failed_PayloadTooLarge, "The email was not sent because the total size of the attachments exceeds the allowed limit." },
+                { EmailNotificationResultType.Failed_ContentTooLarge, "The email was not sent because the email message is too large to be queued for sending." }
             };
 
         private readonly static List<EmailNotificationResultType> _successResults = new()

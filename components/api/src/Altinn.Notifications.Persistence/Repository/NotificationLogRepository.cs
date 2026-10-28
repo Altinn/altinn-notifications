@@ -13,6 +13,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INotificationLogRepository
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
+
     private const string _getNotificationLogSql = @"
         SELECT
             notificationid,
@@ -30,7 +31,7 @@ public sealed class NotificationLogRepository(NpgsqlDataSource dataSource) : INo
         )";
 
     private const string _insertNotificationLogSql = @"
-        SELECT notifications.insert_notification_log(
+        SELECT notifications.insert_notification_log_v2(
             _shipmentId := @shipmentId
         )";
 

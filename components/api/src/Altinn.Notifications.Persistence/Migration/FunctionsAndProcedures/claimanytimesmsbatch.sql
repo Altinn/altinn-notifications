@@ -22,7 +22,7 @@ BEGIN
     JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
-      AND ord.sendingtimepolicy = 1
+      AND ord.smssendingtimepolicy = 1
     ORDER BY sms._id
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT v_batchsize
@@ -52,6 +52,6 @@ END;
 $$;
 
 COMMENT ON FUNCTION notifications.claim_anytime_sms_batch_v2(INTEGER) IS
-'Claims and returns batches of SMS notifications (sendingtimepolicy = 1).
+'Claims and returns batches of SMS notifications (smssendingtimepolicy = 1).
 _batchsize: requested batch size (defaults to 500 if NULL or <1).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';

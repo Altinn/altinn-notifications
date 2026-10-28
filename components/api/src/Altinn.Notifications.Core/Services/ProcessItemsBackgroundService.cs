@@ -9,8 +9,8 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Background service that processes items with different shapes (e.g. email notifications, composed email notifications,
-/// SMS daytime notifications, and SMS anytime notifications) in separate loops.
+/// Background service that processes items with different shapes (e.g. email daytime notifications, email anytime notifications,
+/// composed email notifications, SMS daytime notifications, and SMS anytime notifications) in separate loops.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProcessItemsBackgroundService"/> class.
@@ -25,7 +25,8 @@ public class ProcessItemsBackgroundService(
     : BackgroundService
 {
     private readonly NotificationConfig _config = config.Value;
-    private readonly ManyItemsLately _manyEmailNotificationsLately = new();
+    private readonly ManyItemsLately _manyEmailDaytimeNotificationsLately = new();
+    private readonly ManyItemsLately _manyEmailAnytimeNotificationsLately = new();
     private readonly ManyItemsLately _manyComposedEmailNotificationsLately = new();
     private readonly ManyItemsLately _manySmsDaytimeNotificationsLately = new();
     private readonly ManyItemsLately _manySmsAnytimeNotificationsLately = new();
@@ -35,7 +36,8 @@ public class ProcessItemsBackgroundService(
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        int totalTasks = _config.EmailNotificationsProcessLoopConfig.TaskCount
+        int totalTasks = _config.EmailDaytimeNotificationsProcessLoopConfig.TaskCount
+            + _config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount
             + _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount
             + _config.SmsDaytimeNotificationsProcessLoopConfig.TaskCount
             + _config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount
@@ -52,13 +54,22 @@ public class ProcessItemsBackgroundService(
         {
             try
             {
-                Task[] emailNotificationTasks = [.. Enumerable.Range(0, _config.EmailNotificationsProcessLoopConfig.TaskCount)
+                Task[] emailDaytimeNotificationTasks = [.. Enumerable.Range(0, _config.EmailDaytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
-                        _manyEmailNotificationsLately,
-                        emailSendingService.SendNotification,
+                        _manyEmailDaytimeNotificationsLately,
+                        ct => emailSendingService.SendNotification(SendingTimePolicy.Daytime, ct),
+                        notificationScheduleService.CanSendEmailNow,
+                        isFirstInstance: i == 0,
+                        _config.EmailDaytimeNotificationsProcessLoopConfig,
+                        stoppingToken))];
+
+                Task[] emailAnytimeNotificationTasks = [.. Enumerable.Range(0, _config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount)
+                    .Select(i => RunProcessItemLoop(
+                        _manyEmailAnytimeNotificationsLately,
+                        ct => emailSendingService.SendNotification(SendingTimePolicy.Anytime, ct),
                         null,
                         isFirstInstance: i == 0,
-                        _config.EmailNotificationsProcessLoopConfig,
+                        _config.EmailAnytimeNotificationsProcessLoopConfig,
                         stoppingToken))];
 
                 Task[] composedEmailNotificationTask = [.. Enumerable.Range(0, _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount)
@@ -106,7 +117,8 @@ public class ProcessItemsBackgroundService(
                         _config.RetryOrdersProcessLoopConfig,
                         stoppingToken))];
 
-                await Task.WhenAll(emailNotificationTasks
+                await Task.WhenAll(emailDaytimeNotificationTasks
+                    .Concat(emailAnytimeNotificationTasks)
                     .Concat(composedEmailNotificationTask)
                     .Concat(smsDaytimeNotificationTasks)
                     .Concat(smsAnytimeNotificationTasks)

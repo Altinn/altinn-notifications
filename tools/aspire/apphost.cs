@@ -1,0 +1,291 @@
+#:sdk Aspire.AppHost.Sdk@13.6.4
+#:property AspireUseCliBundle=true
+
+using System.Diagnostics;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+const string Components = "../../components";
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+string[] projects =
+[
+    $"{Components}/api/src/Altinn.Notifications/Altinn.Notifications.csproj",
+    $"{Components}/email-service/src/Altinn.Notifications.Email/Altinn.Notifications.Email.csproj",
+    $"{Components}/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj",
+];
+
+// Parallel dotnet run builds of the shared project collide, so build one by one first.
+foreach (var project in projects)
+{
+    using var build = Process.Start("dotnet", ["build", Path.Combine(builder.AppHostDirectory, project)]);
+    build.WaitForExit();
+    if (build.ExitCode != 0)
+    {
+        throw new InvalidOperationException($"Build failed for {project}");
+    }
+}
+
+// The dashboard lists resources in the order they are added.
+var api = AddService("api", projects[0], 5090, "swagger", "altinn-notifications");
+var email = AddService("email", projects[1], 5091, "swagger", "altinn-notifications-email");
+var sms = AddService("sms", projects[2], 5092, string.Empty, "altinn-notifications-sms");
+
+// The containers are started outside Aspire so they keep running when it stops; the resources only tail their logs.
+builder.Configuration
+    .AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.json"), optional: true)
+    .AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.Local.json"), optional: true);
+
+// podman or docker. Both take the same start, logs and compose commands.
+var containerRuntime = builder.Configuration["ContainerRuntime"] ?? "podman";
+
+if (builder.Configuration.GetValue("Postgres:UseContainer", true))
+{
+    var postgresContainer = builder.Configuration["Postgres:ContainerName"] ?? "notifications-db";
+    StartContainer(".", ["start", postgresContainer]);
+    var postgres = builder.AddExecutable("postgres", containerRuntime, ".", "logs", "-f", postgresContainer);
+    api.WaitFor(postgres);
+}
+
+// The API's connection strings point to 5432. Another port lets the app host use its own database next to an existing one.
+var postgresPort = builder.Configuration.GetValue("Postgres:Port", 5432);
+if (postgresPort != 5432)
+{
+    string connectionString = "Host=localhost;Port=" + postgresPort + ";Username={0};Password={{0}};Database=notificationsdb";
+    api.WithEnvironment("PostgreSQLSettings__AdminConnectionString", string.Format(connectionString, "platform_notifications_admin"))
+        .WithEnvironment("PostgreSQLSettings__ConnectionString", string.Format(connectionString, "platform_notifications"));
+}
+
+// The services only use AMQP on 5672. The emulator's HTTP port is just for the health check, so it can move if 5300 is taken.
+var serviceBusHealthPort = builder.Configuration.GetValue("ServiceBus:HealthPort", 5300);
+StartContainer("../asb-emulator", ["compose", "up", "-d"], new() { ["EMULATOR_HOST_HTTP_PORT"] = serviceBusHealthPort.ToString() });
+var serviceBus = builder.AddExecutable("servicebus", containerRuntime, ".", "logs", "-f", "servicebus-emulator")
+    .WithHttpEndpoint(port: serviceBusHealthPort, targetPort: serviceBusHealthPort, name: "management", isProxied: false)
+    .WithHttpHealthCheck("/health", endpointName: "management");
+
+api.WaitFor(serviceBus);
+email.WaitFor(serviceBus);
+sms.WaitFor(serviceBus);
+
+AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
+AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
+AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
+
+var app = builder.Build();
+
+HashSet<string> pendingRestarts = [];
+List<FileSystemWatcher> watchers =
+[
+    WatchSource(app.Services, "api/src", api),
+    WatchSource(app.Services, "email-service/src", email),
+    WatchSource(app.Services, "sms-service/src", sms),
+    WatchSource(app.Services, "shared/src", api, email, sms),
+];
+
+app.Run();
+
+foreach (var watcher in watchers)
+{
+    watcher.Dispose();
+}
+
+void StartContainer(string workingDirectory, string[] runtimeArgs, Dictionary<string, string>? environment = null)
+{
+    var startInfo = new ProcessStartInfo(containerRuntime, runtimeArgs) { WorkingDirectory = Path.Combine(builder.AppHostDirectory, workingDirectory) };
+    foreach (var (key, value) in environment ?? [])
+    {
+        startInfo.Environment[key] = value;
+    }
+
+    using var runtime = Process.Start(startInfo)!;
+    runtime.WaitForExit();
+    if (runtime.ExitCode != 0)
+    {
+        throw new InvalidOperationException($"{containerRuntime} {string.Join(' ', runtimeArgs)} failed");
+    }
+}
+
+// No launch profiles: email and sms hardcode ASPNETCORE_URLS, which collides with Aspire's.
+// Fixed, unproxied ports because the services call each other on hardcoded localhost URLs.
+IResourceBuilder<ProjectResource> AddService(string name, string projectPath, int port, string swaggerPath, string clusterService)
+{
+    string swaggerUrl = $"http://localhost:{port}/{swaggerPath}";
+
+    var service = builder.AddProject(name, projectPath, launchProfileName: null)
+        .WithHttpEndpoint(port: port, targetPort: port, isProxied: false)
+        .WithUrl(swaggerUrl, "Swagger")
+        .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
+
+    AddClusterSwitch(service, clusterService, port);
+    return service;
+}
+
+void AddClusterSwitch(IResourceBuilder<ProjectResource> service, string clusterService, int port)
+{
+    Process? forward = null;
+
+    service.WithCommand(
+        "use-cluster",
+        "Use cluster",
+        async context =>
+        {
+            await context.Services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service.Resource, KnownResourceCommands.StopCommand, context.CancellationToken);
+
+            var logger = context.Services.GetRequiredService<ResourceLoggerService>().GetLogger(service.Resource);
+            forward = StartPortForward(clusterService, port, logger);
+            var started = forward;
+            context.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.Register(() => started.Kill());
+
+            await context.Services.GetRequiredService<ResourceNotificationService>().PublishUpdateAsync(service.Resource, s => s with { State = new ResourceStateSnapshot("Cluster", KnownResourceStateStyles.Info) });
+            return CommandResults.Success();
+        },
+        new CommandOptions { IconName = "Cloud", UpdateState = _ => forward is null ? ResourceCommandState.Enabled : ResourceCommandState.Hidden });
+
+    service.WithCommand(
+        "use-local",
+        "Use local",
+        async context =>
+        {
+            forward?.Kill();
+            forward = null;
+            return await context.Services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service.Resource, KnownResourceCommands.StartCommand, context.CancellationToken);
+        },
+        new CommandOptions { IconName = "Desktop", UpdateState = _ => forward is null ? ResourceCommandState.Hidden : ResourceCommandState.Enabled });
+}
+
+static Process StartPortForward(string clusterService, int port, ILogger logger)
+{
+    var process = new Process
+    {
+        StartInfo = new ProcessStartInfo("kubectl", ["port-forward", $"service/{clusterService}", $"{port}:80"])
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        },
+        EnableRaisingEvents = true,
+    };
+
+    process.OutputDataReceived += (_, e) =>
+    {
+        if (e.Data is not null)
+        {
+            logger.LogInformation("{Line}", e.Data);
+        }
+    };
+    process.ErrorDataReceived += (_, e) =>
+    {
+        if (e.Data is not null)
+        {
+            logger.LogError("{Line}", e.Data);
+        }
+    };
+    process.Exited += (_, _) => logger.LogWarning("kubectl port-forward exited with code {ExitCode}", process.ExitCode);
+
+    process.Start();
+    process.BeginOutputReadLine();
+    process.BeginErrorReadLine();
+    return process;
+}
+
+void AddTests(string name, IResourceBuilder<ProjectResource> service, string solution)
+{
+    var tests = builder.AddExecutable(name, "dotnet", ".", "test", $"{Components}/{solution}")
+        .WithExplicitStart()
+        .WithParentRelationship(service.Resource);
+
+    builder.Eventing.Subscribe<BeforeStartEvent>(async (e, ct) =>
+    {
+        var notifications = e.Services.GetRequiredService<ResourceNotificationService>();
+        await notifications.PublishUpdateAsync(tests.Resource, s => s with { IsHidden = true });
+
+        var stopping = e.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
+        _ = ShowTestResultAsync(notifications, tests.Resource, stopping);
+    });
+
+    service.WithCommand(
+        "run-tests",
+        "Run tests",
+        async context =>
+        {
+            await context.Services.GetRequiredService<ResourceNotificationService>().PublishUpdateAsync(tests.Resource, s => s with { IsHidden = false });
+            return await context.Services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(tests.Resource, KnownResourceCommands.StartCommand, context.CancellationToken);
+        },
+        new CommandOptions { IconName = "Beaker", IsHighlighted = false });
+}
+
+// .sql is left out because the API build regenerates a .sql file under src on every run.
+FileSystemWatcher WatchSource(IServiceProvider services, string folder, params IResourceBuilder<ProjectResource>[] affected)
+{
+    string[] extensions = [".cs", ".csproj", ".json"];
+    var watcher = new FileSystemWatcher(Path.Combine(builder.AppHostDirectory, Components, folder)) { IncludeSubdirectories = true };
+
+    FileSystemEventHandler onChange = (_, e) =>
+    {
+        string separator = Path.DirectorySeparatorChar.ToString();
+        if (!extensions.Contains(Path.GetExtension(e.FullPath)) || e.FullPath.Contains($"{separator}bin{separator}") || e.FullPath.Contains($"{separator}obj{separator}"))
+        {
+            return;
+        }
+
+        foreach (var service in affected)
+        {
+            _ = NotifyChangedAsync(services, service.Resource);
+        }
+    };
+
+    watcher.Changed += onChange;
+    watcher.Created += onChange;
+    watcher.Deleted += onChange;
+    watcher.Renamed += (sender, e) => onChange(sender, e);
+    watcher.EnableRaisingEvents = true;
+    return watcher;
+}
+
+async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service)
+{
+    lock (pendingRestarts)
+    {
+        if (!pendingRestarts.Add(service.Name))
+        {
+            return;
+        }
+    }
+
+    await Task.Delay(TimeSpan.FromSeconds(2));
+
+    var result = await services.GetRequiredService<IInteractionService>().PromptNotificationAsync(
+        $"{service.Name} has changed",
+        "Restart it to pick up the changes.",
+        new NotificationInteractionOptions { Intent = MessageIntent.Warning, PrimaryButtonText = "Restart" });
+
+    lock (pendingRestarts)
+    {
+        pendingRestarts.Remove(service.Name);
+    }
+
+    if (!result.Canceled && result.Data)
+    {
+        await services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service, KnownResourceCommands.RestartCommand);
+    }
+}
+
+async Task ShowTestResultAsync(ResourceNotificationService notifications, IResource tests, CancellationToken cancellationToken)
+{
+    await foreach (var update in notifications.WatchAsync(cancellationToken))
+    {
+        string? state = update.Snapshot.State?.Text;
+        if (update.Resource != tests || update.Snapshot.ExitCode is not int exitCode || (state != KnownResourceStates.Finished && state != KnownResourceStates.Exited))
+        {
+            continue;
+        }
+
+        var result = exitCode == 0
+            ? new ResourceStateSnapshot("Passed", KnownResourceStateStyles.Success)
+            : new ResourceStateSnapshot("Failed", KnownResourceStateStyles.Error);
+
+        await notifications.PublishUpdateAsync(tests, s => s with { State = result });
+    }
+}

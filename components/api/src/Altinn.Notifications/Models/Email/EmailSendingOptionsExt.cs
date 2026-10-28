@@ -55,6 +55,7 @@ public class EmailSendingOptionsExt
     /// </summary>
     /// <remarks>
     /// Defaults to <see cref="SendingTimePolicyExt.Anytime"/> allowing delivery at any time.
+    /// <see cref="SendingTimePolicyExt.Daytime"/> restricts delivery to the configured daytime send window.
     /// </remarks>
     [JsonPropertyName("sendingTimePolicy")]
     [DefaultValue(SendingTimePolicyExt.Anytime)]

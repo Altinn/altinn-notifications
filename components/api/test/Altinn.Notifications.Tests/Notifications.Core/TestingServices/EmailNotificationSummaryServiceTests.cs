@@ -1,6 +1,4 @@
-﻿using System;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services;
 
@@ -27,6 +25,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Failed_TTL, false)]
         [InlineData(EmailNotificationResultType.Failed_InvalidSasUrl, false)]
         [InlineData(EmailNotificationResultType.Failed_PayloadTooLarge, false)]
+        [InlineData(EmailNotificationResultType.Failed_ContentTooLarge, false)]
         public void IsSuccessResult_CheckResultForAllEnums(EmailNotificationResultType result, bool expectedIsSuccess)
         {
             bool actualIsSuccess = EmailNotificationSummaryService.IsSuccessResult(result);
@@ -50,6 +49,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Failed_TTL, "The email was in indefinite state Succeeded for too long (TTL), and was subsequently set to failed.")]
         [InlineData(EmailNotificationResultType.Failed_InvalidSasUrl, "The email was not sent because one or more attachment SAS URLs are invalid, expired, or inaccessible.")]
         [InlineData(EmailNotificationResultType.Failed_PayloadTooLarge, "The email was not sent because the total size of the attachments exceeds the allowed limit.")]
+        [InlineData(EmailNotificationResultType.Failed_ContentTooLarge, "The email was not sent because the email message is too large to be queued for sending.")]
         public void GetResultDescription_ExpectedDescription(EmailNotificationResultType result, string expected)
         {
             string actual = EmailNotificationSummaryService.GetResultDescription(result);
