@@ -76,12 +76,108 @@ namespace Altinn.Notifications.Core.Services
         private async Task TraceOrderDistribution(CancellationToken cancellationToken)
         {
             var orderDistribution = await _metricsRepository.GetOrderNotDueDistributionMetrics(cancellationToken);
+            var distributionTable = GenerateOrderDistributionTable(orderDistribution);
+
             DateTime timestamp = DateTime.Now;
-            foreach (var row in orderDistribution)
+            foreach (var row in distributionTable)
             {
                 // Warning level is used to avoid global filtering
                 // The log message will be picked up by a Grafana table
-                _logger.LogWarning("Orders not due distribution for {Timestamp} {Day}: {Count}", timestamp, row.Day, row.Count);
+                _logger.LogWarning("Orders not due distribution for {Timestamp} {IntervalLabel}: {Count}", timestamp, row.IntervalLabel, row.Count);
+            }
+        }
+
+        private static List<(string IntervalLabel, long Count)> GenerateOrderDistributionTable(List<(DateOnly Day, long Count)> orderDistribution)
+        {
+            var table = new List<(string IntervalLabel, long Count)>();
+            DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var (countsByOffset, _) = BuildOrderDistributionOffsets(orderDistribution, today);
+            var maxRelevantOffset = GetMaxRelevantOffset(countsByOffset);
+            if (maxRelevantOffset < 0)
+            {
+                return table;
+            }
+
+            AddTodayRows(table, countsByOffset, maxRelevantOffset);
+            AddFutureRows(table, countsByOffset, maxRelevantOffset);
+
+            return table;
+        }
+
+        private static (Dictionary<int, long> CountsByOffset, int MaxOffset) BuildOrderDistributionOffsets(
+            List<(DateOnly Day, long Count)> orderDistribution,
+            DateOnly today)
+        {
+            var countsByOffset = new Dictionary<int, long>();
+            var maxOffset = -1;
+
+            foreach (var row in orderDistribution)
+            {
+                var offset = row.Day.DayNumber - today.DayNumber;
+                if (offset < 0)
+                {
+                    continue;
+                }
+
+                countsByOffset[offset] = countsByOffset.GetValueOrDefault(offset) + row.Count;
+                if (offset > maxOffset)
+                {
+                    maxOffset = offset;
+                }
+            }
+
+            return (countsByOffset, maxOffset);
+        }
+
+        private static int GetMaxRelevantOffset(Dictionary<int, long> countsByOffset)
+        {
+            var maxRelevantOffset = -1;
+            foreach (var row in countsByOffset)
+            {
+                if (row.Value != 0 && row.Key > maxRelevantOffset)
+                {
+                    maxRelevantOffset = row.Key;
+                }
+            }
+
+            return maxRelevantOffset;
+        }
+
+        private static void AddTodayRows(List<(string IntervalLabel, long Count)> table, Dictionary<int, long> countsByOffset, int maxRelevantOffset)
+        {
+            for (var i = 0; i <= 7 && i <= maxRelevantOffset; i++)
+            {
+                countsByOffset.TryGetValue(i, out long count);
+                table.Add((i == 0 ? "today" : $"today+{i}", count));
+            }
+        }
+
+        private static void AddFutureRows(List<(string IntervalLabel, long Count)> table, Dictionary<int, long> countsByOffset, int maxOffset)
+        {
+            var startOffset = 8;
+            var next30BucketCount = 0;
+            while (startOffset <= maxOffset)
+            {
+                var isNext30Bucket = next30BucketCount < 2;
+                var bucketSize = isNext30Bucket ? 30 : 100;
+                var endOffset = startOffset + bucketSize - 1;
+                var label = isNext30Bucket ? "next30" : "next100";
+
+                long bucketCount = 0;
+                for (var dayOffset = startOffset; dayOffset <= endOffset; dayOffset++)
+                {
+                    if (countsByOffset.TryGetValue(dayOffset, out long count))
+                    {
+                        bucketCount += count;
+                    }
+                }
+
+                table.Add((label, bucketCount));
+                startOffset = endOffset + 1;
+                if (isNext30Bucket)
+                {
+                    next30BucketCount++;
+                }
             }
         }
 
