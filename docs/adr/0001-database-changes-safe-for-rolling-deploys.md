@@ -67,10 +67,20 @@ The repository does not publish GitHub releases or version tags today (the `vX.X
 - **No long-running work inside a migration.** Create materialized views `WITH NO DATA` and populate them outside the migration, through the first pg_cron run or a manual `REFRESH`. The same goes for large backfills: run them as a separate job, not at pod startup.
 - **pg_cron jobs are outside Yuniql.** Someone with the rights creates them and removes them by hand in each environment. The PR describes the exact `cron.schedule` / `cron.unschedule` calls, and the cleanup issue lists the jobs to remove.
 
+### 4. Source files for versioned functions
+
+We keep the convention in [`ReadMe.txt`](../../components/api/src/Altinn.Notifications.Persistence/Migration/ReadMe.txt) and spell out what it means for expand/contract:
+
+- Each function has one file in `FunctionsAndProcedures`, named after the base name without a version suffix (`cancelorder.sql`, `getsmsmetrics.sql`). The file keeps its name when the function gets a new version and holds **only the current version**. More than 20 files hold `_v2`/`_v3` functions today, and none has a version in its file name.
+- DbTools concatenates the files in the folder into the newest version folder's `*-functions-and-procedures.sql`, so it only runs `CREATE OR REPLACE` for what the files contain. When a file switches to `_v2`, the previous version disappears from the source tree but stays unchanged in the database. Its last definition is in the most recent generated snapshot (for #1944: `v1.10/01-functions-and-procedures.sql`) and in git history. Fresh databases still get it, because all version folders run in order.
+- The previous version is dropped in the cleanup release, in a separate file in that release's version folder (for example for [#1995](https://github.com/Altinn/altinn-notifications/issues/1995)). `ReadMe.txt` already allows drops in a separate file.
+
 ### Alternatives considered
 
 - **Change objects in place, with old and new columns side by side.** It avoids a second object, but it does not work for return-type changes (they need `DROP` + `CREATE`) or for materialized views (no `ADD COLUMN`). It also leaves compatibility columns that are hard to remove later, because nothing shows who still reads them.
 - **Accept a short error window for rarely used endpoints.** The DWH export runs rarely, so a few failed calls during a rollout might be tolerable. We rejected this as a general rule: the window is not only the rollout but every rollback, the old version breaks completely when it is redeployed, and deciding per endpoint whether errors are "acceptable" is a judgement call that is easy to get wrong.
+- **Keep both versions in the same function file until cleanup.** v1 would stay visible in the source tree and be recreated by DbTools, but it breaks the one-version-per-file convention. The cleanup PR would also have to edit the function file as well as add the drop.
+- **One `_vN` file per version.** It makes every version visible, but it breaks the naming convention and adds files and churn for objects that are deleted after 30 days anyway.
 
 ## Consequences
 
