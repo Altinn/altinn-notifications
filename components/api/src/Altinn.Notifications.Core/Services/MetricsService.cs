@@ -197,7 +197,6 @@ namespace Altinn.Notifications.Core.Services
                 var isNext30Bucket = next30BucketCount < 2;
                 var bucketSize = isNext30Bucket ? 30 : 100;
                 var endOffset = startOffset + bucketSize - 1;
-                var label = isNext30Bucket ? "next30" : "next100";
 
                 long bucketCount = 0;
                 for (var dayOffset = startOffset; dayOffset <= endOffset; dayOffset++)
