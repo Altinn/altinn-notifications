@@ -1,6 +1,8 @@
 using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
@@ -227,6 +229,7 @@ public static class ServiceUtil
         services.AddSingleton(sharedDataSource);
         RegisterRepositories(services);
         services.AddCoreServices(config);
+        services.AddSingleton<IBacklogMetrics, BacklogMetrics>();
         services.AddAltinnClients(config);
         services.AddAuthorizationService(config);
     }
