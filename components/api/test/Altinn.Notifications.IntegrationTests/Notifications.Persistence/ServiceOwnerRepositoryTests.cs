@@ -34,8 +34,8 @@ public sealed class ServiceOwnerRepositoryTests : IAsyncLifetime
         string sms = $"S{Guid.NewGuid():N}"[..11];
         string email = $"{Guid.NewGuid():N}@test.no";
 
-        await PostgreUtil.InsertServiceOwnerSender(_owner, sms, "SMS");
-        await PostgreUtil.InsertServiceOwnerSender(_owner, email, "Email");
+        await PostgreUtil.InsertServiceOwnerSender(_owner, "SMS", sms);
+        await PostgreUtil.InsertServiceOwnerSender(_owner, "Email", email);
 
         // Act
         var result = await sut.GetRegisteredSenders(TestContext.Current.CancellationToken);
