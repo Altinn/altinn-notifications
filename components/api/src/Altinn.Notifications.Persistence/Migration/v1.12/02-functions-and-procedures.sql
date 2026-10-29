@@ -981,6 +981,22 @@ ALTER FUNCTION notifications.get_email_metrics_v2(integer, integer, integer)
     OWNER TO platform_notifications_admin;
 
 
+-- getemailnotificationsmetrics.sql:
+create or replace function notifications.get_email_notifications_metrics()
+returns table
+(
+    anytimecount bigint,
+    daytimecount bigint,
+    composedcount bigint
+)
+language sql
+as $$
+    SELECT
+        (SELECT count(*) FROM notifications.emailnotifications email WHERE email.result = 'New'::emailnotificationresulttype and sendingtimepolicy = 1 and iscomposed = false),
+        (SELECT count(*) FROM notifications.emailnotifications email WHERE email.result = 'New'::emailnotificationresulttype and sendingtimepolicy = 2 and iscomposed = false),
+        (SELECT count(*) FROM notifications.emailnotifications email WHERE email.result = 'New'::emailnotificationresulttype and iscomposed = true);
+$$;
+
 -- getemailrecipients.sql:
 CREATE OR REPLACE FUNCTION notifications.getemailrecipients_v2(_alternateid uuid)
 RETURNS TABLE(
@@ -1781,6 +1797,23 @@ END;
 $BODY$;
 
 
+-- getordermetrics.sql:
+create or replace function notifications.get_order_metrics()
+returns table
+(
+	ordersnotduecount bigint,
+	orderspastduecount bigint,
+	ordersfailedcount bigint
+)
+language sql
+as $$
+	select
+        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime > now() + INTERVAL '1 minute'),
+        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'),
+        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Failed'::orderprocessingstate);
+$$;
+
+
 -- getorderpastsendtime.sql:
 CREATE OR REPLACE FUNCTION notifications.getorder_pastsendtime()
     RETURNS TABLE(notificationorders jsonb)
@@ -1898,6 +1931,24 @@ Returns a table with the following columns:
 The reminders JSON array contains objects with the following structure:
 - ShipmentId: The unique identifier for the reminder notification order
 - SendersReference: The sender''s reference for the reminder notification (may be null).';
+
+
+-- getordersnotduedistributionmetrics.sql:
+create or replace function notifications.get_orders_notdue_distribution_metrics()
+returns table
+(
+	day date,
+	count bigint
+)
+language sql
+as $$
+	select o.requestedsendtime::date as day, count(*)
+	from notifications.orders o
+	where o.processedstatus = 'Registered'
+		and o.requestedsendtime > now() + interval '1 minute'
+	group by o.requestedsendtime::date
+	order by day;
+$$;
 
 
 -- getorderspastsendtimeupdatestatus.sql:
@@ -2119,6 +2170,21 @@ $BODY$;
 
 ALTER FUNCTION notifications.get_sms_metrics_v2(integer, integer, integer)
     OWNER TO platform_notifications_admin;
+
+
+-- getsmsnotificationsmetrics.sql:
+create or replace function notifications.get_sms_notifications_metrics()
+returns table
+(
+	anytimecount bigint,
+	daytimecount bigint
+)
+language sql
+as $$
+	select
+        (SELECT count(*) FROM notifications.smsnotifications sms WHERE sms.result = 'New'::smsnotificationresulttype and sendingtimepolicy = 1),
+        (SELECT count(*) FROM notifications.smsnotifications sms WHERE sms.result = 'New'::smsnotificationresulttype and sendingtimepolicy = 2);
+$$;
 
 
 -- getsmsrecipients.sql:
