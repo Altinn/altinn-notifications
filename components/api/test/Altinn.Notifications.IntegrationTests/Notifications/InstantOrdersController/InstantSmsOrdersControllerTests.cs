@@ -3,16 +3,33 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.ShortMessageService;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Sms;
+using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tests.Notifications.Utils;
+
 using FluentValidation;
 using FluentValidation.Results;
+
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+
 using Moq;
+
+using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.InstantOrdersController;
@@ -485,6 +502,146 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
                 order.ShortMessageDeliveryDetails.ShortMessageContent.Sender == null),
             It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsBadRequestAndDoesNotSendOrPersist()
+    {
+        // Arrange
+        string unregisteredSender = $"U{Guid.NewGuid():N}"[..11];
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        var smsClientMock = new Mock<IShortMessageServiceClient>();
+
+        var instantOrderRequestService = await CreateTestService(orderRepositoryMock.Object, smsClientMock.Object);
+
+        var client = GetTestClient(instantOrderRequestService: instantOrderRequestService, validator: ValidatorThatPasses());
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(CreatorShortName, scope: NotificationCreationScope));
+
+        using var content = new StringContent(JsonSerializer.Serialize(CreateRequest(unregisteredSender)), Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);
+        var responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(problem);
+        Assert.Equal("NOT-00006", problem.ErrorCode.ToString());
+        Assert.Contains(unregisteredSender, problem.Detail);
+
+        smsClientMock.Verify(c => c.SendAsync(It.IsAny<ShortMessage>()), Times.Never);
+        orderRepositoryMock.Verify(
+            r => r.Create(It.IsAny<InstantSmsNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<SmsNotification>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Post_SenderRegisteredForServiceOwner_ReturnsCreated()
+    {
+        // Arrange
+        string registeredSender = $"R{Guid.NewGuid():N}"[..11];
+        await PostgreUtil.InsertServiceOwnerSender(CreatorShortName, "SMS", registeredSender);
+
+        try
+        {
+            var orderRepositoryMock = new Mock<IOrderRepository>();
+            orderRepositoryMock
+                .Setup(r => r.Create(It.IsAny<InstantSmsNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<SmsNotification>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new InstantNotificationOrderTracking
+                {
+                    OrderChainId = Guid.NewGuid(),
+                    Notification = new NotificationOrderChainShipment { ShipmentId = Guid.NewGuid(), SendersReference = ValidSendersReference }
+                });
+
+            var smsClientMock = new Mock<IShortMessageServiceClient>();
+            smsClientMock
+                .Setup(c => c.SendAsync(It.IsAny<ShortMessage>()))
+                .ReturnsAsync(new ShortMessageSendResult { Success = true, StatusCode = HttpStatusCode.OK });
+
+            var instantOrderRequestService = await CreateTestService(orderRepositoryMock.Object, smsClientMock.Object);
+
+            var client = GetTestClient(instantOrderRequestService: instantOrderRequestService, validator: ValidatorThatPasses());
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(CreatorShortName, scope: NotificationCreationScope));
+
+            using var content = new StringContent(JsonSerializer.Serialize(CreateRequest(registeredSender)), Encoding.UTF8, "application/json");
+
+            // Act
+            var response = await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            smsClientMock.Verify(c => c.SendAsync(It.Is<ShortMessage>(m => m.Sender == registeredSender)), Times.Once);
+        }
+        finally
+        {
+            await PostgreUtil.RunSql(
+                "DELETE FROM notifications.serviceowner WHERE serviceowner = @owner AND senderaddress = @sender",
+                new NpgsqlParameter("@owner", CreatorShortName),
+                new NpgsqlParameter("@sender", registeredSender));
+        }
+    }
+
+    private static InstantSmsNotificationOrderRequestExt CreateRequest(string sender)
+    {
+        return new InstantSmsNotificationOrderRequestExt
+        {
+            IdempotencyId = ValidIdempotencyId,
+            SendersReference = ValidSendersReference,
+            RecipientSms = new ShortMessageDeliveryDetailsExt
+            {
+                PhoneNumber = ValidPhoneNumber,
+                TimeToLiveInSeconds = ValidTimeToLive,
+                ShortMessageContent = new ShortMessageContentExt
+                {
+                    Body = ValidMessageBody,
+                    Sender = sender
+                }
+            }
+        };
+    }
+
+    private static IValidator<InstantSmsNotificationOrderRequestExt> ValidatorThatPasses()
+    {
+        var validatorMock = new Mock<IValidator<InstantSmsNotificationOrderRequestExt>>();
+        validatorMock
+            .Setup(v => v.Validate(It.IsAny<InstantSmsNotificationOrderRequestExt>()))
+            .Returns(new ValidationResult());
+
+        return validatorMock.Object;
+    }
+
+    private static async Task<IInstantOrderRequestService> CreateTestService(IOrderRepository orderRepository, IShortMessageServiceClient smsClient)
+    {
+        var config = Options.Create(new NotificationConfig
+        {
+            DefaultSmsSenderNumber = "Altinn",
+            EnforceSmsSenderOwnership = true,
+            DefaultEmailFromAddress = "noreply@altinn.cloud"
+        });
+
+        var serviceOwnerRepository = (ServiceOwnerRepository)ServiceUtil
+            .GetServices([typeof(IServiceOwnerRepository)])
+            .First(i => i.GetType() == typeof(ServiceOwnerRepository));
+
+        var serviceOwnerService = new ServiceOwnerService(serviceOwnerRepository, config, NullLogger<ServiceOwnerService>.Instance);
+        await serviceOwnerService.LoadSenders(TestContext.Current.CancellationToken);
+
+        var guidService = new Mock<IGuidService>();
+        guidService.Setup(g => g.NewGuid()).Returns(Guid.NewGuid);
+
+        var dateTimeService = new Mock<IDateTimeService>();
+        dateTimeService.Setup(d => d.UtcNow()).Returns(DateTime.UtcNow);
+
+        return new InstantOrderRequestService(
+            guidService.Object,
+            dateTimeService.Object,
+            orderRepository,
+            config,
+            smsClient,
+            Mock.Of<IInstantEmailServiceClient>(),
+            NullLogger<InstantOrderRequestService>.Instance,
+            serviceOwnerService);
     }
 
     private HttpClient GetTestClient(IDateTimeService? dateTimeService = null, IInstantOrderRequestService? instantOrderRequestService = null, IValidator<InstantSmsNotificationOrderRequestExt>? validator = null)

@@ -29,20 +29,9 @@ public class ServiceOwnerService(
     {
         var registeredSenders = await _repository.GetRegisteredSenders(cancellationToken);
 
-        var refreshedSenders = new Dictionary<(SenderAddressType, string), HashSet<string>>();
-        foreach (var registeredSender in registeredSenders)
-        {
-            var key = (registeredSender.AddressType, registeredSender.ServiceOwner);
-            if (!refreshedSenders.TryGetValue(key, out var set))
-            {
-                set = [with(StringComparer.Ordinal)];
-                refreshedSenders[key] = set;
-            }
-
-            set.Add(registeredSender.SenderAddress);
-        }
-
-        _registeredSenders = refreshedSenders;
+        _registeredSenders = registeredSenders
+            .GroupBy(sender => (sender.AddressType, sender.ServiceOwner))
+            .ToDictionary(group => group.Key, group => group.Select(sender => sender.SenderAddress).ToHashSet(StringComparer.Ordinal));
     }
 
     /// <inheritdoc/>

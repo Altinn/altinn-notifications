@@ -1,6 +1,5 @@
-﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -141,7 +140,7 @@ public class InstantOrdersController : ControllerBase
         string idempotencyId,
         IValidator<TRequest> validator,
         Func<TRequest, string, DateTime, TOrder> mapToOrder,
-        Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking>> persistOrder,
+        Func<TOrder, CancellationToken, Task<Result<InstantNotificationOrderTracking>>> persistOrder,
         CancellationToken cancellationToken)
         where TRequest : class
     {
@@ -170,7 +169,14 @@ public class InstantOrdersController : ControllerBase
 
             // 4. Map and persist the instant notification order.
             var instantOrder = mapToOrder(request, creator, _dateTimeService.UtcNow());
-            trackingInformation = await persistOrder(instantOrder, cancellationToken);
+            var persistResult = await persistOrder(instantOrder, cancellationToken);
+            if (persistResult.IsProblem)
+            {
+                var problem = persistResult.Problem!.ToProblemDetails();
+                return StatusCode(problem.Status!.Value, problem);
+            }
+
+            trackingInformation = persistResult.Value;
 
             // 5. Return tracking information and location header.
             return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());

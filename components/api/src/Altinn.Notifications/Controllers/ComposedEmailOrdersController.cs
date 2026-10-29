@@ -70,7 +70,14 @@ public class ComposedEmailOrdersController(
 
             var notificationOrderChainRequest = orderRequest.MapToNotificationOrderChainRequest(creator);
 
-            var response = await _service.RegisterComposedEmailOrderChain(notificationOrderChainRequest, cancellationToken);
+            var result = await _service.RegisterComposedEmailOrderChain(notificationOrderChainRequest, cancellationToken);
+            if (result.IsProblem)
+            {
+                var problem = result.Problem!.ToProblemDetails();
+                return StatusCode(problem.Status!.Value, problem);
+            }
+
+            var response = result.Value;
             var responseExt = response.MapToNotificationOrderChainResponseExt();
 
             if (response.IsNewlyCreated)

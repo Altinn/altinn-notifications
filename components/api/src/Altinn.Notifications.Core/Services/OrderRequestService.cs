@@ -18,36 +18,39 @@ namespace Altinn.Notifications.Core.Services;
 /// <summary>
 /// Implementation of the <see cref="IOrderRequestService"/>.
 /// </summary>
-public class OrderRequestService : IOrderRequestService
+/// <remarks>
+/// Initializes a new instance of the <see cref="OrderRequestService"/> class.
+/// </remarks>
+public class OrderRequestService(
+    IGuidService guid,
+    IDateTimeService dateTime,
+    IOrderRepository repository,
+    IOptions<NotificationConfig> config,
+    IContactPointService contactPointService,
+    IServiceOwnerService serviceOwnerService) : IOrderRequestService
 {
-    private readonly IOrderRepository _repository;
-    private readonly IContactPointService _contactPointService;
-    private readonly IGuidService _guid;
-    private readonly IDateTimeService _dateTime;
-    private readonly string _defaultEmailFromAddress;
-    private readonly string _defaultSmsSender;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
-    /// </summary>
-    public OrderRequestService(
-        IOrderRepository repository,
-        IContactPointService contactPointService,
-        IGuidService guid,
-        IDateTimeService dateTime,
-        IOptions<NotificationConfig> config)
-    {
-        _repository = repository;
-        _contactPointService = contactPointService;
-        _guid = guid;
-        _dateTime = dateTime;
-        _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
-        _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
-    }
+    private readonly IGuidService _guid = guid;
+    private readonly IDateTimeService _dateTime = dateTime;
+    private readonly IOrderRepository _repository = repository;
+    private readonly IServiceOwnerService _serviceOwnerService = serviceOwnerService;
+    private readonly string _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
+    private readonly IContactPointService _contactPointService = contactPointService;
+    private readonly string _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderRequest orderRequest)
+    public async Task<Result<NotificationOrderRequestResponse>> RegisterNotificationOrder(NotificationOrderRequest orderRequest)
     {
+        // The v1 templates cannot distinguish an absent sender from an empty one, so an empty sender is treated as absent.
+        var senderProblem = _serviceOwnerService.ValidateSenders(
+            orderRequest.Creator.ShortName,
+            orderRequest.Templates.OfType<EmailTemplate>().Select(t => string.IsNullOrEmpty(t.FromAddress) ? null : t.FromAddress),
+            orderRequest.Templates.OfType<SmsTemplate>().Select(t => string.IsNullOrEmpty(t.SenderNumber) ? null : t.SenderNumber));
+
+        if (senderProblem != null)
+        {
+            return senderProblem;
+        }
+
         Guid orderId = _guid.NewGuid();
         DateTime currentTime = _dateTime.UtcNow();
 
@@ -94,8 +97,15 @@ public class OrderRequestService : IOrderRequestService
     {
         // 1. Early cancellation check.
         cancellationToken.ThrowIfCancellationRequested();
-        
-        // 2. Idempotency pre-check for retries: if this idempotency key was already
+
+        // 2. Validate the senders of the main order and all reminders, before any contact-point lookup.
+        var senderProblem = ValidateChainSenders(orderRequest);
+        if (senderProblem != null)
+        {
+            return senderProblem;
+        }
+
+        // 3. Idempotency pre-check for retries: if this idempotency key was already
         //    committed by a previous request, return the existing chain immediately.
         //
         //    This serves three purposes:
@@ -118,24 +128,24 @@ public class OrderRequestService : IOrderRequestService
             return existingChain;
         }
 
-        // 3. Get the current time.
+        // 4. Get the current time.
         DateTime currentTime = _dateTime.UtcNow();
 
-        // 4. Create the main order (performs contact-point lookup).
+        // 5. Create the main order (performs contact-point lookup).
         var mainOrderResult = await CreateMainNotificationOrderAsync(orderRequest, currentTime);
         if (mainOrderResult.IsProblem)
         {
             return mainOrderResult.Problem;
         }
 
-        // 5. Create reminders (performs contact-point lookup).
+        // 6. Create reminders (performs contact-point lookup).
         var remindersResult = await CreateReminderNotificationOrdersAsync(orderRequest.Reminders, orderRequest.Creator, currentTime, cancellationToken);
         if (remindersResult.IsProblem)
         {
             return remindersResult.Problem;
         }
 
-        // 6. Persist atomically and return the response.
+        // 7. Persist atomically and return the response.
         //    If a concurrent first-time request won the race, result.IsNewlyCreated
         //    will be false and the existing chain's data is returned directly.
         return await CreateChainResponseAsync(orderRequest, mainOrderResult.Value, remindersResult.Value, cancellationToken);
@@ -155,6 +165,24 @@ public class OrderRequestService : IOrderRequestService
     private static EmailTemplate CreateEmailTemplate(EmailSendingOptions emailSettings)
     {
         return new EmailTemplate(emailSettings.SenderEmailAddress, emailSettings.Subject, emailSettings.Body, emailSettings.ContentType);
+    }
+
+    /// <summary>
+    /// Validates the senders specified in the main order and all reminders of a chain request.
+    /// </summary>
+    private ProblemInstance? ValidateChainSenders(NotificationOrderChainRequest orderRequest)
+    {
+        List<string?> smsSenders = [];
+        List<string?> emailSenders = [];
+
+        CollectSenders(orderRequest.Recipient, emailSenders, smsSenders);
+
+        foreach (var reminder in orderRequest.Reminders ?? [])
+        {
+            CollectSenders(reminder.Recipient, emailSenders, smsSenders);
+        }
+
+        return _serviceOwnerService.ValidateSenders(orderRequest.Creator.ShortName, emailSenders, smsSenders);
     }
 
     /// <summary>
@@ -306,6 +334,38 @@ public class OrderRequestService : IOrderRequestService
 
             _ => [],
         };
+    }
+
+    /// <summary>
+    /// Gets the sender values from every recipient type and adds them to the given lists
+    /// </summary>
+    /// <param name="recipient">The recipient to read email and SMS settings from.</param>
+    /// <param name="emailSenders">
+    /// The list that gets the <see cref="EmailSendingOptions.SenderEmailAddress"/> from each email setting found.
+    /// </param>
+    /// <param name="smsSenders">
+    /// The list that gets the <see cref="SmsSendingOptions.Sender"/> from each SMS setting found.
+    /// </param>
+    private static void CollectSenders(NotificationRecipient recipient, List<string?> emailSenders, List<string?> smsSenders)
+    {
+        List<EmailSendingOptions?> emailSettings =
+        [
+            recipient.RecipientEmail?.Settings,
+            recipient.RecipientPerson?.EmailSettings,
+            recipient.RecipientOrganization?.EmailSettings,
+            recipient.RecipientExternalIdentity?.EmailSettings
+        ];
+
+        List<SmsSendingOptions?> smsSettings =
+        [
+            recipient.RecipientSms?.Settings,
+            recipient.RecipientPerson?.SmsSettings,
+            recipient.RecipientOrganization?.SmsSettings,
+            recipient.RecipientExternalIdentity?.SmsSettings
+        ];
+
+        smsSenders.AddRange(smsSettings.OfType<SmsSendingOptions>().Select(s => s.Sender));
+        emailSenders.AddRange(emailSettings.OfType<EmailSendingOptions>().Select(s => s.SenderEmailAddress));
     }
 
     /// <summary>

@@ -1,7 +1,3 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
@@ -16,10 +12,13 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -176,7 +175,7 @@ public class InstantOrderRequestServiceTests
         var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
         shortMessageServiceClient
             .Setup(e => e.SendAsync(It.Is<ShortMessage>(e => e.NotificationId == smsOrderId)))
-            .Callback(() => taskCompletionSource.SetResult())
+            .Callback(taskCompletionSource.SetResult)
             .ReturnsAsync(new ShortMessageSendResult()
             {
                 Success = true,
@@ -191,16 +190,16 @@ public class InstantOrderRequestServiceTests
             shortMessageServiceClient: shortMessageServiceClient.Object);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, TestContext.Current.CancellationToken);
+        var persistResult = await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, TestContext.Current.CancellationToken);
 
         // Wait for the short message to be sent.
         await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(orderChainId, result.OrderChainId);
-        Assert.Equal(orderId, result.Notification.ShipmentId);
-        Assert.Equal(sendersReference, result.Notification.SendersReference);
+        Assert.NotNull(persistResult.Value);
+        Assert.Equal(orderChainId, persistResult.Value.OrderChainId);
+        Assert.Equal(orderId, persistResult.Value.Notification.ShipmentId);
+        Assert.Equal(sendersReference, persistResult.Value.Notification.SendersReference);
 
         guidServiceMock.Verify(e => e.NewGuid(), Times.Once);
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
@@ -514,13 +513,13 @@ public class InstantOrderRequestServiceTests
         };
 
         // Act
-        var result = await service.PersistInstantEmailNotificationAsync(emailOrder, TestContext.Current.CancellationToken);
+        var persistResult = await service.PersistInstantEmailNotificationAsync(emailOrder, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedEmailOrderTracking.OrderChainId, result.OrderChainId);
-        Assert.Equal(expectedEmailOrderTracking.Notification.ShipmentId, result.Notification.ShipmentId);
-        Assert.Equal(expectedEmailOrderTracking.Notification.SendersReference, result.Notification.SendersReference);
+        Assert.NotNull(persistResult.Value);
+        Assert.Equal(expectedEmailOrderTracking.OrderChainId, persistResult.Value.OrderChainId);
+        Assert.Equal(expectedEmailOrderTracking.Notification.ShipmentId, persistResult.Value.Notification.ShipmentId);
+        Assert.Equal(expectedEmailOrderTracking.Notification.SendersReference, persistResult.Value.Notification.SendersReference);
 
         orderRepositoryMock.Verify(
             e => e.Create(
@@ -932,11 +931,19 @@ public class InstantOrderRequestServiceTests
             Times.Never);
     }
 
-    private static InstantOrderRequestService GetTestService(IGuidService? guidService = null, IDateTimeService? dateTimeService = null, IOrderRepository? orderRepository = null, IShortMessageServiceClient? shortMessageServiceClient = null, IInstantEmailServiceClient? instantEmailServiceClient = null, ILogger<InstantOrderRequestService>? logger = null)
+    private static InstantOrderRequestService GetTestService(
+        IGuidService? guidService = null,
+        IDateTimeService? dateTimeService = null,
+        IOrderRepository? orderRepository = null,
+        IShortMessageServiceClient? shortMessageServiceClient = null,
+        IInstantEmailServiceClient? instantEmailServiceClient = null,
+        ILogger<InstantOrderRequestService>? logger = null,
+        IServiceOwnerService? serviceOwnerService = null)
     {
         guidService ??= Mock.Of<IGuidService>();
         dateTimeService ??= Mock.Of<IDateTimeService>();
         orderRepository ??= Mock.Of<IOrderRepository>();
+        serviceOwnerService ??= Mock.Of<IServiceOwnerService>();
         shortMessageServiceClient ??= Mock.Of<IShortMessageServiceClient>();
         instantEmailServiceClient ??= Mock.Of<IInstantEmailServiceClient>();
 
@@ -946,6 +953,14 @@ public class InstantOrderRequestServiceTests
             DefaultEmailFromAddress = "noreply@altinn.no"
         });
 
-        return new InstantOrderRequestService(guidService, dateTimeService, orderRepository, configurationOptions, shortMessageServiceClient, instantEmailServiceClient, logger ?? NullLogger<InstantOrderRequestService>.Instance);
+        return new InstantOrderRequestService(
+            guidService,
+            dateTimeService,
+            orderRepository,
+            configurationOptions,
+            shortMessageServiceClient,
+            instantEmailServiceClient,
+            logger ?? NullLogger<InstantOrderRequestService>.Instance,
+            serviceOwnerService);
     }
 }

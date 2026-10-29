@@ -5,17 +5,26 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Files;
 using Altinn.Notifications.Models.Recipient;
+using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 using Moq;
+
+using Npgsql;
 
 using Xunit;
 
@@ -248,6 +257,72 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
     }
 
     [Fact]
+    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsBadRequestAndDoesNotPersistOrder()
+    {
+        // Arrange
+        string unregisteredSender = $"{Guid.NewGuid():N}@test.no";
+        
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var composedEmailOrderRequestService = await CreateTestService(orderRepositoryMock.Object);
+
+        var client = GetTestClient(composedEmailService: composedEmailOrderRequestService);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: _validScope));
+
+        // Act
+        var response = await SendPostRequest(client, ValidRequest(unregisteredSender));
+        var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(problem);
+        Assert.Contains(unregisteredSender, problem.Detail);
+        Assert.Contains("NOT-00005", content);
+
+        orderRepositoryMock.Verify(
+            r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Post_SenderRegisteredForServiceOwner_ReturnsCreated()
+    {
+        // Arrange
+        string registeredSender = $"{Guid.NewGuid():N}@test.no";
+        await PostgreUtil.InsertServiceOwnerSender("ttd", "Email", registeredSender);
+
+        try
+        {
+            var orderRepositoryMock = new Mock<IOrderRepository>();
+            orderRepositoryMock
+                .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new OrderChainCreateResult { IsNewlyCreated = true, InternalId = 1, OrderChainId = Guid.NewGuid(), ShipmentId = Guid.NewGuid() });
+
+            var composedEmailOrderRequestService = await CreateTestService(orderRepositoryMock.Object);
+
+            var client = GetTestClient(composedEmailService: composedEmailOrderRequestService);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Bearer", PrincipalUtil.GetOrgToken("ttd", scope: _validScope));
+
+            // Act
+            var response = await SendPostRequest(client, ValidRequest(registeredSender));
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            orderRepositoryMock.Verify(
+                r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>?>(), It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+        finally
+        {
+            await PostgreUtil.RunSql(
+                "DELETE FROM notifications.serviceowner WHERE serviceowner = 'ttd' AND senderaddress = @sender",
+                new NpgsqlParameter("@sender", registeredSender));
+        }
+    }
+
+    [Fact]
     public async Task Post_MultipleFileReferences_ReturnsCreated()
     {
         // Arrange
@@ -303,7 +378,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
     }
 
-    private static ComposedEmailRequestExt ValidRequest() => new()
+    private static ComposedEmailRequestExt ValidRequest(string? senderEmailAddress = null) => new()
     {
         IdempotencyId = Guid.NewGuid().ToString(),
         SendersReference = "ref-attach-001",
@@ -314,6 +389,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
             Settings = new ComposedEmailSendingOptionsExt
             {
                 Subject = "Decision from Altinn",
+                SenderEmailAddress = senderEmailAddress,
                 Body = "Please see the attached document.",
                 Attachments =
                 [
@@ -327,6 +403,25 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
             }
         }
     };
+
+    private static async Task<IComposedEmailOrderRequestService> CreateTestService(IOrderRepository orderRepository)
+    {
+        var config = Options.Create(new NotificationConfig
+        {
+            DefaultSmsSenderNumber = "Altinn",
+            EnforceEmailSenderOwnership = true,
+            DefaultEmailFromAddress = "noreply@altinn.cloud"
+        });
+
+        var serviceOwnerRepository = (ServiceOwnerRepository)ServiceUtil
+            .GetServices([typeof(IServiceOwnerRepository)])
+            .First(i => i.GetType() == typeof(ServiceOwnerRepository));
+
+        var serviceOwnerService = new ServiceOwnerService(serviceOwnerRepository, config, NullLogger<ServiceOwnerService>.Instance);
+        await serviceOwnerService.LoadSenders(TestContext.Current.CancellationToken);
+
+        return new ComposedEmailOrderRequestService(Mock.Of<IDateTimeService>(), orderRepository, serviceOwnerService, config);
+    }
 
     private static NotificationOrderChainResponse CreateOrderChainResponse() => new()
     {

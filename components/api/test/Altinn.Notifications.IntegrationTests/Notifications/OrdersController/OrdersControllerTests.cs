@@ -4,17 +4,26 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 using Moq;
+
+using Npgsql;
 
 using Xunit;
 
@@ -543,6 +552,65 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     }
 
     [Fact]
+    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsBadRequestAndDoesNotPersistOrder()
+    {
+        // Arrange
+        string unregisteredSender = $"{Guid.NewGuid():N}@test.no";
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        var orderRequestService = await CreateTestService(orderRepositoryMock.Object);
+
+        HttpClient client = GetTestClient(orderRequestService: orderRequestService);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        HttpResponseMessage response = await client.PostAsync(_basePath, CreateEmailOrderContent(unregisteredSender), TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        ProblemDetails? problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(problem);
+        Assert.Contains(unregisteredSender, problem.Detail);
+        Assert.Contains("NOT-00005", content);
+
+        orderRepositoryMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Post_SenderRegisteredForServiceOwner_ReturnsAccepted()
+    {
+        // Arrange
+        string registeredSender = $"{Guid.NewGuid():N}@test.no";
+        await PostgreUtil.InsertServiceOwnerSender("ttd", "Email", registeredSender);
+
+        try
+        {
+            var orderRepositoryMock = new Mock<IOrderRepository>();
+            orderRepositoryMock
+                .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+                .ReturnsAsync((NotificationOrder order) => order);
+
+            var orderRequestService = await CreateTestService(orderRepositoryMock.Object);
+
+            HttpClient client = GetTestClient(orderRequestService: orderRequestService);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+            // Act
+            HttpResponseMessage response = await client.PostAsync(_basePath, CreateEmailOrderContent(registeredSender), TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            orderRepositoryMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Once);
+        }
+        finally
+        {
+            await PostgreUtil.RunSql(
+                "DELETE FROM notifications.serviceowner WHERE serviceowner = 'ttd' AND senderaddress = @sender",
+                new NpgsqlParameter("@sender", registeredSender));
+        }
+    }
+
+    [Fact]
     public async Task Post_InvalidOrderRequest_BadRequest()
     {
         HttpClient client = GetTestClient();
@@ -631,7 +699,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         Assert.Equal("One or more validation errors occurred.", actual?.Title);
     }
 
-    [Fact]
+    [Fact]  
     public async Task CancelOrder_MissingBearer_ReturnsUnauthorized()
     {
         // Arrange
@@ -780,6 +848,44 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         // Assert
         orderService.VerifyAll();
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    private static StringContent CreateEmailOrderContent(string fromAddress)
+    {
+        var request = new NotificationOrderRequestExt
+        {
+            NotificationChannel = NotificationChannelExt.Email,
+            EmailTemplate = new EmailTemplateExt { FromAddress = fromAddress, Subject = "Test", Body = "Test Body" },
+            Recipients = [new RecipientExt { EmailAddress = "recipient@altinnxyz.no" }],
+            RequestedSendTime = DateTime.UtcNow.AddDays(1)
+        };
+
+        return new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+    }
+
+    private static async Task<IOrderRequestService> CreateTestService(IOrderRepository orderRepository)
+    {
+        var config = Options.Create(new NotificationConfig
+        {
+            DefaultSmsSenderNumber = "Altinn",
+            EnforceEmailSenderOwnership = true,
+            DefaultEmailFromAddress = "noreply@altinn.cloud"
+        });
+
+        var serviceOwnerRepository = (ServiceOwnerRepository)ServiceUtil
+            .GetServices([typeof(IServiceOwnerRepository)])
+            .First(i => i.GetType() == typeof(ServiceOwnerRepository));
+
+        var serviceOwnerService = new ServiceOwnerService(serviceOwnerRepository, config, NullLogger<ServiceOwnerService>.Instance);
+        await serviceOwnerService.LoadSenders(TestContext.Current.CancellationToken);
+
+        var guidService = new Mock<IGuidService>();
+        guidService.Setup(g => g.NewGuid()).Returns(Guid.NewGuid);
+
+        var dateTimeService = new Mock<IDateTimeService>();
+        dateTimeService.Setup(d => d.UtcNow()).Returns(DateTime.UtcNow);
+
+        return new OrderRequestService(guidService.Object, dateTimeService.Object, orderRepository, config, Mock.Of<IContactPointService>(), serviceOwnerService);
     }
 
     private HttpClient GetTestClient(IGetOrderService? getOrderService = null, IOrderRequestService? orderRequestService = null, ICancelOrderService? cancelOrderService = null)
