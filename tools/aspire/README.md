@@ -10,7 +10,7 @@ Runs the whole Notifications stack locally from one command, with logs, traces a
 * A container named `notifications-db` with the database and roles from [Database Setup](../../getting-started.md#3-database-setup-postgresql), or a local PostgreSQL (see [Settings](#settings)). For example (replace `podman` with `docker` if you use Docker):
 
   ```bash
-  podman run -d --name notifications-db -p 5432:5432 \
+  podman run -d --name notifications-db -p 127.0.0.1:5432:5432 \
     -e POSTGRES_USER=platform_notifications_admin \
     -e POSTGRES_PASSWORD=Password \
     -e POSTGRES_DB=notificationsdb \
