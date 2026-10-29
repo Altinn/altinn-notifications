@@ -1,0 +1,2 @@
+﻿create index if not exists notifications_processedstatus_requestedsendtime on notifications.orders (processedstatus, requestedsendtime);
+create index if not exists notifications_requestedsendtime_filter_failed on notifications.orders (requestedsendtime) where processedstatus = 'Failed';
