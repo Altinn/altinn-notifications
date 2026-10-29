@@ -419,6 +419,16 @@ public static class PostgreUtil
             new NpgsqlParameter("@id", notificationId));
     }
 
+    /// <summary>
+    /// Reads the current time from the database clock.
+    /// Use it as the reference when asserting on timestamps the database sets itself (now(), CURRENT_TIMESTAMP),
+    /// since the clock of the test process can be slightly ahead of the database clock.
+    /// </summary>
+    public static async Task<DateTime> GetDatabaseUtcNow()
+    {
+        return await RunSqlReturnOutput<DateTime>("SELECT clock_timestamp()");
+    }
+
     public static async Task<T> RunSqlReturnOutput<T>(string query)
     {
         await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);

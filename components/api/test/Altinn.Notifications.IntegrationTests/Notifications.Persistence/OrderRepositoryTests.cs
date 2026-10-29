@@ -228,8 +228,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
         await repo.Create(order);
 
-        // Record time before setting status
-        DateTime beforeStatusUpdate = DateTime.UtcNow;
+        // Record time before setting status, from the database clock since processed is set by the database itself
+        DateTime beforeStatusUpdate = await PostgreUtil.GetDatabaseUtcNow();
 
         // Act
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
@@ -240,10 +240,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
                             WHERE alternateid = '{order.Id}'";
 
         DateTime? processedTimestamp = await PostgreUtil.RunSqlReturnOutput<DateTime?>(sql);
+        DateTime afterStatusUpdate = await PostgreUtil.GetDatabaseUtcNow();
 
         Assert.NotNull(processedTimestamp);
         Assert.True(processedTimestamp.Value >= beforeStatusUpdate, "Processed timestamp should be set to current time or later");
-        Assert.True(processedTimestamp.Value <= DateTime.UtcNow.AddSeconds(5), "Processed timestamp should be close to current time");
+        Assert.True(processedTimestamp.Value <= afterStatusUpdate, "Processed timestamp should be close to current time");
     }
 
     [Fact]
