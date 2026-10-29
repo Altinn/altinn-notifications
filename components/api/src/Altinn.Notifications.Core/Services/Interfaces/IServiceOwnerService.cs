@@ -1,4 +1,4 @@
-using Altinn.Notifications.Core.Enums;
+using Altinn.Authorization.ProblemDetails;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -13,15 +13,17 @@ public interface IServiceOwnerService
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that completes when the registered senders have been loaded.</returns>
-    Task LoadRegisteredSenders(CancellationToken cancellationToken = default);
+    Task LoadSenders(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Finds the senders that are not registered for the service owner.
+    /// Validates that the senders of a request are registered for the ordering service owner. Each channel is validated only if enforcement is enabled for it.
+    /// A <c>null</c> sender is treated as not specified, and the default sender of the channel is always accepted.
+    /// An empty or whitespace sender is invalid. All other senders must be registered for the service owner.
     /// </summary>
-    /// <param name="serviceOwner">The short name of the service owner.</param>
-    /// <param name="addressType">The channel the senders are used for.</param>
-    /// <param name="senders">The senders to look up.</param>
-    /// <returns>The distinct senders that are not registered for the service owner, or an empty list if all are registered.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the registered senders have not been loaded.</exception>
-    IReadOnlyList<string> GetUnregisteredSenders(string serviceOwner, SenderAddressType addressType, IEnumerable<string> senders);
+    /// <param name="serviceOwner">The short name of the service owner placing the order.</param>
+    /// <param name="emailSenders">The email sender addresses specified in the request.</param>
+    /// <param name="smsSenders">The SMS senders specified in the request.</param>
+    /// <returns>A problem naming all invalid senders of the first failing channel, or <c>null</c> if all senders are valid.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if enforcement is enabled and the registered senders have not been loaded.</exception>
+    ProblemInstance? ValidateSenders(string serviceOwner, IEnumerable<string?> emailSenders, IEnumerable<string?> smsSenders);
 }

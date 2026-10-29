@@ -20,7 +20,7 @@ public class ServiceOwnerDataLoader(IServiceOwnerService serviceOwnerService, IO
     {
         if (_config.EnforceEmailSenderOwnership || _config.EnforceSmsSenderOwnership)
         {
-            await _serviceOwnerService.LoadRegisteredSenders(cancellationToken);
+            await _serviceOwnerService.LoadSenders(cancellationToken);
         }
     }
 
