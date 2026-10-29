@@ -30,7 +30,7 @@ public class ServiceOwnerService(
         var registeredSenders = await _repository.GetRegisteredSenders(cancellationToken);
 
         _registeredSenders = registeredSenders
-            .GroupBy(sender => (sender.AddressType, sender.ServiceOwner))
+            .GroupBy(sender => (sender.AddressType, sender.ServiceOwner.ToLowerInvariant()))
             .ToDictionary(group => group.Key, group => group.Select(sender => sender.SenderAddress).ToHashSet(StringComparer.Ordinal));
     }
 
@@ -76,7 +76,7 @@ public class ServiceOwnerService(
     {
         var registered = _registeredSenders ?? throw new InvalidOperationException("The registered senders have not been loaded.");
 
-        registered.TryGetValue((addressType, serviceOwner), out var ownerSenders);
+        registered.TryGetValue((addressType, serviceOwner.ToLowerInvariant()), out var ownerSenders);
 
         return [.. senders.Where(s => ownerSenders == null || !ownerSenders.Contains(s))];
     }
@@ -85,7 +85,7 @@ public class ServiceOwnerService(
     {
         string senders = string.Join(", ", invalidSenders.Select(s => $"'{s}'"));
 
-        _logger.LogWarning("Rejected {SenderKind} not registered for service owner {ServiceOwner}: {Senders}", senderKind, serviceOwner, senders);
+        _logger.LogWarning("Rejected {Count} {SenderKind} not registered for service owner {ServiceOwner}", invalidSenders.Count, senderKind, serviceOwner);
 
         return ProblemInstance.Create(descriptor, $"The following {senderKind} are not registered for this service owner: {senders}.");
     }

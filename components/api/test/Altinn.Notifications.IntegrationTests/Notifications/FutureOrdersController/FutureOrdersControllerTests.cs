@@ -6,14 +6,19 @@ using System.Text.Json.Serialization;
 
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
+using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using FluentValidation;
@@ -21,8 +26,12 @@ using FluentValidation.Results;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 using Moq;
+
+using Npgsql;
 
 using Xunit;
 
@@ -886,6 +895,74 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
+    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsBadRequestAndDoesNotPersistOrder()
+    {
+        // Arrange
+        string unregisteredSender = $"{Guid.NewGuid():N}@test.no";
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        var orderRequestService = await CreateOrderRequestService(orderRepositoryMock.Object);
+
+        HttpClient client = GetTestClient(orderRequestService: orderRequestService);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        HttpResponseMessage response = await SendPostRequest(client, CreateFutureEmailOrderChainRequest(unregisteredSender));
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        ProblemDetails? problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(problem);
+        Assert.Contains(unregisteredSender, problem.Detail);
+        Assert.Contains("NOT-00005", content);
+
+        orderRepositoryMock.Verify(
+            r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Post_SenderRegisteredForServiceOwner_ReturnsCreated()
+    {
+        // Arrange
+        string registeredSender = $"{Guid.NewGuid():N}@test.no";
+        await PostgreUtil.InsertServiceOwnerSender("ttd", "Email", registeredSender);
+
+        try
+        {
+            var orderRepositoryMock = new Mock<IOrderRepository>();
+            orderRepositoryMock
+                .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new OrderChainCreateResult
+                {
+                    IsNewlyCreated = true,
+                    OrderChainId = Guid.NewGuid(),
+                    ShipmentId = Guid.NewGuid()
+                });
+
+            var orderRequestService = await CreateOrderRequestService(orderRepositoryMock.Object);
+
+            HttpClient client = GetTestClient(orderRequestService: orderRequestService);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+            // Act
+            HttpResponseMessage response = await SendPostRequest(client, CreateFutureEmailOrderChainRequest(registeredSender));
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            orderRepositoryMock.Verify(
+                r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+        finally
+        {
+            await PostgreUtil.RunSql(
+                "DELETE FROM notifications.serviceowner WHERE serviceowner = 'ttd' AND senderaddress = @sender",
+                new NpgsqlParameter("@sender", registeredSender));
+        }
+    }
+
+    [Fact]
     public async Task Post_OperationCanceledDuringRegistration_Returns499Status()
     {
         // Arrange
@@ -1030,7 +1107,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     /// Creates a valid notification order chain request for testing.
     /// </summary>
     /// <returns>A properly configured <see cref="NotificationOrderChainRequestExt"/> instance.</returns>
-    private static NotificationOrderChainRequestExt CreateFutureEmailOrderChainRequest()
+    private static NotificationOrderChainRequestExt CreateFutureEmailOrderChainRequest(string senderEmailAddress = "sender@example.com")
     {
         return new NotificationOrderChainRequestExt
         {
@@ -1045,7 +1122,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                     {
                         Body = "Test body",
                         Subject = "Test subject",
-                        SenderEmailAddress = "sender@example.com",
+                        SenderEmailAddress = senderEmailAddress,
                         ContentType = EmailContentTypeExt.Plain
                     }
                 }
@@ -1161,6 +1238,31 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         validatorMock.Setup(v => v.Validate(It.IsAny<NotificationOrderChainRequestExt>()))
             .Returns(new ValidationResult());
         return validatorMock;
+    }
+
+    private static async Task<IOrderRequestService> CreateOrderRequestService(IOrderRepository orderRepository)
+    {
+        var config = Options.Create(new NotificationConfig
+        {
+            DefaultSmsSenderNumber = "Altinn",
+            EnforceEmailSenderOwnership = true,
+            DefaultEmailFromAddress = "noreply@altinn.cloud"
+        });
+
+        var serviceOwnerRepository = (ServiceOwnerRepository)ServiceUtil
+            .GetServices([typeof(IServiceOwnerRepository)])
+            .First(i => i.GetType() == typeof(ServiceOwnerRepository));
+
+        var serviceOwnerService = new ServiceOwnerService(serviceOwnerRepository, config, NullLogger<ServiceOwnerService>.Instance);
+        await serviceOwnerService.LoadSenders(TestContext.Current.CancellationToken);
+
+        var guidService = new Mock<IGuidService>();
+        guidService.Setup(g => g.NewGuid()).Returns(Guid.NewGuid);
+
+        var dateTimeService = new Mock<IDateTimeService>();
+        dateTimeService.Setup(d => d.UtcNow()).Returns(DateTime.UtcNow);
+
+        return new OrderRequestService(guidService.Object, dateTimeService.Object, orderRepository, config, Mock.Of<IContactPointService>(), serviceOwnerService);
     }
 
     /// <summary>
