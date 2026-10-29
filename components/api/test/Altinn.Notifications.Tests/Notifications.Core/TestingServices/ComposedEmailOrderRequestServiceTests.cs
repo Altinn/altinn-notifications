@@ -1,5 +1,7 @@
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Files;
@@ -131,14 +133,14 @@ public class ComposedEmailOrderRequestServiceTests
         var service = GetTestService(repoMock.Object, dateTimeMock.Object);
 
         // Act
-        var registerationResult = await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
+        var registrationResult = await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(registerationResult.Value);
-        Assert.Equal(chainId, registerationResult.Value.OrderChainId);
-        Assert.Equal(orderId, registerationResult.Value.OrderChainReceipt.ShipmentId);
-        Assert.Equal("ref-001", registerationResult.Value.OrderChainReceipt.SendersReference);
-        Assert.Null(registerationResult.Value.OrderChainReceipt.Reminders);
+        Assert.NotNull(registrationResult.Value);
+        Assert.Equal(chainId, registrationResult.Value.OrderChainId);
+        Assert.Equal(orderId, registrationResult.Value.OrderChainReceipt.ShipmentId);
+        Assert.Equal("ref-001", registrationResult.Value.OrderChainReceipt.SendersReference);
+        Assert.Null(registrationResult.Value.OrderChainReceipt.Reminders);
 
         repoMock.VerifyAll();
         dateTimeMock.Verify(d => d.UtcNow(), Times.Once);
@@ -478,6 +480,30 @@ public class ComposedEmailOrderRequestServiceTests
         Assert.Equal(sasUrl, deserialized.EmailAttachments[0].SasUrl);
         Assert.Equal("decision.pdf", deserialized.EmailAttachments[0].Filename);
         Assert.Equal("application/pdf", deserialized.EmailAttachments[0].MimeType);
+    }
+
+    [Fact]
+    public async Task RegisterComposedEmailOrderChain_SenderNotRegistered_ReturnsProblemWithoutPersistence()
+    {
+        // Arrange
+        var problem = ProblemInstance.Create(Problems.InvalidEmailSender, "The following sender email addresses are not registered for this service owner: 'x@y.no'.");
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+        serviceOwnerServiceMock
+            .Setup(s => s.ValidateSenders("ttd", It.IsAny<IEnumerable<string?>>(), It.IsAny<IEnumerable<string?>>()))
+            .Returns(problem);
+
+        var repoMock = new Mock<IOrderRepository>(MockBehavior.Strict);
+        var service = GetTestService(repoMock.Object, serviceOwnerService: serviceOwnerServiceMock.Object);
+
+        var request = ValidComposedEmailRequest(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow.AddHours(1));
+
+        // Act
+        var result = await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsProblem);
+        Assert.Same(problem, result.Problem);
+        repoMock.VerifyNoOtherCalls();
     }
 
     private static NotificationOrderChainRequest ValidComposedEmailRequest(Guid orderId, Guid chainId, DateTime requestedSendTime, string? sendersReference = null)

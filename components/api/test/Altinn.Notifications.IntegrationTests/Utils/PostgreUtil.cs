@@ -488,6 +488,14 @@ public static class PostgreUtil
             new NpgsqlParameter("@type", addressTypeName));
     }
 
+    public static async Task DeleteServiceOwnerSender(string serviceOwner, string senderAddress)
+    {
+        await RunSql(
+            "DELETE FROM notifications.serviceowner WHERE serviceowner = @owner AND senderaddress = @address",
+            new NpgsqlParameter("@owner", serviceOwner),
+            new NpgsqlParameter("@address", senderAddress));
+    }
+
     public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
         => GetDeadDeliveryReportIdByJsonField("operationId", operationId);
 

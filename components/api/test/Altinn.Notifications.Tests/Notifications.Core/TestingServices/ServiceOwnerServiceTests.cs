@@ -26,6 +26,14 @@ public class ServiceOwnerServiceTests
     }
 
     [Fact]
+    public async Task ValidateSenders_ServiceOwnerMatchingIsCaseInsensitive()
+    {
+        var service = await CreateLoadedService(true, false);
+
+        Assert.Null(service.ValidateSenders(_owner.ToUpperInvariant(), ["ok@digdir.no"], []));
+    }
+
+    [Fact]
     public async Task ValidateSenders_WhitespaceSender_Rejected()
     {
         var service = await CreateLoadedService(true, false);

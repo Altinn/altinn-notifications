@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
@@ -18,7 +17,6 @@ using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
-using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using FluentValidation;
@@ -26,12 +24,8 @@ using FluentValidation.Results;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 using Moq;
-
-using Npgsql;
 
 using Xunit;
 
@@ -956,9 +950,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         }
         finally
         {
-            await PostgreUtil.RunSql(
-                "DELETE FROM notifications.serviceowner WHERE serviceowner = 'ttd' AND senderaddress = @sender",
-                new NpgsqlParameter("@sender", registeredSender));
+            await PostgreUtil.DeleteServiceOwnerSender("ttd", registeredSender);
         }
     }
 
@@ -1242,25 +1234,11 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
     private static async Task<IOrderRequestService> CreateOrderRequestService(IOrderRepository orderRepository)
     {
-        var config = Options.Create(new NotificationConfig
-        {
-            DefaultSmsSenderNumber = "Altinn",
-            EnforceEmailSenderOwnership = true,
-            DefaultEmailFromAddress = "noreply@altinn.cloud"
-        });
+        var config = SenderOwnershipTestUtil.CreateConfig(enforceEmail: true);
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(config);
 
-        var serviceOwnerRepository = (ServiceOwnerRepository)ServiceUtil
-            .GetServices([typeof(IServiceOwnerRepository)])
-            .First(i => i.GetType() == typeof(ServiceOwnerRepository));
-
-        var serviceOwnerService = new ServiceOwnerService(serviceOwnerRepository, config, NullLogger<ServiceOwnerService>.Instance);
-        await serviceOwnerService.LoadSenders(TestContext.Current.CancellationToken);
-
-        var guidService = new Mock<IGuidService>();
-        guidService.Setup(g => g.NewGuid()).Returns(Guid.NewGuid);
-
-        var dateTimeService = new Mock<IDateTimeService>();
-        dateTimeService.Setup(d => d.UtcNow()).Returns(DateTime.UtcNow);
+        var guidService = SenderOwnershipTestUtil.CreateGuidService();
+        var dateTimeService = SenderOwnershipTestUtil.CreateDateTimeService();
 
         return new OrderRequestService(guidService.Object, dateTimeService.Object, orderRepository, config, Mock.Of<IContactPointService>(), serviceOwnerService);
     }

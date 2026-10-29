@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Controllers;
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
@@ -19,12 +18,8 @@ using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 using Moq;
-
-using Npgsql;
 
 using Xunit;
 
@@ -316,9 +311,7 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
         }
         finally
         {
-            await PostgreUtil.RunSql(
-                "DELETE FROM notifications.serviceowner WHERE serviceowner = 'ttd' AND senderaddress = @sender",
-                new NpgsqlParameter("@sender", registeredSender));
+            await PostgreUtil.DeleteServiceOwnerSender("ttd", registeredSender);
         }
     }
 
@@ -406,19 +399,8 @@ public class ComposedEmailOrdersControllerTests : IClassFixture<IntegrationTestW
 
     private static async Task<IComposedEmailOrderRequestService> CreateTestService(IOrderRepository orderRepository)
     {
-        var config = Options.Create(new NotificationConfig
-        {
-            DefaultSmsSenderNumber = "Altinn",
-            EnforceEmailSenderOwnership = true,
-            DefaultEmailFromAddress = "noreply@altinn.cloud"
-        });
-
-        var serviceOwnerRepository = (ServiceOwnerRepository)ServiceUtil
-            .GetServices([typeof(IServiceOwnerRepository)])
-            .First(i => i.GetType() == typeof(ServiceOwnerRepository));
-
-        var serviceOwnerService = new ServiceOwnerService(serviceOwnerRepository, config, NullLogger<ServiceOwnerService>.Instance);
-        await serviceOwnerService.LoadSenders(TestContext.Current.CancellationToken);
+        var config = SenderOwnershipTestUtil.CreateConfig(enforceEmail: true);
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(config);
 
         return new ComposedEmailOrderRequestService(Mock.Of<IDateTimeService>(), orderRepository, serviceOwnerService, config);
     }

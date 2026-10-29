@@ -1,5 +1,7 @@
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.InstantEmailService;
@@ -929,6 +931,132 @@ public class InstantOrderRequestServiceTests
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task PersistInstantSmsNotificationAsync_InstantNotificationOrder_SenderNotRegistered_ReturnsProblemWithoutPersistenceOrSending()
+    {
+        // Arrange
+        var order = new InstantNotificationOrder
+        {
+            OrderId = Guid.NewGuid(),
+            OrderChainId = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new Creator("ttd"),
+            IdempotencyId = "sender-rejected-id",
+            InstantNotificationRecipient = new InstantNotificationRecipient
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                {
+                    TimeToLiveInSeconds = 3600,
+                    PhoneNumber = "+4799999999",
+                    ShortMessageContent = new ShortMessageContent { Sender = "Evil", Message = "Test message" }
+                }
+            }
+        };
+
+        var (service, repository, smsClient, _, problem) = CreateRejectingService(Problems.InvalidSmsSender, "SMS senders", "Evil");
+
+        // Act
+        var result = await service.PersistInstantSmsNotificationAsync(order, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsProblem);
+        Assert.Same(problem, result.Problem);
+        repository.VerifyNoOtherCalls();
+        smsClient.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task PersistInstantSmsNotificationAsync_InstantSmsNotificationOrder_SenderNotRegistered_ReturnsProblemWithoutPersistenceOrSending()
+    {
+        // Arrange
+        var order = new InstantSmsNotificationOrder
+        {
+            OrderId = Guid.NewGuid(),
+            OrderChainId = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new Creator("ttd"),
+            IdempotencyId = "sender-rejected-id",
+            ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+            {
+                TimeToLiveInSeconds = 3600,
+                PhoneNumber = "+4799999999",
+                ShortMessageContent = new ShortMessageContent { Sender = "Evil", Message = "Test message" }
+            }
+        };
+
+        var (service, repository, smsClient, _, problem) = CreateRejectingService(Problems.InvalidSmsSender, "SMS senders", "Evil");
+
+        // Act
+        var result = await service.PersistInstantSmsNotificationAsync(order, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsProblem);
+        Assert.Same(problem, result.Problem);
+        repository.VerifyNoOtherCalls();
+        smsClient.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task PersistInstantEmailNotificationAsync_SenderNotRegistered_ReturnsProblemWithoutPersistenceOrSending()
+    {
+        // Arrange
+        var order = new InstantEmailNotificationOrder
+        {
+            OrderId = Guid.NewGuid(),
+            OrderChainId = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new Creator("ttd"),
+            IdempotencyId = "sender-rejected-id",
+            InstantEmailDetails = new InstantEmailDetails
+            {
+                EmailAddress = "recipient@example.com",
+                EmailContent = new InstantEmailContent
+                {
+                    FromAddress = "x@y.no",
+                    Subject = "Test Subject",
+                    Body = "Test email body content",
+                    ContentType = EmailContentType.Plain
+                }
+            }
+        };
+
+        var (service, repository, _, emailClient, problem) = CreateRejectingService(Problems.InvalidEmailSender, "sender email addresses", "x@y.no");
+
+        // Act
+        var result = await service.PersistInstantEmailNotificationAsync(order, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsProblem);
+        Assert.Same(problem, result.Problem);
+        repository.VerifyNoOtherCalls();
+        emailClient.VerifyNoOtherCalls();
+    }
+
+    private static (InstantOrderRequestService Service, Mock<IOrderRepository> Repository, Mock<IShortMessageServiceClient> SmsClient, Mock<IInstantEmailServiceClient> EmailClient, ProblemInstance Problem) CreateRejectingService(
+        ProblemDescriptor descriptor,
+        string senderKind,
+        string sender)
+    {
+        var problem = ProblemInstance.Create(descriptor, $"The following {senderKind} are not registered for this service owner: '{sender}'.");
+
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+        serviceOwnerServiceMock
+            .Setup(s => s.ValidateSenders("ttd", It.IsAny<IEnumerable<string?>>(), It.IsAny<IEnumerable<string?>>()))
+            .Returns(problem);
+
+        var repository = new Mock<IOrderRepository>(MockBehavior.Strict);
+        var smsClient = new Mock<IShortMessageServiceClient>(MockBehavior.Strict);
+        var emailClient = new Mock<IInstantEmailServiceClient>(MockBehavior.Strict);
+
+        var service = GetTestService(
+            orderRepository: repository.Object,
+            shortMessageServiceClient: smsClient.Object,
+            instantEmailServiceClient: emailClient.Object,
+            serviceOwnerService: serviceOwnerServiceMock.Object);
+
+        return (service, repository, smsClient, emailClient, problem);
     }
 
     private static InstantOrderRequestService GetTestService(
