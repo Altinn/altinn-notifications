@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
@@ -13,9 +14,12 @@ using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -97,16 +101,16 @@ public class InstantSmsOrderRequestServiceTests
             shortMessageServiceClient: shortMessageServiceClient.Object);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
+        var persistResult = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
 
         // Wait for the background Task.Run to complete
         await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(orderChainId, result.OrderChainId);
-        Assert.Equal(orderId, result.Notification.ShipmentId);
-        Assert.Equal(sendersReference, result.Notification.SendersReference);
+        Assert.NotNull(persistResult.Value);
+        Assert.Equal(orderChainId, persistResult.Value.OrderChainId);
+        Assert.Equal(orderId, persistResult.Value.Notification.ShipmentId);
+        Assert.Equal(sendersReference, persistResult.Value.Notification.SendersReference);
 
         guidServiceMock.Verify(e => e.NewGuid(), Times.Once);
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
@@ -265,13 +269,13 @@ public class InstantSmsOrderRequestServiceTests
             defaultSmsSender: defaultSmsSenderIdentifier);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
+        var persistResult = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken)!;
 
         // Wait for the background Task.Run to complete
         await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        Assert.NotNull(persistResult.Value);
 
         // Verify that the SMS notification template uses the default sender
         orderRepositoryMock.Verify(
@@ -363,10 +367,10 @@ public class InstantSmsOrderRequestServiceTests
             shortMessageServiceClient: shortMessageServiceClient.Object);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
+        var persistResult = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        Assert.NotNull(persistResult.Value);
 
         // Verify that message count is calculated correctly (should be > 1 for long message)
         orderRepositoryMock.Verify(
@@ -455,10 +459,10 @@ public class InstantSmsOrderRequestServiceTests
             shortMessageServiceClient: shortMessageServiceClient.Object);
 
         // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
+        var persistResult = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        Assert.NotNull(persistResult.Value);
 
         // Verify the NotificationOrder structure
         orderRepositoryMock.Verify(
@@ -488,11 +492,13 @@ public class InstantSmsOrderRequestServiceTests
         IShortMessageServiceClient? shortMessageServiceClient = null,
         IInstantEmailServiceClient? instantEmailServiceClient = null,
         string? defaultSmsSender = null,
-        string? defaultEmailFromAddress = null)
+        string? defaultEmailFromAddress = null,
+        IServiceOwnerService? serviceOwnerService = null)
     {
         guidService ??= Mock.Of<IGuidService>();
         dateTimeService ??= Mock.Of<IDateTimeService>();
         orderRepository ??= Mock.Of<IOrderRepository>();
+        serviceOwnerService ??= Mock.Of<IServiceOwnerService>();
         shortMessageServiceClient ??= Mock.Of<IShortMessageServiceClient>();
         instantEmailServiceClient ??= Mock.Of<IInstantEmailServiceClient>();
 
@@ -511,6 +517,7 @@ public class InstantSmsOrderRequestServiceTests
             configurationOptions,
             shortMessageServiceClient,
             instantEmailServiceClient,
-            NullLogger<InstantOrderRequestService>.Instance);
+            NullLogger<InstantOrderRequestService>.Instance,
+            serviceOwnerService);
     }
 }

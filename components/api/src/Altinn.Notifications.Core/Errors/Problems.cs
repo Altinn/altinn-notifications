@@ -38,4 +38,16 @@ public static class Problems
     /// </summary>
     public static ProblemDescriptor PlatformDependencyError { get; }
         = _factory.Create(4, HttpStatusCode.ServiceUnavailable, "A temporary network failure occurred");
+
+    /// <summary>
+    /// Gets a <see cref="ProblemDescriptor"/> for email sender addresses that are not registered for the service owner.
+    /// </summary>
+    public static ProblemDescriptor InvalidEmailSender { get; }
+        = _factory.Create(5, HttpStatusCode.BadRequest, "Email sender address not registered for service owner");
+
+    /// <summary>
+    /// Gets a <see cref="ProblemDescriptor"/> for SMS senders that are not registered for the service owner.
+    /// </summary>
+    public static ProblemDescriptor InvalidSmsSender { get; }
+        = _factory.Create(6, HttpStatusCode.BadRequest, "SMS sender not registered for service owner");
 }

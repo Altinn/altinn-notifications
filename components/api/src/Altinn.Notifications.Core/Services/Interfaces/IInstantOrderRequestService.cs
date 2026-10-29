@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -38,12 +39,16 @@ public interface IInstantOrderRequestService
     /// A <see cref="CancellationToken"/> to observe for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing an <see cref="InstantNotificationOrderTracking"/> instance with tracking information.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{T}"/> with an <see cref="InstantNotificationOrderTracking"/> instance with tracking information.
+    /// If the SMS sender is not registered for the ordering service owner, returns a failed <see cref="Result{T}"/> with a <see cref="ProblemInstance"/> describing the error.
     /// </returns>
+    /// <remarks>
+    /// The sender is validated only when SMS sender ownership enforcement is enabled.
+    /// </remarks>
     /// <exception cref="OperationCanceledException">
     /// Thrown if the operation is canceled via the <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<InstantNotificationOrderTracking> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default);
+    Task<Result<InstantNotificationOrderTracking>> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Registers a new instant SMS notification order.
@@ -55,12 +60,16 @@ public interface IInstantOrderRequestService
     /// A <see cref="CancellationToken"/> to observe for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing an <see cref="InstantNotificationOrderTracking"/> instance with tracking information.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{T}"/> with an <see cref="InstantNotificationOrderTracking"/> instance with tracking information.
+    /// If the SMS sender is not registered for the ordering service owner, returns a failed <see cref="Result{T}"/> with a <see cref="ProblemInstance"/> describing the error.
     /// </returns>
+    /// <remarks>
+    /// The sender is validated only when SMS sender ownership enforcement is enabled.
+    /// </remarks>
     /// <exception cref="OperationCanceledException">
     /// Thrown if the operation is canceled via the <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<InstantNotificationOrderTracking> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default);
+    Task<Result<InstantNotificationOrderTracking>> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Registers a new instant email notification order.
@@ -72,10 +81,14 @@ public interface IInstantOrderRequestService
     /// A <see cref="CancellationToken"/> to observe for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing an <see cref="InstantNotificationOrderTracking"/> instance with tracking information.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{T}"/> with an <see cref="InstantNotificationOrderTracking"/> instance with tracking information.
+    /// If the email sender is not registered for the ordering service owner, returns a failed <see cref="Result{T}"/> with a <see cref="ProblemInstance"/> describing the error.
     /// </returns>
+    /// <remarks>
+    /// The sender is validated only when email sender ownership enforcement is enabled.
+    /// </remarks>
     /// <exception cref="OperationCanceledException">
     /// Thrown if the operation is canceled via the <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<InstantNotificationOrderTracking> PersistInstantEmailNotificationAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, CancellationToken cancellationToken = default);
+    Task<Result<InstantNotificationOrderTracking>> PersistInstantEmailNotificationAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, CancellationToken cancellationToken = default);
 }

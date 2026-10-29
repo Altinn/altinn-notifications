@@ -1,14 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
-using Altinn.Notifications.Core.Models.Files;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -27,6 +22,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class OrderRequestServiceTests
 {
+    private static readonly string[] _expectedEmailSenders = ["dontreply@skatteetaten.no"];
+    private static readonly string[] _expectedSmsSenders = ["Skatteetaten"];
+    private static readonly string[] _defaultEmailSenders = ["noreply@altinn.no"];
+
     [Fact]
     public async Task RegisterNotificationOrder_ForEmail_ExpectedInputToRepository()
     {
@@ -65,13 +64,24 @@ public class OrderRequestServiceTests
             .Callback<NotificationOrder>(o => Assert.Equivalent(expectedRepoInput, o))
             .ReturnsAsync((NotificationOrder order) => order);
 
-        var service = GetTestService(repoMock.Object, null, id, createdTime);
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
 
-        // Act                    
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var service = GetTestService(repoMock.Object, null, id, createdTime, serviceOwnerServiceMock.Object);
+
+        // Act
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
         // Assert
-        Assert.Equal(expectedRepoInput.Id, actual.OrderId);
+        Assert.NotNull(registrationResult.Value);
+        Assert.Equal(expectedRepoInput.Id, registrationResult.Value.OrderId);
+
+        serviceOwnerServiceMock.Verify(
+            s => s.ValidateSenders(
+                "ttd",
+                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(_expectedEmailSenders)),
+                It.Is<IEnumerable<string?>>(e => !e.Any())),
+            Times.Once);
+
         repoMock.VerifyAll();
     }
 
@@ -116,10 +126,12 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, null, id, createdTime);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
-        // Assert        
-        Assert.Equal(expectedRepoInput.Id, actual.OrderId);
+        // Assert
+        Assert.NotNull(registrationResult.Value);
+        Assert.Equal(expectedRepoInput.Id, registrationResult.Value.OrderId);
+
         repoMock.VerifyAll();
     }
 
@@ -161,13 +173,24 @@ public class OrderRequestServiceTests
             .Callback<NotificationOrder>(o => Assert.Equivalent(expectedRepoInput, o))
             .ReturnsAsync((NotificationOrder order) => order);
 
-        var service = GetTestService(repoMock.Object, null, id, createdTime);
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+
+        var service = GetTestService(repoMock.Object, null, id, createdTime, serviceOwnerServiceMock.Object);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
-        // Assert        
-        Assert.Equal(expectedRepoInput.Id, actual.OrderId);
+        // Assert
+        Assert.NotNull(registrationResult.Value);
+        Assert.Equal(expectedRepoInput.Id, registrationResult.Value.OrderId);
+
+        serviceOwnerServiceMock.Verify(
+            s => s.ValidateSenders(
+                "ttd",
+                It.Is<IEnumerable<string?>>(e => !e.Any()),
+                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(_expectedSmsSenders))),
+            Times.Once);
+
         repoMock.VerifyAll();
     }
 
@@ -212,10 +235,12 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, null, id, createdTime);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
-        // Assert        
-        Assert.Equal(expectedRepoInput.Id, actual.OrderId);
+        // Assert
+        Assert.NotNull(registrationResult.Value);
+        Assert.Equal(expectedRepoInput.Id, registrationResult.Value.OrderId);
+
         repoMock.VerifyAll();
     }
 
@@ -246,10 +271,13 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, null, id, createdTime);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
-        // Assert        
-        Assert.Equal(RecipientLookupStatus.Failed, actual.RecipientLookup?.Status);
+        // Assert
+        Assert.NotNull(registrationResult.Value);
+        Assert.NotNull(registrationResult.Value.RecipientLookup);
+        Assert.Equal(RecipientLookupStatus.Failed, registrationResult.Value.RecipientLookup.Status);
+
         repoMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Once);
     }
 
@@ -577,20 +605,6 @@ public class OrderRequestServiceTests
             })
             .Build();
 
-        var expectedNotificationOrder = new NotificationOrder
-        {
-            Id = orderId,
-            Created = currentTime,
-            ResourceId = resourceId,
-            Creator = new Creator("ttd"),
-            Type = OrderType.Notification,
-            SendersReference = "self-identified-email-ref",
-            RequestedSendTime = currentTime.AddMinutes(10),
-            NotificationChannel = NotificationChannel.Email,
-            Recipients = [new Recipient([], externalIdentity: externalIdentity)],
-            Templates = [new EmailTemplate("noreply@altinn.no", "Test Subject", "Test Email body", EmailContentType.Plain)]
-        };
-
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock
             .Setup(r => r.Create(
@@ -621,7 +635,9 @@ public class OrderRequestServiceTests
             })
             .Returns(Task.CompletedTask);
 
-        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime, serviceOwnerServiceMock.Object);
 
         // Act
         var result = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
@@ -651,6 +667,13 @@ public class OrderRequestServiceTests
         contactPointServiceMock.Verify(
             cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>(), It.IsAny<OrderLifecycleStage>(), It.IsAny<bool>(), It.IsAny<string?>()),
             Times.Never);
+
+        serviceOwnerServiceMock.Verify(
+            s => s.ValidateSenders(
+                "ttd",
+                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(_defaultEmailSenders)),
+                It.Is<IEnumerable<string?>>(e => !e.Any())),
+            Times.Once);
 
         orderRepositoryMock.VerifyAll();
     }
@@ -1265,11 +1288,17 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
         // Assert
-        Assert.Equal(RecipientLookupStatus.PartialSuccess, actual.RecipientLookup?.Status);
-        Assert.Single(actual.RecipientLookup?.IsReserved!);
+        Assert.NotNull(registrationResult.Value);
+        Assert.NotNull(registrationResult.Value.RecipientLookup);
+
+        Assert.NotNull(registrationResult.Value.RecipientLookup.IsReserved);
+        Assert.Single(registrationResult.Value.RecipientLookup.IsReserved);
+
+        Assert.Equal(RecipientLookupStatus.PartialSuccess, registrationResult.Value.RecipientLookup.Status);
+
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
     }
@@ -1333,12 +1362,18 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
         // Assert
-        Assert.Equal(RecipientLookupStatus.Success, actual.RecipientLookup?.Status);
-        Assert.Equal(0, actual.RecipientLookup!.IsReserved?.Count);
-        Assert.Equal(0, actual.RecipientLookup!.MissingContact?.Count);
+        Assert.NotNull(registrationResult.Value);
+        Assert.NotNull(registrationResult.Value.RecipientLookup);
+        Assert.NotNull(registrationResult.Value.RecipientLookup.IsReserved);
+        Assert.NotNull(registrationResult.Value.RecipientLookup.MissingContact);
+        Assert.Equal(RecipientLookupStatus.Success, registrationResult.Value.RecipientLookup.Status);
+
+        Assert.Empty(registrationResult.Value.RecipientLookup.IsReserved);
+        Assert.Empty(registrationResult.Value.RecipientLookup.MissingContact);
+
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
     }
@@ -1372,10 +1407,13 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, null, id, createdTime);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
-        // Assert        
-        Assert.Equal(RecipientLookupStatus.Failed, actual.RecipientLookup?.Status);
+        // Assert
+        Assert.NotNull(registrationResult.Value);
+        Assert.NotNull(registrationResult.Value.RecipientLookup);
+        Assert.Equal(RecipientLookupStatus.Failed, registrationResult.Value.RecipientLookup.Status);
+
         repoMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Once);
     }
 
@@ -1442,12 +1480,20 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
         // Assert
-        Assert.Equal(RecipientLookupStatus.PartialSuccess, actual.RecipientLookup?.Status);
-        Assert.Single(actual.RecipientLookup!.IsReserved!);
-        Assert.Single(actual.RecipientLookup!.MissingContact!);
+        Assert.NotNull(registrationResult.Value);
+        Assert.NotNull(registrationResult.Value.RecipientLookup);
+
+        Assert.NotNull(registrationResult.Value.RecipientLookup.IsReserved);
+        Assert.Single(registrationResult.Value.RecipientLookup.IsReserved);
+
+        Assert.NotNull(registrationResult.Value.RecipientLookup.MissingContact);
+        Assert.Single(registrationResult.Value.RecipientLookup.MissingContact);
+
+        Assert.Equal(RecipientLookupStatus.PartialSuccess, registrationResult.Value.RecipientLookup.Status);
+
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
     }
@@ -1504,12 +1550,20 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
-        // Assert        
-        Assert.Equal(RecipientLookupStatus.Success, actual.RecipientLookup?.Status);
-        Assert.Equal(0, actual.RecipientLookup!.IsReserved?.Count);
-        Assert.Equal(0, actual.RecipientLookup!.MissingContact?.Count);
+        // Assert
+        Assert.NotNull(registrationResult.Value);
+        Assert.NotNull(registrationResult.Value.RecipientLookup);
+
+        Assert.NotNull(registrationResult.Value.RecipientLookup.IsReserved);
+        Assert.Empty(registrationResult.Value.RecipientLookup.IsReserved);
+
+        Assert.NotNull(registrationResult.Value.RecipientLookup.MissingContact);
+        Assert.Empty(registrationResult.Value.RecipientLookup.MissingContact);
+
+        Assert.Equal(RecipientLookupStatus.Success, registrationResult.Value.RecipientLookup.Status);
+
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
     }
@@ -1572,11 +1626,11 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 
         // Act
-        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
         // Assert
-        Assert.NotNull(actual);
-        Assert.Equal(id, actual.OrderId);
+        Assert.NotNull(registrationResult.Value);
+        Assert.Equal(id, registrationResult.Value.OrderId);
 
         contactPointMock.Verify(
             cp => cp.AddEmailAndSmsContactPointsAsync(
@@ -3170,27 +3224,107 @@ public class OrderRequestServiceTests
             Times.Once);
     }
 
-    private static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
+    [Fact]
+    public async Task RegisterNotificationOrder_SenderNotRegistered_ReturnsProblemWithoutLookupOrPersistence()
     {
-        if (repository == null)
+        // Arrange
+        var problem = ProblemInstance.Create(Problems.InvalidEmailSender, "The following sender email addresses are not registered for this service owner: 'x@y.no'.");
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+        serviceOwnerServiceMock
+            .Setup(s => s.ValidateSenders("ttd", It.IsAny<IEnumerable<string?>>(), It.IsAny<IEnumerable<string?>>()))
+            .Returns(problem);
+
+        var repoMock = new Mock<IOrderRepository>(MockBehavior.Strict);
+        var contactPointMock = new Mock<IContactPointService>(MockBehavior.Strict);
+
+        var service = GetTestService(repoMock.Object, contactPointMock.Object, serviceOwnerService: serviceOwnerServiceMock.Object);
+
+        NotificationOrderRequest input = new()
         {
-            var repo = new Mock<IOrderRepository>();
-            repository = repo.Object;
-        }
+            Creator = new Creator("ttd"),
+            NotificationChannel = NotificationChannel.Email,
+            RequestedSendTime = DateTime.UtcNow,
+            Templates = { new EmailTemplate { Body = "email-body", FromAddress = "x@y.no" } }
+        };
 
-        var guidMock = new Mock<IGuidService>();
-        guidMock.Setup(g => g.NewGuid())
-            .Returns(guid ?? Guid.NewGuid());
+        // Act
+        var registrationResult = await service.RegisterNotificationOrder(input);
 
-        var dateTimeMock = new Mock<IDateTimeService>();
-        dateTimeMock.Setup(g => g.UtcNow())
-            .Returns(dateTime ?? DateTime.UtcNow);
+        // Assert
+        Assert.True(registrationResult.IsProblem);
+        Assert.Same(problem, registrationResult.Problem);
+        repoMock.VerifyNoOtherCalls();
+        contactPointMock.VerifyNoOtherCalls();
+    }
 
-        if (contactPointService == null)
-        {
-            var contactService = new Mock<IContactPointService>();
-            contactPointService = contactService.Object;
-        }
+    [Fact]
+    public async Task RegisterNotificationOrderChain_SenderNotRegistered_ReturnsProblemWithoutLookupOrPersistence()
+    {
+        // Arrange
+        var problem = ProblemInstance.Create(Problems.InvalidEmailSender, "The following sender email addresses are not registered for this service owner: 'x@y.no'.");
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+        serviceOwnerServiceMock
+            .Setup(s => s.ValidateSenders("test", It.IsAny<IEnumerable<string?>>(), It.IsAny<IEnumerable<string?>>()))
+            .Returns(problem);
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetOrderChainId(Guid.NewGuid())
+            .SetCreator(new Creator("test"))
+            .SetType(OrderType.Notification)
+            .SetIdempotencyId("sender-rejected-id")
+            .SetRequestedSendTime(DateTime.UtcNow.AddDays(1))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmail = new RecipientEmail
+                {
+                    EmailAddress = "test@altinn.xyz",
+                    Settings = new EmailSendingOptions
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject",
+                        SenderEmailAddress = "x@y.no",
+                        ContentType = EmailContentType.Plain
+                    }
+                }
+            })
+            .Build();
+
+        var orderRepositoryMock = new Mock<IOrderRepository>(MockBehavior.Strict);
+        var contactPointMock = new Mock<IContactPointService>(MockBehavior.Strict);
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointMock.Object, serviceOwnerService: serviceOwnerServiceMock.Object);
+
+        // Act
+        var registrationResult = await service.RegisterNotificationOrderChain(orderChainRequest, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(registrationResult.IsProblem);
+        Assert.Same(problem, registrationResult.Problem);
+        orderRepositoryMock.VerifyNoOtherCalls();
+        contactPointMock.VerifyNoOtherCalls();
+    }
+
+    private static OrderRequestService GetTestService(
+        IOrderRepository? orderRepository = null,
+        IContactPointService? contactPointService = null,
+        Guid? guid = null,
+        DateTime? dateTime = null,
+        IServiceOwnerService? serviceOwnerService = null)
+    {
+        var guidService = new Mock<IGuidService>();
+        guidService.Setup(e => e.NewGuid())
+                   .Returns(guid ?? Guid.NewGuid());
+
+        var dateTimeService = new Mock<IDateTimeService>();
+        dateTimeService.Setup(e => e.UtcNow())
+                       .Returns(dateTime ?? DateTime.UtcNow);
+
+        orderRepository ??= new Mock<IOrderRepository>().Object;
+
+        contactPointService ??= new Mock<IContactPointService>().Object;
+
+        serviceOwnerService ??= new Mock<IServiceOwnerService>().Object;
 
         var config = Options.Create<NotificationConfig>(new()
         {
@@ -3198,6 +3332,6 @@ public class OrderRequestServiceTests
             DefaultSmsSenderNumber = "TestDefaultSmsSenderNumberNumber"
         });
 
-        return new OrderRequestService(repository, contactPointService, guidMock.Object, dateTimeMock.Object, config);
+        return new OrderRequestService(guidService.Object, dateTimeService.Object, orderRepository, config, contactPointService, serviceOwnerService);
     }
 }

@@ -1,0 +1,38 @@
+meta {
+  name: validation - unregistered sender
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{random_idempotency_id}}",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "recipient@example.com",
+        "emailSettings": {
+          "senderEmailAddress": "unregistered-sender@example.com",
+          "subject": "(TEST) Unregistered sender (Env.: {{Environment}})",
+          "body": "(TEST) This order should be rejected (Ref: {{random_idempotency_id}})"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  Verifies sender ownership enforcement. The sender "unregistered-sender@example.com" is not
+  registered for the calling service owner in notifications.serviceowner.
+
+  Expected result when EnforceEmailSenderOwnership is enabled: 400 Bad Request with error
+  code NOT-00005 naming the unregistered sender. When the flag is disabled the order is accepted.
+
+  The same applies to SMS senders and EnforceSmsSenderOwnership, which is rejected with NOT-00006.
+}

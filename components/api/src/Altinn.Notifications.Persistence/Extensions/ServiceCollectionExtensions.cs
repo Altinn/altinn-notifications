@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Health;
 using Altinn.Notifications.Persistence.Repository;
@@ -29,16 +29,17 @@ public static class ServiceCollectionExtensions
         return services
         .AddSingleton<IOrderRepository, OrderRepository>()
         .AddSingleton<IMetricsRepository, MetricsRepository>()
+        .AddSingleton<IDashboardRepository, DashboardRepository>()
+        .AddSingleton<IUnitOfWorkRepository, UnitOfWorkRepository>()
         .AddSingleton<IStatusFeedRepository, StatusFeedRepository>()
+        .AddSingleton<IServiceOwnerRepository, ServiceOwnerRepository>()
         .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
         .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
         .AddSingleton<INotificationLogRepository, NotificationLogRepository>()
         .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
+        .AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>()
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
         .AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>()
-        .AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>()
-        .AddSingleton<IDashboardRepository, DashboardRepository>()
-        .AddSingleton<IUnitOfWorkRepository, UnitOfWorkRepository>()
         .AddNpgsqlDataSource(connectionString, builder =>
             builder.EnableParameterLogging(settings.LogParameters)
                    .EnableDynamicJson()

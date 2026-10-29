@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Configuration;
+using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -72,7 +73,14 @@ public class EmailNotificationOrdersController : ControllerBase
         }
 
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
-        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        var registration = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        if (registration.IsProblem)
+        {
+            var problemDetails = registration.Problem.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
+        }
+
+        NotificationOrderRequestResponse result = registration.Value;
 
         return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
     }

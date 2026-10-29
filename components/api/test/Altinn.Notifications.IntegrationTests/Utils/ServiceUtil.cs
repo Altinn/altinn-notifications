@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+
 using Npgsql;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
@@ -236,10 +237,11 @@ public static class ServiceUtil
     private static void RegisterRepositories(IServiceCollection services)
     {
         services.AddSingleton<IOrderRepository, OrderRepository>();
-        services.AddSingleton<IUnitOfWorkRepository, UnitOfWorkRepository>();
         services.AddSingleton<IMetricsRepository, MetricsRepository>();
         services.AddSingleton<IDashboardRepository, DashboardRepository>();
+        services.AddSingleton<IUnitOfWorkRepository, UnitOfWorkRepository>();
         services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
+        services.AddSingleton<IServiceOwnerRepository, ServiceOwnerRepository>();
         services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
         services.AddSingleton<INotificationLogRepository, NotificationLogRepository>();
         services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();

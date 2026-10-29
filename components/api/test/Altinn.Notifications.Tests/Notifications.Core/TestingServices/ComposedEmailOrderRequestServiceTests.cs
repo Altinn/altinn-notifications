@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Files;
@@ -137,14 +133,14 @@ public class ComposedEmailOrderRequestServiceTests
         var service = GetTestService(repoMock.Object, dateTimeMock.Object);
 
         // Act
-        var result = await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
+        var registrationResult = await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(chainId, result.OrderChainId);
-        Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
-        Assert.Equal("ref-001", result.OrderChainReceipt.SendersReference);
-        Assert.Null(result.OrderChainReceipt.Reminders);
+        Assert.NotNull(registrationResult.Value);
+        Assert.Equal(chainId, registrationResult.Value.OrderChainId);
+        Assert.Equal(orderId, registrationResult.Value.OrderChainReceipt.ShipmentId);
+        Assert.Equal("ref-001", registrationResult.Value.OrderChainReceipt.SendersReference);
+        Assert.Null(registrationResult.Value.OrderChainReceipt.Reminders);
 
         repoMock.VerifyAll();
         dateTimeMock.Verify(d => d.UtcNow(), Times.Once);
@@ -193,7 +189,9 @@ public class ComposedEmailOrderRequestServiceTests
                 Reminders = null
             });
 
-        var service = GetTestService(repoMock.Object);
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+
+        var service = GetTestService(repoMock.Object, serviceOwnerService: serviceOwnerServiceMock.Object);
 
         // Act
         await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
@@ -202,6 +200,13 @@ public class ComposedEmailOrderRequestServiceTests
         Assert.NotNull(capturedOrder);
         var template = Assert.IsType<EmailTemplate>(capturedOrder.Templates[0]);
         Assert.Equal(customSender, template.FromAddress);
+
+        serviceOwnerServiceMock.Verify(
+            s => s.ValidateSenders(
+                "ttd",
+                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(new[] { customSender })),
+                It.Is<IEnumerable<string?>>(e => !e.Any())),
+            Times.Once);
     }
 
     [Fact]
@@ -246,7 +251,9 @@ public class ComposedEmailOrderRequestServiceTests
                 Reminders = null
             });
 
-        var service = GetTestService(repoMock.Object);
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+
+        var service = GetTestService(repoMock.Object, serviceOwnerService: serviceOwnerServiceMock.Object);
 
         // Act
         await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
@@ -255,6 +262,14 @@ public class ComposedEmailOrderRequestServiceTests
         Assert.NotNull(capturedOrder);
         var template = Assert.IsType<EmailTemplate>(capturedOrder.Templates[0]);
         Assert.Equal("noreply@altinn.no", template.FromAddress);
+
+        // An absent sender is passed on as null, and only the default is substituted afterwards.
+        serviceOwnerServiceMock.Verify(
+            s => s.ValidateSenders(
+                "ttd",
+                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(new string?[] { null })),
+                It.Is<IEnumerable<string?>>(e => !e.Any())),
+            Times.Once);
     }
 
     [Fact]
@@ -467,6 +482,30 @@ public class ComposedEmailOrderRequestServiceTests
         Assert.Equal("application/pdf", deserialized.EmailAttachments[0].MimeType);
     }
 
+    [Fact]
+    public async Task RegisterComposedEmailOrderChain_SenderNotRegistered_ReturnsProblemWithoutPersistence()
+    {
+        // Arrange
+        var problem = ProblemInstance.Create(Problems.InvalidEmailSender, "The following sender email addresses are not registered for this service owner: 'x@y.no'.");
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+        serviceOwnerServiceMock
+            .Setup(s => s.ValidateSenders("ttd", It.IsAny<IEnumerable<string?>>(), It.IsAny<IEnumerable<string?>>()))
+            .Returns(problem);
+
+        var repoMock = new Mock<IOrderRepository>(MockBehavior.Strict);
+        var service = GetTestService(repoMock.Object, serviceOwnerService: serviceOwnerServiceMock.Object);
+
+        var request = ValidComposedEmailRequest(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow.AddHours(1));
+
+        // Act
+        var result = await service.RegisterComposedEmailOrderChain(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsProblem);
+        Assert.Same(problem, result.Problem);
+        repoMock.VerifyNoOtherCalls();
+    }
+
     private static NotificationOrderChainRequest ValidComposedEmailRequest(Guid orderId, Guid chainId, DateTime requestedSendTime, string? sendersReference = null)
     {
         var recipient = new NotificationRecipient
@@ -510,10 +549,12 @@ public class ComposedEmailOrderRequestServiceTests
 
     private static ComposedEmailOrderRequestService GetTestService(
         IOrderRepository? orderRepository = null,
-        IDateTimeService? dateTimeService = null)
+        IDateTimeService? dateTimeService = null,
+        IServiceOwnerService? serviceOwnerService = null)
     {
         orderRepository ??= Mock.Of<IOrderRepository>();
         dateTimeService ??= Mock.Of<IDateTimeService>();
+        serviceOwnerService ??= Mock.Of<IServiceOwnerService>();
 
         var config = Options.Create(new NotificationConfig
         {
@@ -521,6 +562,6 @@ public class ComposedEmailOrderRequestServiceTests
             DefaultSmsSenderNumber = "Altinn"
         });
 
-        return new ComposedEmailOrderRequestService(dateTimeService, orderRepository, config);
+        return new ComposedEmailOrderRequestService(dateTimeService, orderRepository, serviceOwnerService, config);
     }
 }

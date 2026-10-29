@@ -489,6 +489,23 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
+    public static async Task InsertServiceOwnerSender(string serviceOwner, string addressTypeName, string senderAddress)
+    {
+        await RunSql(
+            "INSERT INTO notifications.serviceowner (serviceowner, addresstypeid, senderaddress) SELECT @owner, id, @address FROM notifications.senderaddresstype WHERE name = @type",
+            new NpgsqlParameter("@owner", serviceOwner),
+            new NpgsqlParameter("@address", senderAddress),
+            new NpgsqlParameter("@type", addressTypeName));
+    }
+
+    public static async Task DeleteServiceOwnerSender(string serviceOwner, string senderAddress)
+    {
+        await RunSql(
+            "DELETE FROM notifications.serviceowner WHERE serviceowner = @owner AND senderaddress = @address",
+            new NpgsqlParameter("@owner", serviceOwner),
+            new NpgsqlParameter("@address", senderAddress));
+    }
+
     public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
         => GetDeadDeliveryReportIdByJsonField("operationId", operationId);
 

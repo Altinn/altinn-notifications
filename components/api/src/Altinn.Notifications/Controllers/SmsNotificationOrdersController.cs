@@ -1,14 +1,18 @@
-﻿using Altinn.Notifications.Configuration;
+using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators.Extensions;
+
 using FluentValidation;
 using FluentValidation.Results;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
 
@@ -72,7 +76,14 @@ public class SmsNotificationOrdersController : ControllerBase
         }
 
         var orderRequest = smsNotificationOrderRequest.MapToOrderRequest(creator);
-        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        var registration = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        if (registration.IsProblem)
+        {
+            var problemDetails = registration.Problem.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
+        }
+
+        NotificationOrderRequestResponse result = registration.Value;
 
         return Accepted(result.OrderId.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
