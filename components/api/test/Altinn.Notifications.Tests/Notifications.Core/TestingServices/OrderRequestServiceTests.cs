@@ -22,6 +22,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class OrderRequestServiceTests
 {
+    private static readonly string[] _expectedEmailSenders = ["dontreply@skatteetaten.no"];
+    private static readonly string[] _expectedSmsSenders = ["Skatteetaten"];
+    private static readonly string[] _defaultEmailSenders = ["noreply@altinn.no"];
+
     [Fact]
     public async Task RegisterNotificationOrder_ForEmail_ExpectedInputToRepository()
     {
@@ -74,7 +78,7 @@ public class OrderRequestServiceTests
         serviceOwnerServiceMock.Verify(
             s => s.ValidateSenders(
                 "ttd",
-                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(new[] { "dontreply@skatteetaten.no" })),
+                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(_expectedEmailSenders)),
                 It.Is<IEnumerable<string?>>(e => !e.Any())),
             Times.Once);
 
@@ -184,7 +188,7 @@ public class OrderRequestServiceTests
             s => s.ValidateSenders(
                 "ttd",
                 It.Is<IEnumerable<string?>>(e => !e.Any()),
-                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(new[] { "Skatteetaten" }))),
+                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(_expectedSmsSenders))),
             Times.Once);
 
         repoMock.VerifyAll();
@@ -667,7 +671,7 @@ public class OrderRequestServiceTests
         serviceOwnerServiceMock.Verify(
             s => s.ValidateSenders(
                 "ttd",
-                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(new[] { "noreply@altinn.no" })),
+                It.Is<IEnumerable<string?>>(e => e.SequenceEqual(_defaultEmailSenders)),
                 It.Is<IEnumerable<string?>>(e => !e.Any())),
             Times.Once);
 

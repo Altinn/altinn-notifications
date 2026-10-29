@@ -172,7 +172,7 @@ public class InstantOrdersController : ControllerBase
             var persistResult = await persistOrder(instantOrder, cancellationToken);
             if (persistResult.IsProblem)
             {
-                var problem = persistResult.Problem!.ToProblemDetails();
+                var problem = persistResult.Problem.ToProblemDetails();
                 return StatusCode(problem.Status!.Value, problem);
             }
 

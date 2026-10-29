@@ -73,7 +73,7 @@ public class ComposedEmailOrdersController(
             var result = await _service.RegisterComposedEmailOrderChain(notificationOrderChainRequest, cancellationToken);
             if (result.IsProblem)
             {
-                var problem = result.Problem!.ToProblemDetails();
+                var problem = result.Problem.ToProblemDetails();
                 return StatusCode(problem.Status!.Value, problem);
             }
 

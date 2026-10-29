@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Email.IntegrationTestsASB.Tests;
 [Collection(nameof(IntegrationTestContainersCollection))]
 public class CheckEmailSendStatusHandlerTests(IntegrationTestEmailContainersFixture fixture)
 {
-    private IntegrationTestEmailContainersFixture _fixture = fixture;
+    private readonly IntegrationTestEmailContainersFixture _fixture = fixture;
 
     private string EmailStatusCheckQueueName => _fixture.WebHost.WolverineSettings!.EmailStatusCheckQueueName;
 

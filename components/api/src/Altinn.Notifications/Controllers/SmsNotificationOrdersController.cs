@@ -79,7 +79,7 @@ public class SmsNotificationOrdersController : ControllerBase
         var registration = await _orderRequestService.RegisterNotificationOrder(orderRequest);
         if (registration.IsProblem)
         {
-            var problemDetails = registration.Problem!.ToProblemDetails();
+            var problemDetails = registration.Problem.ToProblemDetails();
             return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
 
