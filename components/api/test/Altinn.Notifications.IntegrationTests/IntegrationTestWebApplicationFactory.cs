@@ -76,7 +76,12 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             config.AddConfiguration(configuration);
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ=="
+                ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://fake.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=ZmFrZQ==",
+
+                // The database is migrated once by PostgreSqlMigrationFixture. Yuniql keeps its
+                // configuration in a process-wide singleton, so test hosts starting in parallel
+                // must not run migrations themselves.
+                ["PostgreSQLSettings:EnableDBConnection"] = "false"
             });
 
             string? uri = configuration["GeneralSettings:BaseUri"];
