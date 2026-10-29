@@ -36,6 +36,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IValidateOptions<SmsSenderSubstitutionConfig>, SmsSenderSubstitutionConfigValidator>();
 
         services
+            .AddHostedService<ServiceOwnerDataLoader>()
             .AddHostedService<ProcessItemsBackgroundService>();
 
         services
@@ -49,9 +50,11 @@ public static class ServiceCollectionExtensions
             .AddSingleton<ICancelOrderService, CancelOrderService>()
             .AddSingleton<IContactPointService, ContactPointService>()
             .AddSingleton<IOrderRequestService, OrderRequestService>()
+            .AddSingleton<IServiceOwnerService, ServiceOwnerService>()
             .AddSingleton<INotificationLogService, NotificationLogService>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
+            .AddSingleton<ISenderValidationService, SenderValidationService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<IDeadDeliveryReportService, DeadDeliveryReportService>()
             .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
