@@ -1942,7 +1942,12 @@ returns table
 )
 language sql
 as $$
-	select o.requestedsendtime::date as day, count(*) from notifications.orders o where o.processedstatus = 'Registered' group by o.requestedsendtime::date order by day;
+	select o.requestedsendtime::date as day, count(*)
+	from notifications.orders o
+	where o.processedstatus = 'Registered'
+		and o.requestedsendtime > now() + interval '1 minute'
+	group by o.requestedsendtime::date
+	order by day;
 $$;
 
 

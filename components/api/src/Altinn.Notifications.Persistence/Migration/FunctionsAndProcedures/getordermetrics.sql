@@ -7,7 +7,6 @@ returns table
 )
 language sql
 as $$
-	-- TODO: Populate with real order backlog query.
 	select
         (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime > now() + INTERVAL '1 minute'),
         (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'),
