@@ -6,7 +6,7 @@ Runs the whole Notifications stack locally from one command, with logs, traces a
 
 * [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 * [Aspire CLI](https://aspire.dev/get-started/install-cli/)
-* [Podman](https://podman.io/) or Docker (see [Settings](#settings))
+* Docker or [Podman](https://podman.io/). The app host uses whichever is running (see [Settings](#settings))
 * A container named `notifications-db` with the database and roles from [Database Setup](../../getting-started.md#3-database-setup-postgresql), or a local PostgreSQL (see [Settings](#settings)). For example (replace `podman` with `docker` if you use Docker):
 
   ```bash
@@ -43,17 +43,16 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
-| `ContainerRuntime` | `podman` | `podman` or `docker`, used to start the containers and tail their logs |
+| `ContainerRuntime` | (none) | `docker` or `podman`, used to start the containers and tail their logs. Without it, `ASPIRE_CONTAINER_RUNTIME` is used if set, or else the first of `docker` and `podman` that is running |
 | `Postgres:UseContainer` | `true` | `false` uses a local PostgreSQL instead of starting a container |
 | `Postgres:ContainerName` | `notifications-db` | The Postgres container to start |
 | `Postgres:Port` | `5432` | Points the API at another port, e.g. to keep a separate database next to the one you use for development |
 | `ServiceBus:HealthPort` | `5300` | Host port for the emulator's health endpoint. Change it if 5300 is taken, e.g. by Altinn localtest. The services only use 5672. |
 
-For example, with Docker, a separate database on 5442 and localtest running:
+For example, a separate database on 5442 and localtest running:
 
 ```json
 {
-  "ContainerRuntime": "docker",
   "Postgres": {
     "ContainerName": "notifications-aspire-db",
     "Port": 5442
