@@ -1,6 +1,7 @@
 #:sdk Aspire.AppHost.Sdk@13.6.4
 #:property AspireUseCliBundle=true
 
+using System.ComponentModel;
 using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,8 +40,10 @@ builder.Configuration
     .AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.json"), optional: true)
     .AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.Local.json"), optional: true);
 
-// podman or docker. Both take the same start, logs and compose commands.
-var containerRuntime = builder.Configuration["ContainerRuntime"] ?? "podman";
+// docker or podman. Both take the same start, logs and compose commands.
+// Without a setting, use the runtime Aspire is set to, or else whichever of docker and podman is running.
+var containerRuntime = new[] { builder.Configuration["ContainerRuntime"], builder.Configuration["ASPIRE_CONTAINER_RUNTIME"] }
+    .FirstOrDefault(runtime => !string.IsNullOrEmpty(runtime)) ?? DetectContainerRuntime();
 
 if (builder.Configuration.GetValue("Postgres:UseContainer", true))
 {
@@ -100,12 +103,67 @@ void StartContainer(string workingDirectory, string[] runtimeArgs, Dictionary<st
         startInfo.Environment[key] = value;
     }
 
-    using var runtime = Process.Start(startInfo)!;
-    runtime.WaitForExit();
-    if (runtime.ExitCode != 0)
+    Process runtime;
+    try
     {
-        throw new InvalidOperationException($"{containerRuntime} {string.Join(' ', runtimeArgs)} failed");
+        runtime = Process.Start(startInfo)!;
     }
+    catch (Win32Exception)
+    {
+        throw new InvalidOperationException($"{containerRuntime} is not installed. Install it, or set ContainerRuntime in appsettings.Local.json.");
+    }
+
+    using (runtime)
+    {
+        runtime.WaitForExit();
+        if (runtime.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"{containerRuntime} {string.Join(' ', runtimeArgs)} failed. Check that {containerRuntime} is running, or set ContainerRuntime.");
+        }
+    }
+}
+
+// docker first, like Aspire.
+static string DetectContainerRuntime()
+{
+    foreach (var runtime in new[] { "docker", "podman" })
+    {
+        if (IsRunning(runtime))
+        {
+            return runtime;
+        }
+    }
+
+    throw new InvalidOperationException("Neither docker nor podman is running. Start one of them, or set ContainerRuntime in appsettings.Local.json.");
+}
+
+static bool IsRunning(string runtime)
+{
+    using var process = new Process
+    {
+        StartInfo = new ProcessStartInfo(runtime, ["info"]) { RedirectStandardOutput = true, RedirectStandardError = true },
+    };
+    process.OutputDataReceived += (_, _) => { };
+    process.ErrorDataReceived += (_, _) => { };
+
+    try
+    {
+        process.Start();
+    }
+    catch (Win32Exception)
+    {
+        return false;
+    }
+
+    process.BeginOutputReadLine();
+    process.BeginErrorReadLine();
+    if (!process.WaitForExit(TimeSpan.FromSeconds(15)))
+    {
+        process.Kill();
+        return false;
+    }
+
+    return process.ExitCode == 0;
 }
 
 // No launch profiles: email and sms hardcode ASPNETCORE_URLS, which collides with Aspire's.
