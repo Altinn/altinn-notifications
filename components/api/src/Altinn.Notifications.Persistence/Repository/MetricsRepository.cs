@@ -16,8 +16,8 @@ namespace Altinn.Notifications.Persistence.Repository
         private readonly NpgsqlDataSource _dataSource;
 
         private const string _getMonthlytMetric = "SELECT * FROM notifications.get_metrics_v2($1, $2);";  // month, year
-        private const string _getDailySmsMetric = "SELECT * FROM notifications.get_sms_metrics($1, $2, $3);";  // day, month, year
-        private const string _getDailyEmailMetric = "SELECT * FROM notifications.get_email_metrics($1, $2, $3);";  // day, month, year
+        private const string _getDailySmsMetric = "SELECT * FROM notifications.get_sms_metrics_v2($1, $2, $3);";  // day, month, year
+        private const string _getDailyEmailMetric = "SELECT * FROM notifications.get_email_metrics_v2($1, $2, $3);";  // day, month, year
         private const string _getEmailNotificationsMetricsSql = "SELECT anytimecount, daytimecount, composedcount FROM notifications.get_email_notifications_metrics()";
         private const string _getSmsNotificationsMetricsSql = "SELECT anytimecount, daytimecount FROM notifications.get_sms_notifications_metrics()";
         private const string _getOrderMetricsSql = "SELECT ordersnotduecount, orderspastduecount, ordersfailedcount FROM notifications.get_order_metrics()";
@@ -89,18 +89,17 @@ namespace Altinn.Notifications.Persistence.Repository
                     DailySmsMetricsRecord smsRow = new()
                     {
                         SmsId = reader.GetValue<long>("sms_id"),
-                        ShipmentId = reader.GetValue<Guid>("shipmentid").ToString(),
+                        SmsShipmentId = reader.GetValue<string>("sms_shipmentid"),
+                        OrderShipmentId = reader.GetValue<string>("order_shipmentid"),
                         SendersReference = reader.GetValue<string?>("senders_reference") ?? string.Empty,
-                        RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime").ToString("O"),
+                        RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime"),
+                        ResultTime = reader.GetValue<DateTime>("resulttime"),
                         CreatorName = reader.GetValue<string>("creatorname"),
                         ResourceId = reader.GetValue<string?>("resourceid"),
                         Result = reader.GetValue<string>("result"),
                         GatewayReference = reader.GetValue<string?>("gatewayreference") ?? string.Empty,
                         Rate = reader.GetValue<string>("rate"),
-                        MobileNumberPrefix = reader.GetValue<string>("mobilenumber_prefix"),
-                        AltinnSmsCount = reader.GetValue<int?>("altinn_sms_count") ?? 0,
-                        AltinnSmsBodyLength = reader.GetValue<int?>("altinn_sms_body_length") ?? 0,
-                        AltinnSmsCustomBodyLength = reader.GetValue<int?>("altinn_sms_custom_body_length") ?? 0
+                        MobileNumberPrefix = reader.GetValue<string>("mobilenumber_prefix")
                     };
 
                     metrics.Metrics.Add(smsRow);
@@ -133,9 +132,11 @@ namespace Altinn.Notifications.Persistence.Repository
                     DailyEmailMetricsRecord emailRow = new()
                     {
                         EmailId = reader.GetValue<long>("email_id"),
-                        ShipmentId = reader.GetValue<Guid>("shipmentid").ToString(),
+                        EmailShipmentId = reader.GetValue<string>("email_shipmentid"),
+                        OrderShipmentId = reader.GetValue<string>("order_shipmentid"),
                         SendersReference = reader.GetValue<string?>("senders_reference") ?? string.Empty,
-                        RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime").ToString("O"),
+                        RequestedSendTime = reader.GetValue<DateTime>("requestedsendtime"),
+                        ResultTime = reader.GetValue<DateTime>("resulttime"),
                         CreatorName = reader.GetValue<string>("creatorname"),
                         ResourceId = reader.GetValue<string?>("resourceid"),
                         Result = reader.GetValue<string>("result"),
