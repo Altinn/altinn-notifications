@@ -4,7 +4,7 @@
     Command:
     podman compose run k6 run /src/tests/orders-composed-email-v2.js \
     --secret-source=file=/.secrets \
-    -e altinn_env={environment: at22, at23, at24, tt02, prod} \
+    -e altinn_env={environment: at22, at23, tt02, prod} \
     -e emailRecipient={an email address to use as the notification recipient}
 
     Notes:
