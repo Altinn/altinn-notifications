@@ -261,7 +261,7 @@ To send real SMS through LinkMobility's test gateway, set the target in `appsett
 
 ### Debugging what LinkMobility gets
 
-To see exactly what `sms` sends, e.g. when special characters or line breaks come out wrong on the phone, set `LogPayloads` to `Plain`. The proxy then logs each request and response in full but for `<PW>`, once as text, once with invisible characters escaped (`\r`, `\n`, `\u0007`, `[U+00A0]` for a non-breaking space, `[U+FFFD]` where bytes were not valid in the charset) and once as hex of the bytes as they went over the wire. With `PayloadFolder` it also writes each body to a file you can attach to a LinkMobility ticket. It works in stub and proxy mode, and the payload LinkMobility gets is unchanged.
+To see exactly what `sms` sends, e.g. when special characters or line breaks come out wrong on the phone, set `LogPayloads` to `Plain`. The proxy then logs each request and response much as `curl -v` shows it, with the request and status lines and headers, and the body in full but for `<PW>`, once as text, once with invisible characters escaped (`\r`, `\n`, `\u0007`, `[U+00A0]` for a non-breaking space, `[U+FFFD]` where bytes were not valid in the charset) and once as hex of the bytes as they went over the wire. With `PayloadFolder` it also writes each body to a file you can attach to a LinkMobility ticket. It works in stub and proxy mode, and the payload LinkMobility gets is unchanged.
 
 ```json
 {

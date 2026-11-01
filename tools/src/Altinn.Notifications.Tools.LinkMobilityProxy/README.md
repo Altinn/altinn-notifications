@@ -62,10 +62,15 @@ The log line also shows the scenario, e.g. `LinkMobility stub POST / -> 200 (Und
 
 ### Plain payload logging
 
-To debug what reaches LinkMobility, e.g. special characters, control characters or line breaks that come out wrong, set `LogPayloads` to `Plain`. Each request and response is then logged with only `<PW>` masked, in three forms:
+To debug what reaches LinkMobility, e.g. special characters, control characters or line breaks that come out wrong, set `LogPayloads` to `Plain`. Each request and response is then logged much as `curl -v` shows it, with the request and status lines and the headers, and with only `<PW>` masked in the body, which is shown in three forms:
 
 ```text
-LinkMobility stub POST / -> 200 (Delivered)
+LinkMobility stub POST / -> 200 (Delivered) in 3 ms
+> POST / HTTP/1.1
+> Host: localhost:5093
+> traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
+> Content-Type: text/xml; charset=utf-8
+> Content-Length: 294
 Request: text/xml; charset=utf-8, 294 bytes, decoded as utf-8
 <?xml version="1.0" encoding="iso-8859-1"?><SESSION>
   ...
@@ -75,10 +80,15 @@ linje
   ...
 Escaped: <?xml version="1.0" encoding="iso-8859-1"?><SESSION>\r\n  <CLIENT>user</CLIENT>\r\n  <PW>***</PW>\r\n ... <TEXT>Hei\r\nlinje\r\næøå[U+00A0]x</TEXT> ...
 Hex: 3C 3F 78 6D 6C ... 48 65 69 0D 0A 6C 69 6E 6A 65 0D 0A C3 A6 C3 B8 C3 A5 C2 A0 78 3C 2F 54 45 58 54 3E ...
+< HTTP/1.1 200 OK
+< Content-Type: text/xml
 Response: text/xml, 213 bytes, decoded as utf-8
 ...
 ```
 
+* `>` lines are the request line and every header the proxy received. `<` lines are the status line with its reason phrase and the response headers the proxy has: in proxy mode those the target answered with, in stub mode those the stub sets. Headers the server adds as it writes the response, such as `Date` and `Content-Length`, are not shown. `Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie` are shown as `***`.
+* In proxy mode the headers are those the SMS service sent to the proxy. WireMock forwards the body unchanged, but the request it sends on has the target's `Host`, and its own transport headers such as `Connection`.
+* The time is from when the proxy received the request until its answer was ready, including the round trip to the target in proxy mode.
 * The text is decoded by the charset in `Content-Type`, or UTF-8 without one.
 * `Escaped` shows what cannot be seen: `\r`, `\n` and `\t`, other control characters as `\u0007`, and non-breaking and other special spaces, zero-width and other format characters, combining marks and `U+FFFD` as `[U+00A0]`. `U+FFFD` is what bytes that are not valid in the charset decode to. A backslash is `\\`.
 * `Hex` is the bytes as they went over the wire, with only the content of `<PW>` replaced by `***`, so invalid bytes and a wrong charset survive. If the password cannot be found in the bytes, e.g. in a UTF-16 body, the hex is left out rather than shown with it.

@@ -2,6 +2,8 @@ using System.Text;
 
 using Altinn.Notifications.Tools.LinkMobilityProxy;
 
+using WireMock.Types;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tools.Tests.LinkMobilityProxy;
@@ -70,8 +72,42 @@ public class PlainPayloadTests
     }
 
     [Fact]
-    public void Describe_NoBody_IsEmpty()
+    public void Describe_NoBody_SaysSo()
     {
-        Assert.Equal("Response: no content type, 0 bytes, decoded as utf-8\n\nEscaped: \nHex: ", PlainPayload.Describe("Response", [], null));
+        Assert.Equal("Response: no body", PlainPayload.Describe("Response", [], null));
+    }
+
+    [Fact]
+    public void RequestHead_ShowsRequestLineAndHeadersLikeCurl_WithSecretsMasked()
+    {
+        var headers = new Dictionary<string, WireMockList<string>>
+        {
+            ["Host"] = new("localhost:5093"),
+            ["Content-Type"] = new("text/xml; charset=utf-8"),
+            ["authorization"] = new("Basic c2VjcmV0"),
+            ["Accept"] = new("text/xml", "*/*"),
+        };
+
+        string head = PlainPayload.RequestHead("POST", "/?a=1", "1.1", headers);
+
+        Assert.Equal("> POST /?a=1 HTTP/1.1\n> Host: localhost:5093\n> Content-Type: text/xml; charset=utf-8\n> authorization: ***\n> Accept: text/xml\n> Accept: */*", head);
+    }
+
+    [Theory]
+    [InlineData(200, "1.1", "< HTTP/1.1 200 OK")]
+    [InlineData(404, "1.1", "< HTTP/1.1 404 Not Found")]
+    [InlineData("502", "HTTP/2", "< HTTP/2 502 Bad Gateway")]
+    [InlineData(599, "1.1", "< HTTP/1.1 599")]
+    public void ResponseHead_ShowsStatusLineWithReasonPhrase(object statusCode, string httpVersion, string expected)
+    {
+        Assert.Equal(expected, PlainPayload.ResponseHead(statusCode, httpVersion, null));
+    }
+
+    [Fact]
+    public void ResponseHead_ShowsHeadersWithSetCookieMasked()
+    {
+        var headers = new Dictionary<string, WireMockList<string>> { ["Content-Type"] = new("text/xml"), ["Set-Cookie"] = new("session=abc") };
+
+        Assert.Equal("< HTTP/1.1 200 OK\n< Content-Type: text/xml\n< Set-Cookie: ***", PlainPayload.ResponseHead(200, "1.1", headers));
     }
 }

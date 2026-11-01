@@ -314,14 +314,20 @@ internal sealed class LinkMobilityProxyService(
         string? requestType = Header(request.Headers, "Content-Type");
         string? responseType = Header(response.Headers, "Content-Type");
 
+        // Both are UTC, taken when WireMock received the request and when the answer to it was ready.
+        double elapsed = Math.Max(0, (response.DateTime.ToUniversalTime() - request.DateTime.ToUniversalTime()).TotalMilliseconds);
+
         logger.LogInformation(
-            "LinkMobility {Mode} {Method} {Path} -> {StatusCode} ({Scenario})\n{Request}\n{Response}{Files}",
+            "LinkMobility {Mode} {Method} {Path} -> {StatusCode} ({Scenario}) in {ElapsedMilliseconds:0} ms\n{RequestHead}\n{Request}\n{ResponseHead}\n{Response}{Files}",
             Mode,
             request.Method,
             request.Path,
             response.StatusCode,
             scenarios,
+            elapsed,
+            PlainPayload.RequestHead(request.Method, request.Path + request.RawQuery, request.HttpVersion, request.Headers),
             PlainPayload.Describe("Request", requestBody, requestType),
+            PlainPayload.ResponseHead(response.StatusCode, request.HttpVersion, response.Headers),
             PlainPayload.Describe("Response", responseBody, responseType),
             WritePayloads(request.DateTime, requestBody, requestType, responseBody, responseType));
     }

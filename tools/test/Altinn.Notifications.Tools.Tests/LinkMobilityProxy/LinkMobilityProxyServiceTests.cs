@@ -196,6 +196,28 @@ public class LinkMobilityProxyServiceTests
     }
 
     [Fact]
+    public async Task StubMode_Plain_LogsRequestAndStatusLinesAndHeadersLikeCurl()
+    {
+        await using var host = await ProxyHost.StartAsync(s => s.LogPayloads = PayloadLogMode.Plain);
+
+        using var http = new HttpClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, host.Url + "/?a=1") { Content = new ByteArrayContent(OddSendRequest("+4799123456")) };
+        request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("text/xml; charset=utf-8");
+        request.Headers.Add("traceparent", "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", "c2VjcmV0");
+        using var response = await http.SendAsync(request, TestContext.Current.CancellationToken);
+
+        var entry = await host.Logger.WaitForAsync("LinkMobility stub POST / -> 200 (Delivered) in ");
+        Assert.Contains("\n> POST /?a=1 HTTP/1.1\n", entry);
+        Assert.Contains($"\n> Host: localhost:{host.Settings.Port}\n", entry);
+        Assert.Contains("\n> Content-Type: text/xml; charset=utf-8\n", entry);
+        Assert.Contains("\n> traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01\n", entry);
+        Assert.Contains("\n> Authorization: ***\n", entry);
+        Assert.Contains("\n< HTTP/1.1 200 OK\n< Content-Type: text/xml\nResponse: ", entry);
+        Assert.DoesNotContain("c2VjcmV0", entry);
+    }
+
+    [Fact]
     public async Task StubMode_Plain_ControlCharacterXmlDoesNotAllow_IsLoggedThoughTheStubRejectsTheSend()
     {
         await using var host = await ProxyHost.StartAsync(s => s.LogPayloads = PayloadLogMode.Plain);
@@ -257,7 +279,7 @@ public class LinkMobilityProxyServiceTests
     public async Task ProxyMode_Plain_ForwardsBytesUnchangedAndLogsThem()
     {
         using var gateway = WireMockServer.Start();
-        gateway.Given(Request.Create().UsingPost()).RespondWith(Response.Create().WithStatusCode(200).WithBody("<SESSION><LOGON>OK</LOGON></SESSION>"));
+        gateway.Given(Request.Create().UsingPost()).RespondWith(Response.Create().WithStatusCode(200).WithHeader("X-Gateway", "pswin").WithBody("<SESSION><LOGON>OK</LOGON></SESSION>"));
         await using var host = await ProxyHost.StartAsync(s =>
         {
             s.Target = gateway.Url!;
@@ -273,6 +295,8 @@ public class LinkMobilityProxyServiceTests
         Assert.Contains(@"\u0007æøå[U+00A0]a[U+FFFD]", entry);
         Assert.Contains("61 FF 3C", entry);
         Assert.Contains("<SESSION><LOGON>OK</LOGON></SESSION>", entry);
+        Assert.Contains("\n< HTTP/1.1 200 OK\n", entry);
+        Assert.Contains("\n< X-Gateway: pswin\n", entry);
         Assert.DoesNotContain("secret", entry);
     }
 

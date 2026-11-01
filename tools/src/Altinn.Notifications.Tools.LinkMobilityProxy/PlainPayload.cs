@@ -1,15 +1,21 @@
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+
+using WireMock.Types;
 
 namespace Altinn.Notifications.Tools.LinkMobilityProxy;
 
 /// <summary>
-/// Describes a body for <see cref="Configuration.PayloadLogMode.Plain"/> logging: the text with only the password masked,
-/// the text with invisible characters escaped, and the hex of its bytes.
+/// Describes a request or response for <see cref="Configuration.PayloadLogMode.Plain"/> logging: the request or status line and
+/// headers as <c>curl -v</c> shows them, and the body as text with only the password masked, as text with invisible characters
+/// escaped, and as the hex of its bytes.
 /// </summary>
 internal static class PlainPayload
 {
+    private static readonly string[] _secretHeaders = ["Authorization", "Proxy-Authorization", "Cookie", "Set-Cookie"];
+
     /// <summary>
     /// The body with only the password masked, at byte level. Null when the password could not be found at byte level, e.g. in
     /// a UTF-16 body, so the bytes are not shown at all.
@@ -21,11 +27,34 @@ internal static class PlainPayload
     }
 
     /// <summary>
+    /// The request line and headers as <c>curl -v</c> shows them, e.g. <c>&gt; POST /?a=1 HTTP/1.1</c> and <c>&gt; Host: localhost:5093</c>.
+    /// </summary>
+    public static string RequestHead(string method, string pathAndQuery, string httpVersion, IEnumerable<KeyValuePair<string, WireMockList<string>>>? headers)
+    {
+        return Head($"> {method} {pathAndQuery} {HttpVersion(httpVersion)}", '>', headers);
+    }
+
+    /// <summary>
+    /// The status line and headers as <c>curl -v</c> shows them, e.g. <c>&lt; HTTP/1.1 404 Not Found</c>. Only the headers the
+    /// proxy has: the ones the server adds as it writes the response, such as <c>Date</c> and <c>Content-Length</c>, are not among them.
+    /// </summary>
+    public static string ResponseHead(object? statusCode, string httpVersion, IEnumerable<KeyValuePair<string, WireMockList<string>>>? headers)
+    {
+        string reason = int.TryParse(Convert.ToString(statusCode, CultureInfo.InvariantCulture), out int code) ? ReasonPhrase(code) : string.Empty;
+        return Head($"< {HttpVersion(httpVersion)} {statusCode} {reason}".TrimEnd(), '<', headers);
+    }
+
+    /// <summary>
     /// A block with the content type, the length, the text decoded by the content type's charset, the escaped text and the hex,
     /// all with the password masked.
     /// </summary>
     public static string Describe(string label, byte[] body, string? contentType)
     {
+        if (body.Length == 0)
+        {
+            return $"{label}: no body";
+        }
+
         var encoding = Encoding(contentType);
         var masked = MaskedBytes(body, contentType);
         string text = masked is null ? PayloadMasker.MaskPassword(encoding.GetString(body)) : encoding.GetString(masked);
@@ -106,6 +135,34 @@ internal static class PlainPayload
         }
 
         return System.Text.Encoding.UTF8;
+    }
+
+    private static string Head(string firstLine, char direction, IEnumerable<KeyValuePair<string, WireMockList<string>>>? headers)
+    {
+        var head = new StringBuilder(firstLine);
+        foreach (var (name, values) in headers ?? [])
+        {
+            foreach (string value in values)
+            {
+                head.Append('\n').Append(direction).Append(' ').Append(name).Append(": ")
+                    .Append(_secretHeaders.Contains(name, StringComparer.OrdinalIgnoreCase) ? "***" : Escape(value));
+            }
+        }
+
+        return head.ToString();
+    }
+
+    // HttpResponseMessage knows the standard reason phrase of each status code, e.g. "Not Found" for 404.
+    private static string ReasonPhrase(int statusCode)
+    {
+        using var response = new HttpResponseMessage((HttpStatusCode)statusCode);
+        return response.ReasonPhrase ?? string.Empty;
+    }
+
+    // WireMock gives the version as e.g. "1.1", curl shows "HTTP/1.1".
+    private static string HttpVersion(string version)
+    {
+        return version.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase) ? version : "HTTP/" + version;
     }
 
     private static bool IsInvisible(char c)
