@@ -97,7 +97,11 @@ public class ServiceOwnerService(
     {
         string senders = string.Join(", ", invalidSenders);
 
-        _logger.LogWarning("Rejected {SenderKind} not registered for service owner {ServiceOwner}: {Senders}", senderKind, serviceOwner, senders);
+        _logger.LogWarning(
+            "Rejected {SenderKind} not registered for service owner {ServiceOwner}. InvalidSenderCount={InvalidSenderCount}",
+            senderKind,
+            serviceOwner,
+            invalidSenders.Count);
 
         return ProblemInstance.Create(descriptor, $"The following {senderKind} are not registered for this service owner: {senders}.");
     }
