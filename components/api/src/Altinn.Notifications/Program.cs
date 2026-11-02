@@ -128,10 +128,17 @@ void ConfigureWebHostCreationLogging()
 
 void ConfigureApplicationLogging(ILoggingBuilder logging)
 {
-    logging.AddOpenTelemetry(builder =>
+    logging.AddOpenTelemetry(options =>
     {
-        builder.IncludeFormattedMessage = true;
-        builder.IncludeScopes = true;
+        options.IncludeFormattedMessage = true;
+        options.IncludeScopes = true;
+
+        // Copies each log to the current span as an event, so the Aspire dashboard lists it in the span details.
+        // Development only, since the exporters would otherwise get every log twice.
+        if (builder.Environment.IsDevelopment())
+        {
+            options.AttachLogsToActivityEvent();
+        }
     });
 }
 
