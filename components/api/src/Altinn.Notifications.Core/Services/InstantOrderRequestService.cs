@@ -1,4 +1,4 @@
-using System.Web;
+﻿using System.Web;
 
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;

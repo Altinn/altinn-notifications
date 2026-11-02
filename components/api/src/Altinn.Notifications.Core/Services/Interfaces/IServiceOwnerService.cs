@@ -17,8 +17,8 @@ public interface IServiceOwnerService
 
     /// <summary>
     /// Validates that the senders of a request are registered for the ordering service owner. Each channel is validated only if enforcement is enabled for it.
-    /// A <c>null</c> sender is treated as not specified, and the default sender of the channel is always accepted.
-    /// An empty or whitespace sender is invalid. All other senders must be registered for the service owner.
+    /// A <c>null</c>, empty or whitespace sender is treated as not specified, since the default sender of the channel is used instead, and the default sender is always accepted.
+    /// All other senders must be registered for the service owner.
     /// </summary>
     /// <param name="serviceOwner">The short name of the service owner placing the order.</param>
     /// <param name="emailSenders">The email sender addresses specified in the request.</param>

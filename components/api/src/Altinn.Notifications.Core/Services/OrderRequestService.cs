@@ -40,11 +40,10 @@ public class OrderRequestService(
     /// <inheritdoc/>
     public async Task<Result<NotificationOrderRequestResponse>> RegisterNotificationOrder(NotificationOrderRequest orderRequest)
     {
-        // The v1 templates cannot distinguish an absent sender from an empty one, so an empty sender is treated as absent.
         var senderProblem = _serviceOwnerService.ValidateSenders(
             orderRequest.Creator.ShortName,
-            orderRequest.Templates.OfType<EmailTemplate>().Select(t => string.IsNullOrEmpty(t.FromAddress) ? null : t.FromAddress),
-            orderRequest.Templates.OfType<SmsTemplate>().Select(t => string.IsNullOrEmpty(t.SenderNumber) ? null : t.SenderNumber));
+            orderRequest.Templates.OfType<EmailTemplate>().Select(t => t.FromAddress),
+            orderRequest.Templates.OfType<SmsTemplate>().Select(t => t.SenderNumber));
 
         if (senderProblem != null)
         {
@@ -190,12 +189,12 @@ public class OrderRequestService(
     /// </summary>
     private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)
     {
-        foreach (var template in templates.OfType<EmailTemplate>().Where(e => string.IsNullOrEmpty(e.FromAddress)))
+        foreach (var template in templates.OfType<EmailTemplate>().Where(e => string.IsNullOrWhiteSpace(e.FromAddress)))
         {
             template.FromAddress = _defaultEmailFromAddress;
         }
 
-        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrEmpty(e.SenderNumber)))
+        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrWhiteSpace(e.SenderNumber)))
         {
             template.SenderNumber = _defaultSmsSender;
         }

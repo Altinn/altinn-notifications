@@ -22,7 +22,7 @@ public class ServiceOwnerService(
     private readonly ILogger<ServiceOwnerService> _logger = logger;
     private readonly IServiceOwnerRepository _repository = repository;
 
-    private volatile Dictionary<(SenderAddressType Type, string Owner), HashSet<string>>? _registeredSenders;
+    private volatile Dictionary<SenderAddressType, Dictionary<string, HashSet<string>>>? _registeredSenders;
 
     /// <inheritdoc/>
     public async Task LoadSenders(CancellationToken cancellationToken = default)
@@ -30,8 +30,15 @@ public class ServiceOwnerService(
         var registeredSenders = await _repository.GetRegisteredSenders(cancellationToken);
 
         _registeredSenders = registeredSenders
-            .GroupBy(sender => (sender.AddressType, sender.ServiceOwner.ToLowerInvariant()))
-            .ToDictionary(group => group.Key, group => group.Select(sender => sender.SenderAddress).ToHashSet(StringComparer.Ordinal));
+            .GroupBy(sender => sender.AddressType)
+            .ToDictionary(
+                typeGroup => typeGroup.Key,
+                typeGroup => typeGroup
+                    .GroupBy(sender => sender.ServiceOwner, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        ownerGroup => ownerGroup.Key,
+                        ownerGroup => ownerGroup.Select(sender => sender.SenderAddress).ToHashSet(StringComparer.Ordinal),
+                        StringComparer.OrdinalIgnoreCase));
     }
 
     /// <inheritdoc/>
@@ -59,33 +66,38 @@ public class ServiceOwnerService(
             return [];
         }
 
-        List<string> specified = [.. senders.OfType<string>().Select(s => s.Trim()).Distinct(StringComparer.Ordinal)];
-
-        List<string> blank = [.. specified.Where(string.IsNullOrWhiteSpace)];
-        List<string> toLookUp = [.. specified.Where(s => !string.IsNullOrWhiteSpace(s) && !string.Equals(s, defaultSender, StringComparison.Ordinal))];
+        List<string> toLookUp = [.. senders
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s!)
+            .Distinct(StringComparer.Ordinal)
+            .Where(s => !string.Equals(s, defaultSender, StringComparison.Ordinal))];
 
         if (toLookUp.Count == 0)
         {
-            return blank;
+            return [];
         }
 
-        return [.. blank, .. GetUnregisteredSenders(serviceOwner, addressType, toLookUp)];
+        return GetUnregisteredSenders(serviceOwner, addressType, toLookUp);
     }
 
     private List<string> GetUnregisteredSenders(string serviceOwner, SenderAddressType addressType, List<string> senders)
     {
         var registered = _registeredSenders ?? throw new InvalidOperationException("The registered senders have not been loaded.");
 
-        registered.TryGetValue((addressType, serviceOwner.ToLowerInvariant()), out var ownerSenders);
+        HashSet<string>? ownerSenders = null;
+        if (registered.TryGetValue(addressType, out var owners))
+        {
+            owners.TryGetValue(serviceOwner, out ownerSenders);
+        }
 
         return [.. senders.Where(s => ownerSenders == null || !ownerSenders.Contains(s))];
     }
 
     private ProblemInstance CreateProblem(ProblemDescriptor descriptor, string serviceOwner, string senderKind, List<string> invalidSenders)
     {
-        string senders = string.Join(", ", invalidSenders.Select(s => $"'{s}'"));
+        string senders = string.Join(", ", invalidSenders);
 
-        _logger.LogWarning("Rejected {Count} {SenderKind} not registered for service owner {ServiceOwner}", invalidSenders.Count, senderKind, serviceOwner);
+        _logger.LogWarning("Rejected {SenderKind} not registered for service owner {ServiceOwner}: {Senders}", senderKind, serviceOwner, senders);
 
         return ProblemInstance.Create(descriptor, $"The following {senderKind} are not registered for this service owner: {senders}.");
     }

@@ -34,11 +34,32 @@ public class ServiceOwnerServiceTests
     }
 
     [Fact]
-    public async Task ValidateSenders_WhitespaceSender_Rejected()
+    public async Task ValidateSenders_OwnerRegisteredWithDifferentCasings_SendersAreMergedCaseInsensitively()
     {
-        var service = await CreateLoadedService(true, false);
+        var repository = new Mock<IServiceOwnerRepository>();
+        repository
+            .Setup(r => r.GetRegisteredSenders(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new("Digdir", SenderAddressType.Email, "a@digdir.no"),
+                new("DIGDIR", SenderAddressType.Email, "b@digdir.no")
+            ]);
 
-        Assert.NotNull(service.ValidateSenders(_owner, [" "], []));
+        var service = CreateService(true, false, repository);
+        await service.LoadSenders(TestContext.Current.CancellationToken);
+
+        Assert.Null(service.ValidateSenders("digdir", ["a@digdir.no", "b@digdir.no"], []));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public async Task ValidateSenders_NullEmptyOrWhitespaceSender_TreatedAsNotSpecified(string? sender)
+    {
+        var service = await CreateLoadedService(true, true);
+
+        Assert.Null(service.ValidateSenders(_owner, [sender], [sender]));
     }
 
     [Fact]
@@ -57,7 +78,7 @@ public class ServiceOwnerServiceTests
         var problem = service.ValidateSenders(_owner, ["anything@x.no"], ["Evil"]);
 
         Assert.NotNull(problem);
-        Assert.Contains("'Evil'", problem.Detail);
+        Assert.Contains("Evil", problem.Detail);
     }
 
     [Fact]
@@ -101,16 +122,16 @@ public class ServiceOwnerServiceTests
         var problem = service.ValidateSenders(_owner, ["bad1@x.no", "ok@digdir.no", "bad2@x.no", "bad1@x.no"], []);
 
         Assert.NotNull(problem);
-        Assert.Contains("'bad1@x.no', 'bad2@x.no'", problem.Detail);
+        Assert.Contains("bad1@x.no, bad2@x.no", problem.Detail);
         Assert.DoesNotContain("ok@digdir.no", problem.Detail);
     }
 
     [Fact]
-    public async Task ValidateSenders_PaddedRegisteredSender_AcceptedAfterTrim()
+    public async Task ValidateSenders_PaddedRegisteredSender_Rejected()
     {
         var service = await CreateLoadedService(true, false);
 
-        Assert.Null(service.ValidateSenders(_owner, [" ok@digdir.no "], []));
+        Assert.NotNull(service.ValidateSenders(_owner, [" ok@digdir.no "], []));
     }
 
     [Fact]

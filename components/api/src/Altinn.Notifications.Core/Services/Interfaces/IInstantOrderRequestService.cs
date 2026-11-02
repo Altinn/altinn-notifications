@@ -1,4 +1,4 @@
-using Altinn.Authorization.ProblemDetails;
+﻿using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;

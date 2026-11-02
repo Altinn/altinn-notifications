@@ -14,16 +14,15 @@ public class ServiceOwnerRepository(NpgsqlDataSource dataSource) : IServiceOwner
     private readonly NpgsqlDataSource _dataSource = dataSource;
 
     private const string _getRegisteredSendersSql = @"
-        SELECT sos.serviceowner, sat.name, sos.senderaddress
-        FROM notifications.serviceowner sos
-        INNER JOIN notifications.senderaddresstype sat ON sat.id = sos.addresstypeid";
+        SELECT serviceowner, addresstypeid, senderaddress
+        FROM notifications.serviceowner";
 
     /// <summary>
-    /// Reads all rows of the notifications.serviceowner table in a single query and maps each address type name to a <see cref="SenderAddressType"/>.
+    /// Reads all rows of the notifications.serviceowner table in a single query and maps each address type id to a <see cref="SenderAddressType"/>.
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A list with one entry for each registered sender, or an empty list if none are registered.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when a row refers to an address type name that is not a known <see cref="SenderAddressType"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a row refers to an address type id that is not a known <see cref="SenderAddressType"/>.</exception>
     public async Task<IReadOnlyList<RegisteredSender>> GetRegisteredSenders(CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getRegisteredSendersSql);
@@ -32,13 +31,13 @@ public class ServiceOwnerRepository(NpgsqlDataSource dataSource) : IServiceOwner
         List<RegisteredSender> senders = [];
         while (await reader.ReadAsync(cancellationToken))
         {
-            string typeName = reader.GetString(1);
-            if (!Enum.TryParse(typeName, ignoreCase: true, out SenderAddressType addressType))
+            short typeId = reader.GetInt16(1);
+            if (!Enum.IsDefined(typeof(SenderAddressType), (int)typeId))
             {
-                throw new InvalidOperationException($"Unknown sender address type '{typeName}'.");
+                throw new InvalidOperationException($"Unknown sender address type id '{typeId}'.");
             }
 
-            senders.Add(new RegisteredSender(reader.GetString(0), addressType, reader.GetString(2)));
+            senders.Add(new RegisteredSender(reader.GetString(0), (SenderAddressType)typeId, reader.GetString(2)));
         }
 
         return senders;
