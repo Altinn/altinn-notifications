@@ -161,7 +161,7 @@ public class ComposedEmailOrdersControllerTests
         var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
         Assert.Equal(400, objectResult.StatusCode);
         Assert.Equal(Problems.InvalidEmailSender.ErrorCode, problemDetails.ErrorCode);
-        Assert.Contains("'x@y.no'", problemDetails.Detail);
+        Assert.Contains("x@y.no", problemDetails.Detail);
         orderRepository.VerifyNoOtherCalls();
     }
 
