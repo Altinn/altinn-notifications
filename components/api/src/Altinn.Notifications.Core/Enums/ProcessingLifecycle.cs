@@ -47,8 +47,8 @@ public enum ProcessingLifecycle
     /// The order was not processed because predefined conditions for sending were not satisfied.
     /// </summary>
     /// <remarks>
-    /// This occurs when an order has conditional sending requirements that weren't met,
-    /// such as when a condition endpoint returned a negative result.
+    /// Legacy value, only present on orders persisted before the send condition was moved to per-notification evaluation at send time.
+    /// New orders never get this status; see <see cref="SMS_SendConditionNotMet"/> and <see cref="Email_SendConditionNotMet"/>.
     /// </remarks>
     Order_SendConditionNotMet,
 

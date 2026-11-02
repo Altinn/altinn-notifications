@@ -987,28 +987,6 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         return isCompleted;
     }
 
-    /// <inheritdoc/>
-    public async Task SetOrderSendConditionNotMetAsync(UnitOfWork unitOfWork, NotificationOrder order, CancellationToken cancellationToken = default)
-    {
-        var connection = unitOfWork.Connection;
-        var transaction = unitOfWork.Transaction;
-
-        await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, OrderProcessingStatus.SendConditionNotMet.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
-        int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
-
-        if (rowsAffected > 0)
-        {
-            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
-        }
-        else
-        {
-            throw new InvalidOperationException(
-                $"Order {order.Id} not found when attempting to persist processing result");
-        }
-    }
-
     /// <summary>
     /// Advances the order to <see cref="OrderProcessingStatus.Completed"/> when all notifications are immediately terminal,
     /// otherwise to <see cref="OrderProcessingStatus.Processed"/>.
