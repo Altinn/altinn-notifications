@@ -23,6 +23,10 @@ public enum OrderProcessingStatus
     /// <summary>
     /// The notification order was not sent because the send condition was not met.
     /// </summary>
+    /// <remarks>
+    /// Legacy value. The send condition is now evaluated per notification at send time, so new orders never get this status.
+    /// It is kept to support reading orders persisted before that change.
+    /// </remarks>
     SendConditionNotMet,
 
     /// <summary>
