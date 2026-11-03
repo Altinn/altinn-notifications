@@ -128,8 +128,8 @@ The check runs in the same database transaction as the claim, before the notific
 
 - **Condition met (or no endpoint):** the notification is published as usual.
 - **Condition not met:** the notification gets the terminal result `SendConditionNotMet`
-  and is not published. The notification log and status feed are updated, and the order
-  is completed once all its notifications are final.
+  and is not published. The notification log is updated. When all notifications of the
+  order are final, the order is completed and its status feed entry is written.
 - **Check inconclusive (endpoint or token failure):** the transaction is rolled back, so
   the claim is released and the notification is picked up again on a later poll until it
   expires. There is currently no retry limit or backoff.
