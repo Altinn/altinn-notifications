@@ -244,6 +244,46 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotification_DaytimeSmsWhereConditionFlipsBetweenEvaluations_IsSentThenStopped()
+    {
+        var endpoint = new Uri("https://condition.example/check");
+        var first = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint };
+        var second = new Sms(Guid.NewGuid(), "Altinn", "+4799992222", "message", "ttd") { ConditionEndpoint = endpoint };
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .SetupSequence(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(first)
+            .ReturnsAsync(second);
+
+        // The condition holds at the first send and is no longer met when the next notification is sent
+        var conditionClient = new Mock<IConditionClient>();
+        conditionClient
+            .SetupSequence(c => c.CheckSendCondition(endpoint))
+            .ReturnsAsync(true)
+            .ReturnsAsync(false);
+
+        var publisher = new Mock<ISmsCommandPublisher>();
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(() => CreateUnitOfWork());
+
+        var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, conditionClient: conditionClient.Object);
+
+        await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
+        await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
+
+        conditionClient.Verify(c => c.CheckSendCondition(endpoint), Times.Exactly(2));
+        publisher.Verify(p => p.PublishAsync(first, It.IsAny<CancellationToken>()), Times.Once);
+        publisher.Verify(p => p.PublishAsync(second, It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), second.NotificationId, SmsNotificationResultType.SendConditionNotMet, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), first.NotificationId, It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task SendNotification_NoConditionEndpoint_DoesNotCheckCondition()
     {
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd");

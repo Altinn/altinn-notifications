@@ -1545,6 +1545,36 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetNewNotificationAsync_ReturnsConditionEndpointFromOrder()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        Uri conditionEndpoint = new("https://condition.example/check?id=1");
+        await PostgreUtil.RunSql($@"
+            UPDATE notifications.orders
+            SET notificationorder = jsonb_set(notificationorder::jsonb, '{{ConditionEndpoint}}', '""{conditionEndpoint}""'::jsonb)
+            WHERE alternateid = '{order.Id}';");
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act
+        Email? claimed = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            commitOnMatch: false,
+            maxAttempts: 200);
+
+        // Assert
+        Assert.NotNull(claimed);
+        Assert.Equal(conditionEndpoint, claimed.ConditionEndpoint);
+    }
+
+    [Fact]
     public async Task UpdateSendStatusAsync_WhenUnitOfWorkIsRolledBack_LeavesResultUnchanged()
     {
         // Arrange
