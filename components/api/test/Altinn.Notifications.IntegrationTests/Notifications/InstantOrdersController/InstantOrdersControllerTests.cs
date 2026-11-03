@@ -31,7 +31,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
     private const int ValidTimeToLive = 360;
     private const int MinimumTimeToLive = 60;
-    private const int MaximumTimeToLive = 17280;
+    private const int MaximumTimeToLive = 172800;
 
     private const string CreatorShortName = "ttd";
     private const string SenderIdentifier = "Altinn";
@@ -332,9 +332,9 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     }
 
     [Theory]
-    [InlineData(InvalidPhoneNumber, MinimumTimeToLive)]
-    [InlineData(ValidPhoneNumber, MaximumTimeToLive + 20)]
-    public async Task Post_WhenPhoneNumberOrTimeToLiveIsInvalid_ReturnsBadRequestWithValidationErrors(string phoneNumber, int timeToLiveInSeconds)
+    [InlineData(InvalidPhoneNumber, MinimumTimeToLive, nameof(ShortMessageDeliveryDetailsExt.PhoneNumber), nameof(ShortMessageDeliveryDetailsExt.TimeToLiveInSeconds))]
+    [InlineData(ValidPhoneNumber, MaximumTimeToLive + 20, nameof(ShortMessageDeliveryDetailsExt.TimeToLiveInSeconds), nameof(ShortMessageDeliveryDetailsExt.PhoneNumber))]
+    public async Task Post_WhenPhoneNumberOrTimeToLiveIsInvalid_ReturnsBadRequestWithValidationErrors(string phoneNumber, int timeToLiveInSeconds, string expectedErrorKey, string unexpectedErrorKey)
     {
         // Arrange
         var request = new InstantNotificationOrderRequestExt
@@ -372,7 +372,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                 failures.Add(new ValidationFailure(nameof(ShortMessageDeliveryDetailsExt.PhoneNumber), "Recipient phone number is not a valid mobile number."));
             }
 
-            if (instantRequest.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds != MaximumTimeToLive)
+            var timeToLive = instantRequest.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds;
+            if (timeToLive < MinimumTimeToLive || timeToLive > MaximumTimeToLive)
             {
                 failures.Add(new ValidationFailure(nameof(ShortMessageDeliveryDetailsExt.TimeToLiveInSeconds), "Time-to-live must be between 60 and 172800 seconds (48 hours)."));
             }
@@ -398,6 +399,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         // Assert
         Assert.NotNull(problem);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(expectedErrorKey, problem.Errors.Keys);
+        Assert.DoesNotContain(unexpectedErrorKey, problem.Errors.Keys);
 
         validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Once);
 
