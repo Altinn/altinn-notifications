@@ -25,9 +25,11 @@ public class EmailNotificationService(
     IEmailNotificationRepository emailNotificationRepository,
     IComposedEmailCommandPublisher composedEmailCommandPublisher,
     IUnitOfWorkRepository unitOfWorkRepository,
-    ILogger<EmailNotificationService> logger) : IEmailNotificationService
+    ILogger<EmailNotificationService> logger,
+    IConditionClient conditionClient) : IEmailNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
+    private readonly IConditionClient _conditionClient = conditionClient;
     private readonly IGuidService _guidService = guidService;
     private readonly ILogger<EmailNotificationService> _logger = logger;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
@@ -180,6 +182,21 @@ public class EmailNotificationService(
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            bool? isSendConditionMet = await EvaluateSendCondition(claimedNotification, operationName);
+            if (isSendConditionMet is null)
+            {
+                // Releasing the claim makes the notification eligible for a new attempt on a later poll.
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                return false;
+            }
+
+            if (isSendConditionMet == false)
+            {
+                await _emailNotificationRepository.UpdateSendStatusAsync(unitOfWork, claimedNotification.NotificationId, EmailNotificationResultType.SendConditionNotMet, cancellationToken: cancellationToken);
+                await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+                return true;
+            }
+
             await PublishClaimedNotification(unitOfWork, claimedNotification, publishNotification, operationName, cancellationToken);
 
             await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
@@ -204,6 +221,43 @@ public class EmailNotificationService(
 
             return false;
         }
+    }
+
+    /// <summary>
+    /// Evaluates the send condition of the order the notification belongs to.
+    /// </summary>
+    /// <returns><c>true</c> if met or no condition endpoint is configured, <c>false</c> if not met, <c>null</c> if the check was inconclusive.</returns>
+    private async Task<bool?> EvaluateSendCondition(Email email, string operationName)
+    {
+        if (email.ConditionEndpoint is null)
+        {
+            return true;
+        }
+
+        var result = await _conditionClient.CheckSendCondition(email.ConditionEndpoint);
+        if (result.IsSuccess)
+        {
+            if (!result.Value)
+            {
+                _logger.LogInformation(
+                    "// EmailNotificationService // {OperationName} // Condition check yielded false for notification '{NotificationId}' at endpoint '{Endpoint}'.",
+                    operationName,
+                    email.NotificationId,
+                    email.ConditionEndpoint);
+            }
+
+            return result.Value;
+        }
+
+        _logger.LogWarning(
+            "// EmailNotificationService // {OperationName} // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. The claim is released.",
+            operationName,
+            email.NotificationId,
+            email.ConditionEndpoint,
+            result.Error!.StatusCode,
+            result.Error.Message ?? "No error message provided");
+
+        return null;
     }
 
     /// <summary>

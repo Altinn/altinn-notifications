@@ -5,6 +5,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -193,6 +194,74 @@ public class SmsNotificationServiceTests
             Times.Never);
         unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
         unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotification_ConditionNotMet_SetsSendConditionNotMetAndCommitsWithoutPublishing()
+    {
+        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), true, false);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(unitOfWork, It.IsAny<Guid?>(), SmsNotificationResultType.SendConditionNotMet, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotification_ConditionMet_PublishesAndCommits()
+    {
+        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), true, true);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Once);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendNotification_ConditionInconclusive_RollsBackWithoutPublishingOrSettingStatus()
+    {
+        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), false, false);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotification_NoConditionEndpoint_DoesNotCheckCondition()
+    {
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd");
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+
+        var conditionClient = new Mock<IConditionClient>();
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(CreateUnitOfWork());
+
+        var service = GetService(repository: repo.Object, unitOfWorkRepository: unitOfWorkRepository.Object, conditionClient: conditionClient.Object);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        conditionClient.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Never);
     }
 
     [Fact]
@@ -638,6 +707,30 @@ public class SmsNotificationServiceTests
         return new UnitOfWork();
     }
 
+    private static (SmsNotificationService Service, Mock<ISmsNotificationRepository> Repo, Mock<ISmsCommandPublisher> Publisher, Mock<IUnitOfWorkRepository> UnitOfWorkRepository, UnitOfWork UnitOfWork) CreateConditionScenario(Uri endpoint, bool checkSucceeds, bool conditionMet)
+    {
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint };
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+
+        var publisher = new Mock<ISmsCommandPublisher>();
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = CreateUnitOfWork();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+
+        var conditionClient = new Mock<IConditionClient>();
+        conditionClient
+            .Setup(c => c.CheckSendCondition(endpoint))
+            .ReturnsAsync(checkSucceeds ? conditionMet : new ConditionClientError { StatusCode = 503, Message = "unavailable" });
+
+        var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, conditionClient: conditionClient.Object);
+
+        return (service, repo, publisher, unitOfWorkRepository, unitOfWork);
+    }
+
     private static SmsNotificationService GetService(
         Guid? guidOutput = null,
         DateTime? dateTimeOutput = null,
@@ -645,7 +738,8 @@ public class SmsNotificationServiceTests
         ISmsCommandPublisher? commandPublisher = null,
         IUnitOfWorkRepository? unitOfWorkRepository = null,
         ISmsSenderSubstitutionService? senderSubstitutionService = null,
-        ILogger<SmsNotificationService>? logger = null)
+        ILogger<SmsNotificationService>? logger = null,
+        IConditionClient? conditionClient = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService.Setup(g => g.NewGuid()).Returns(guidOutput ?? Guid.NewGuid());
@@ -665,6 +759,7 @@ public class SmsNotificationServiceTests
             commandPublisher,
             unitOfWorkRepository,
             logger ?? new Mock<ILogger<SmsNotificationService>>().Object,
-            senderSubstitutionService);
+            senderSubstitutionService,
+            conditionClient ?? new Mock<IConditionClient>().Object);
     }
 }

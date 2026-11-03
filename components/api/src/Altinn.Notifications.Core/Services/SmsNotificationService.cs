@@ -21,6 +21,7 @@ namespace Altinn.Notifications.Core.Services;
 public class SmsNotificationService : ISmsNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
+    private readonly IConditionClient _conditionClient;
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
@@ -39,8 +40,10 @@ public class SmsNotificationService : ISmsNotificationService
         ISmsCommandPublisher smsPublisher,
         IUnitOfWorkRepository unitOfWorkRepository,
         ILogger<SmsNotificationService> logger,
-        ISmsSenderSubstitutionService senderSubstitutionService)
+        ISmsSenderSubstitutionService senderSubstitutionService,
+        IConditionClient conditionClient)
     {
+        _conditionClient = conditionClient;
         _guidService = guidService;
         _dateTimeService = dateTimeService;
         _repository = repository;
@@ -121,6 +124,22 @@ public class SmsNotificationService : ISmsNotificationService
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+
+            bool? isSendConditionMet = await EvaluateSendCondition(newSmsNotification);
+            if (isSendConditionMet is null)
+            {
+                // Releasing the claim makes the notification eligible for a new attempt on a later poll.
+                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                return false;
+            }
+
+            if (isSendConditionMet == false)
+            {
+                await _repository.UpdateSendStatusAsync(unitOfWork, newSmsNotification.NotificationId, SmsNotificationResultType.SendConditionNotMet, cancellationToken: cancellationToken);
+                await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+                return true;
+            }
+
             await ApplySenderSubstitution(unitOfWork, newSmsNotification);
 
             await PublishClaimedNotification(unitOfWork, newSmsNotification, cancellationToken);
@@ -183,6 +202,41 @@ public class SmsNotificationService : ISmsNotificationService
         }
 
         await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+    }
+
+    /// <summary>
+    /// Evaluates the send condition of the order the notification belongs to.
+    /// </summary>
+    /// <returns><c>true</c> if met or no condition endpoint is configured, <c>false</c> if not met, <c>null</c> if the check was inconclusive.</returns>
+    private async Task<bool?> EvaluateSendCondition(Sms sms)
+    {
+        if (sms.ConditionEndpoint is null)
+        {
+            return true;
+        }
+
+        var result = await _conditionClient.CheckSendCondition(sms.ConditionEndpoint);
+        if (result.IsSuccess)
+        {
+            if (!result.Value)
+            {
+                _logger.LogInformation(
+                    "// SmsNotificationService // EvaluateSendCondition // Condition check yielded false for notification '{NotificationId}' at endpoint '{Endpoint}'.",
+                    sms.NotificationId,
+                    sms.ConditionEndpoint);
+            }
+
+            return result.Value;
+        }
+
+        _logger.LogWarning(
+            "// SmsNotificationService // EvaluateSendCondition // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. The claim is released.",
+            sms.NotificationId,
+            sms.ConditionEndpoint,
+            result.Error!.StatusCode,
+            result.Error.Message ?? "No error message provided");
+
+        return null;
     }
 
     /// <summary>
