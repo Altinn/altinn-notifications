@@ -1014,8 +1014,10 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(expected.Order().ToList(), logged);
     }
 
-    [Fact]
-    public async Task UpdateSendStatusAsync_OnClaimedRowInSameUnitOfWork_SetsResultAndCompletesOrder()
+    [Theory]
+    [InlineData(SmsNotificationResultType.Failed_ContentTooLarge)]
+    [InlineData(SmsNotificationResultType.SendConditionNotMet)]
+    public async Task UpdateSendStatusAsync_OnClaimedRowInSameUnitOfWork_SetsResultAndCompletesOrder(SmsNotificationResultType finalResult)
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime, simulateConsumers: true, simulateCronJob: true);
@@ -1028,16 +1030,17 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         // Act
         Sms? claimed = await ExecuteClaimUntilMatchInUnitOfWorkAsync(
-            (unitOfWork, cancellationToken) => ClaimAndSetContentTooLarge(repo, unitOfWork, smsNotification.Id, cancellationToken),
+            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, smsNotification.Id, finalResult, cancellationToken),
             sms => sms.NotificationId == smsNotification.Id,
             TestContext.Current.CancellationToken,
             commitOnMatch: true);
 
         // Assert
         Assert.NotNull(claimed);
-        Assert.Equal(SmsNotificationResultType.Failed_ContentTooLarge.ToString(), await SelectSmsNotificationStatus(smsNotification.Id));
+        Assert.Equal(finalResult.ToString(), await SelectSmsNotificationStatus(smsNotification.Id));
         Assert.Equal(1, await SelectOrdersCompletedCount(order));
         Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
+        Assert.Equal(1, await PostgreUtil.SelectNotificationLogEntryCount(order.Id));
     }
 
     [Fact]
@@ -1054,7 +1057,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         // Act
         Sms? claimed = await ExecuteClaimUntilMatchInUnitOfWorkAsync(
-            (unitOfWork, cancellationToken) => ClaimAndSetContentTooLarge(repo, unitOfWork, smsNotification.Id, cancellationToken),
+            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, smsNotification.Id, SmsNotificationResultType.Failed_ContentTooLarge, cancellationToken),
             sms => sms.NotificationId == smsNotification.Id,
             TestContext.Current.CancellationToken,
             commitOnMatch: false);
@@ -1141,12 +1144,12 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     // Updates the claimed row on the claiming transaction, which holds the row lock. A separate connection would block.
-    private static async Task<Sms?> ClaimAndSetContentTooLarge(SmsNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken)
+    private static async Task<Sms?> ClaimAndSetResult(SmsNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, SmsNotificationResultType result, CancellationToken cancellationToken)
     {
         Sms? claimed = await repo.GetNewNotification(unitOfWork, cancellationToken, SendingTimePolicy.Anytime);
         if (claimed?.NotificationId == notificationId)
         {
-            await repo.UpdateSendStatusAsync(unitOfWork, notificationId, SmsNotificationResultType.Failed_ContentTooLarge, cancellationToken: cancellationToken);
+            await repo.UpdateSendStatusAsync(unitOfWork, notificationId, result, cancellationToken: cancellationToken);
         }
 
         return claimed;
