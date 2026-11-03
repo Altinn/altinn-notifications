@@ -48,7 +48,7 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         var dialogId = Guid.NewGuid();
         const string transmissionId = "test-transmission-abc123";
         const string toAddress = "log-test@example.com";
-        const string operationId = "op-id-test-abc123";
+        var operationId = Guid.NewGuid().ToString();
         const string resourceId = "ttd-resource";
         const string creatorName = "ttd";
 
