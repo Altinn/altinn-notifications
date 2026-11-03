@@ -10,20 +10,11 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface IOrderRequestService
 {
     /// <summary>
-    /// Registers a new notification order.
+    /// Registers a new order
     /// </summary>
-    /// <param name="orderRequest">
-    /// The notification order request containing the recipients, templates and sender details of the order.
-    /// </param>
-    /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{T}"/> with a <see cref="NotificationOrderRequestResponse"/>
-    /// containing the generated order identifier and receipt information.
-    /// If validation fails, including when a sender is not registered for the ordering service owner, returns a failed <see cref="Result{T}"/> with a <see cref="ProblemInstance"/> describing the validation error.
-    /// </returns>
-    /// <remarks>
-    /// Sender ownership is only validated for the channels where enforcement is enabled.
-    /// </remarks>
-    Task<Result<NotificationOrderRequestResponse>> RegisterNotificationOrder(NotificationOrderRequest orderRequest);
+    /// <param name="orderRequest">The notification order request</param>
+    /// <returns>The order request response object</returns>
+    Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderRequest orderRequest);
 
     /// <summary>
     /// Registers a notification order chain with optional reminders for delayed delivery.
@@ -37,7 +28,7 @@ public interface IOrderRequestService
     /// <returns>
     /// A <see cref="Task{TResult}"/> containing a <see cref="Result{T}"/> with a <see cref="NotificationOrderChainResponse"/>
     /// containing the generated order chain identifier and receipt information for both the main notification and any associated reminders.
-    /// If validation fails, including when a sender is not registered for the ordering service owner, returns a failed <see cref="Result{T}"/> with a <see cref="ProblemInstance"/> describing the validation error.
+    /// If validation fails, returns a failed <see cref="Result{T}"/> with a <see cref="ProblemInstance"/> describing the validation error.
     /// </returns>
     /// <remarks>
     /// This method processes a chain of notifications, consisting of an initial notification and

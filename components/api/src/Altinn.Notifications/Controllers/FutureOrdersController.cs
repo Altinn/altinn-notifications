@@ -29,16 +29,19 @@ public class FutureOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
     private readonly IValidator<NotificationOrderChainRequestExt> _validator;
+    private readonly IServiceOwnerService _serviceOwnerService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
     public FutureOrdersController(
         IOrderRequestService orderRequestService,
-        IValidator<NotificationOrderChainRequestExt> validator)
+        IValidator<NotificationOrderChainRequestExt> validator,
+        IServiceOwnerService serviceOwnerService)
     {
         _validator = validator;
         _orderRequestService = orderRequestService;
+        _serviceOwnerService = serviceOwnerService;
     }
 
     /// <summary>
@@ -63,14 +66,15 @@ public class FutureOrdersController : ControllerBase
     {
         try
         {
-            var validationResult = _validator.Validate(notificationOrderRequest);
+            string? creator = HttpContext.GetOrg();
+
+            var validationResult = _validator.Validate(notificationOrderRequest, creator, _serviceOwnerService);
             if (!validationResult.IsValid)
             {
                 validationResult.AddToModelState(ModelState);
                 return ValidationProblem(ModelState);
             }
 
-            string? creator = HttpContext.GetOrg();
             if (creator == null)
             {
                 return Forbid();

@@ -21,7 +21,7 @@ public sealed class ServiceOwnerRepositoryTests : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         await PostgreUtil.RunSql(
-            "DELETE FROM notifications.serviceowner WHERE serviceowner = @owner",
+            "DELETE FROM notifications.serviceowner WHERE lower(serviceowner) = @owner",
             new NpgsqlParameter("@owner", _owner));
     }
 
@@ -41,8 +41,32 @@ public sealed class ServiceOwnerRepositoryTests : IAsyncLifetime
         var result = await sut.GetRegisteredSenders(TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Contains(result, s => s.ServiceOwner == _owner && s.AddressType == SenderAddressType.Sms && s.SenderAddress == sms);
-        Assert.Contains(result, s => s.ServiceOwner == _owner && s.AddressType == SenderAddressType.Email && s.SenderAddress == email);
+        Assert.Contains(result, s => s.ServiceOwner == _owner && s.AddressType == AddressType.Sms && s.SenderAddress == sms);
+        Assert.Contains(result, s => s.ServiceOwner == _owner && s.AddressType == AddressType.Email && s.SenderAddress == email);
+    }
+
+    [Fact]
+    public async Task InsertSender_SameSenderWithDifferentCasing_ThrowsUniqueViolation()
+    {
+        // Arrange
+        string email = $"{Guid.NewGuid():N}@test.no";
+        await PostgreUtil.InsertServiceOwnerSender(_owner, "Email", email);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<PostgresException>(() => PostgreUtil.InsertServiceOwnerSender(_owner, "Email", email.ToUpperInvariant()));
+
+        // Assert
+        Assert.Equal(PostgresErrorCodes.UniqueViolation, exception.SqlState);
+    }
+
+    [Fact]
+    public async Task InsertSender_ServiceOwnerNotLowercase_ThrowsCheckViolation()
+    {
+        // Act
+        var exception = await Assert.ThrowsAsync<PostgresException>(() => PostgreUtil.InsertServiceOwnerSender(_owner.ToUpperInvariant(), "Email", $"{Guid.NewGuid():N}@test.no"));
+
+        // Assert
+        Assert.Equal(PostgresErrorCodes.CheckViolation, exception.SqlState);
     }
 
     private static ServiceOwnerRepository CreateRepository()

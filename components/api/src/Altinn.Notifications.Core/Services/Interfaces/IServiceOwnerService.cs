@@ -1,4 +1,4 @@
-using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Enums;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -16,14 +16,15 @@ public interface IServiceOwnerService
     Task LoadSenders(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Validates that the senders of a request are registered for the ordering service owner. Each channel is validated only if enforcement is enabled for it.
-    /// A <c>null</c>, empty or whitespace sender is treated as not specified, since the default sender of the channel is used instead, and the default sender is always accepted.
-    /// All other senders must be registered for the service owner.
+    /// Determines whether a sender may be used by the ordering service owner.
+    /// The sender is allowed if enforcement is disabled for the channel, if no sender is specified (<c>null</c>, empty or whitespace,
+    /// since the default sender of the channel is used instead), if it is the default sender of the channel, or if it is registered for the service owner.
+    /// Service owners and senders are compared case-insensitively.
     /// </summary>
     /// <param name="serviceOwner">The short name of the service owner placing the order.</param>
-    /// <param name="emailSenders">The email sender addresses specified in the request.</param>
-    /// <param name="smsSenders">The SMS senders specified in the request.</param>
-    /// <returns>A problem naming all invalid senders of the first failing channel, or <c>null</c> if all senders are valid.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if enforcement is enabled and the registered senders have not been loaded.</exception>
-    ProblemInstance? ValidateSenders(string serviceOwner, IEnumerable<string?> emailSenders, IEnumerable<string?> smsSenders);
+    /// <param name="addressType">The channel the sender belongs to.</param>
+    /// <param name="sender">The sender specified in the request.</param>
+    /// <returns><c>true</c> if the sender is allowed; otherwise, <c>false</c>.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the sender needs to be looked up and the registered senders have not been loaded.</exception>
+    bool IsSenderAllowed(string serviceOwner, AddressType addressType, string? sender);
 }

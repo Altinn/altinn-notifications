@@ -4,10 +4,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Persistence;
-using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
@@ -119,7 +119,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
     public async Task Post_ValidationReturnsError_BadRequest()
     {
         var validator = new Mock<IValidator<SmsNotificationOrderRequestExt>>();
-        validator.Setup(v => v.Validate(It.IsAny<SmsNotificationOrderRequestExt>()))
+        validator.Setup(v => v.Validate(It.IsAny<IValidationContext>()))
             .Returns(new ValidationResult(new List<ValidationFailure> { new ValidationFailure("SomeProperty", "SomeError") }));
 
         HttpClient client = GetTestClient(validator.Object);
@@ -363,28 +363,28 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
     }
 
     [Fact]
-    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsBadRequestAndDoesNotPersistOrder()
+    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsValidationProblemAndDoesNotRegisterOrder()
     {
         // Arrange
         string unregisteredSender = $"U{Guid.NewGuid():N}"[..11];
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-        var orderService = await CreateTestService(orderRepositoryMock.Object);
+        var serviceMock = new Mock<IOrderRequestService>();
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(SenderOwnershipTestUtil.CreateConfig(enforceSms: true));
 
-        HttpClient client = GetTestClient(orderService: orderService);
+        HttpClient client = GetTestClient(orderService: serviceMock.Object, serviceOwnerService: serviceOwnerService, useRealValidator: true);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         // Act
         HttpResponseMessage response = await client.PostAsync(_basePath, CreateSmsOrderContent(unregisteredSender), TestContext.Current.CancellationToken);
         string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        ProblemDetails? problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+        ValidationProblemDetails? problem = JsonSerializer.Deserialize<ValidationProblemDetails>(content, _options);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.NotNull(problem);
-        Assert.Contains(unregisteredSender, problem.Detail);
-        Assert.Contains("NOT-00006", content);
+        Assert.Contains("SenderNumber", problem.Errors.Keys);
+        Assert.DoesNotContain(unregisteredSender, content);
 
-        orderRepositoryMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Never);
+        serviceMock.Verify(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()), Times.Never);
     }
 
     [Fact]
@@ -392,31 +392,25 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
     {
         // Arrange
         string registeredSender = $"R{Guid.NewGuid():N}"[..11];
-        await PostgreUtil.InsertServiceOwnerSender("ttd", "SMS", registeredSender);
 
-        try
-        {
-            var orderRepositoryMock = new Mock<IOrderRepository>();
-            orderRepositoryMock
-                .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
-                .ReturnsAsync((NotificationOrder order) => order);
+        var serviceMock = new Mock<IOrderRequestService>();
+        serviceMock
+            .Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+            .ReturnsAsync(_successRequestResponse);
 
-            var orderService = await CreateTestService(orderRepositoryMock.Object);
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(
+            SenderOwnershipTestUtil.CreateConfig(enforceSms: true),
+            new RegisteredSender("ttd", AddressType.Sms, registeredSender));
 
-            HttpClient client = GetTestClient(orderService: orderService);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+        HttpClient client = GetTestClient(orderService: serviceMock.Object, serviceOwnerService: serviceOwnerService, useRealValidator: true);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
-            // Act
-            HttpResponseMessage response = await client.PostAsync(_basePath, CreateSmsOrderContent(registeredSender), TestContext.Current.CancellationToken);
+        // Act
+        HttpResponseMessage response = await client.PostAsync(_basePath, CreateSmsOrderContent(registeredSender), TestContext.Current.CancellationToken);
 
-            // Assert
-            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-            orderRepositoryMock.Verify(r => r.Create(It.Is<NotificationOrder>(o => o.Templates.OfType<SmsTemplate>().Any(t => t.SenderNumber == registeredSender))), Times.Once);
-        }
-        finally
-        {
-            await PostgreUtil.DeleteServiceOwnerSender("ttd", registeredSender);
-        }
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        serviceMock.Verify(s => s.RegisterNotificationOrder(It.Is<NotificationOrderRequest>(o => o.Templates.OfType<SmsTemplate>().Any(t => t.SenderNumber == registeredSender))), Times.Once);
     }
 
     private static StringContent CreateSmsOrderContent(string senderNumber)
@@ -432,23 +426,12 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         return new StringContent(request.Serialize(), Encoding.UTF8, "application/json");
     }
 
-    private static async Task<IOrderRequestService> CreateTestService(IOrderRepository orderRepository)
+    private HttpClient GetTestClient(IValidator<SmsNotificationOrderRequestExt>? validator = null, IOrderRequestService? orderService = null, IServiceOwnerService? serviceOwnerService = null, bool useRealValidator = false)
     {
-        var config = SenderOwnershipTestUtil.CreateConfig(enforceSms: true);
-        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(config);
-
-        var guidService = SenderOwnershipTestUtil.CreateGuidService();
-        var dateTimeService = SenderOwnershipTestUtil.CreateDateTimeService();
-
-        return new OrderRequestService(guidService.Object, dateTimeService.Object, orderRepository, config, Mock.Of<IContactPointService>(), serviceOwnerService);
-    }
-
-    private HttpClient GetTestClient(IValidator<SmsNotificationOrderRequestExt>? validator = null, IOrderRequestService? orderService = null)
-    {
-        if (validator == null)
+        if (validator == null && !useRealValidator)
         {
             var validatorMock = new Mock<IValidator<SmsNotificationOrderRequestExt>>();
-            validatorMock.Setup(v => v.Validate(It.IsAny<SmsNotificationOrderRequestExt>()))
+            validatorMock.Setup(v => v.Validate(It.IsAny<IValidationContext>()))
                 .Returns(new ValidationResult());
             validator = validatorMock.Object;
         }
@@ -460,8 +443,17 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         }
 
         _factory.ResetInstalledMocks();
-        _factory.InstallService(validator);
         _factory.InstallService(orderService);
+
+        if (validator != null)
+        {
+            _factory.InstallService(validator);
+        }
+
+        if (serviceOwnerService != null)
+        {
+            _factory.InstallService(serviceOwnerService);
+        }
 
         return _factory.SharedClient;
     }

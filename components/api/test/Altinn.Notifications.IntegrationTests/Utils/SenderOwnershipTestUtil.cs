@@ -1,8 +1,7 @@
 using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
-using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -15,7 +14,7 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 
 /// <summary>
 /// Shared setup for integration tests that exercise sender ownership enforcement with the real
-/// <see cref="ServiceOwnerService"/> backed by the test database.
+/// <see cref="ServiceOwnerService"/> on top of a mocked repository.
 /// </summary>
 public static class SenderOwnershipTestUtil
 {
@@ -30,31 +29,16 @@ public static class SenderOwnershipTestUtil
         });
     }
 
-    public static async Task<ServiceOwnerService> CreateLoadedServiceOwnerService(IOptions<NotificationConfig> config)
+    public static async Task<ServiceOwnerService> CreateLoadedServiceOwnerService(IOptions<NotificationConfig> config, params RegisteredSender[] registeredSenders)
     {
-        var serviceOwnerRepository = (ServiceOwnerRepository)ServiceUtil
-            .GetServices([typeof(IServiceOwnerRepository)])
-            .First(i => i.GetType() == typeof(ServiceOwnerRepository));
+        var serviceOwnerRepository = new Mock<IServiceOwnerRepository>();
+        serviceOwnerRepository
+            .Setup(r => r.GetRegisteredSenders(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(registeredSenders);
 
-        var serviceOwnerService = new ServiceOwnerService(serviceOwnerRepository, config, NullLogger<ServiceOwnerService>.Instance);
+        var serviceOwnerService = new ServiceOwnerService(serviceOwnerRepository.Object, config, NullLogger<ServiceOwnerService>.Instance);
         await serviceOwnerService.LoadSenders(TestContext.Current.CancellationToken);
 
         return serviceOwnerService;
-    }
-
-    public static Mock<IGuidService> CreateGuidService()
-    {
-        var guidService = new Mock<IGuidService>();
-        guidService.Setup(g => g.NewGuid()).Returns(Guid.NewGuid);
-
-        return guidService;
-    }
-
-    public static Mock<IDateTimeService> CreateDateTimeService()
-    {
-        var dateTimeService = new Mock<IDateTimeService>();
-        dateTimeService.Setup(d => d.UtcNow()).Returns(DateTime.UtcNow);
-
-        return dateTimeService;
     }
 }

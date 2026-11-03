@@ -65,6 +65,32 @@ public class InstantSmsNotificationOrderMapperTests
     }
 
     [Fact]
+    public void MapToInstantSmsNotificationOrder_WithPaddedSender_TrimsSender()
+    {
+        // Arrange
+        var request = new InstantSmsNotificationOrderRequestExt
+        {
+            IdempotencyId = "test-idempotency-id",
+            RecipientSms = new ShortMessageDeliveryDetailsExt
+            {
+                PhoneNumber = "+4799999999",
+                TimeToLiveInSeconds = 3600,
+                ShortMessageContent = new ShortMessageContentExt
+                {
+                    Body = "Test SMS message",
+                    Sender = " Altinn "
+                }
+            }
+        };
+
+        // Act
+        var result = request.MapToInstantSmsNotificationOrder("ttd", DateTime.UtcNow);
+
+        // Assert
+        Assert.Equal("Altinn", result.ShortMessageDeliveryDetails.ShortMessageContent.Sender);
+    }
+
+    [Fact]
     public void MapToInstantSmsNotificationOrder_WithNullSender_MapsCorrectly()
     {
         // Arrange

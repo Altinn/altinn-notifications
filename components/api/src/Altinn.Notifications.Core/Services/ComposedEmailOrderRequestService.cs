@@ -1,4 +1,3 @@
-using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Address;
@@ -21,12 +20,10 @@ namespace Altinn.Notifications.Core.Services;
 public class ComposedEmailOrderRequestService(
     IDateTimeService dateTime,
     IOrderRepository repository,
-    IServiceOwnerService serviceOwnerService,
     IOptions<NotificationConfig> config) : IComposedEmailOrderRequestService
 {
     private readonly IDateTimeService _dateTime = dateTime;
     private readonly IOrderRepository _repository = repository;
-    private readonly IServiceOwnerService _serviceOwnerService = serviceOwnerService;
     private readonly string _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
 
     /// <inheritdoc/>
@@ -36,20 +33,14 @@ public class ComposedEmailOrderRequestService(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<NotificationOrderChainResponse>> RegisterComposedEmailOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
+    public async Task<NotificationOrderChainResponse> RegisterComposedEmailOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        DateTime currentTime = _dateTime.UtcNow();
+
         var composedEmail = orderRequest.Recipient.RecipientComposedEmail!;
         var composedEmailSettings = composedEmail.Settings;
-
-        var senderProblem = _serviceOwnerService.ValidateSenders(orderRequest.Creator.ShortName, [composedEmailSettings.SenderEmailAddress], []);
-        if (senderProblem != null)
-        {
-            return senderProblem;
-        }
-
-        DateTime currentTime = _dateTime.UtcNow();
 
         var fromAddress = string.IsNullOrWhiteSpace(composedEmailSettings.SenderEmailAddress)
             ? _defaultEmailFromAddress

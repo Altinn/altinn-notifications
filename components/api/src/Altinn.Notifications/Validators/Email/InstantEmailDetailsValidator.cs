@@ -28,8 +28,10 @@ internal sealed class InstantEmailDetailsValidator : AbstractValidator<InstantEm
             When(details => details.EmailSettings!.SenderEmailAddress != null, () =>
             {
                 RuleFor(details => details.EmailSettings!.SenderEmailAddress)
+                    .Cascade(CascadeMode.Stop)
                     .Must(RecipientRules.IsValidEmail!)
-                    .WithMessage("Invalid email address format.");
+                    .WithMessage("Invalid email address format.")
+                    .MustBeAllowedEmailSender();
             });
 
             RuleFor(details => details.EmailSettings!.Subject)

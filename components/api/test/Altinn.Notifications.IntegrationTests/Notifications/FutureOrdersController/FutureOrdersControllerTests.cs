@@ -6,10 +6,10 @@ using System.Text.Json.Serialization;
 
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Persistence;
-using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.IntegrationTests.Utils;
@@ -169,7 +169,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContextMock = new Mock<HttpContext>();
         httpContextMock.Setup(e => e.Items).Returns(new Dictionary<object, object?> { { "Org", null } });
 
-        var controller = new FutureOrdersController(orderRequestServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderRequestServiceMock.Object, validatorMock.Object, SetupServiceOwnerService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContextMock.Object }
         };
@@ -781,7 +781,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object, SetupServiceOwnerService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -811,7 +811,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object, SetupServiceOwnerService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -840,7 +840,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object, SetupServiceOwnerService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -870,7 +870,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
             .ReturnsAsync(Problems.MissingContactInformation);
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object, SetupServiceOwnerService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -889,29 +889,29 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsBadRequestAndDoesNotPersistOrder()
+    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsValidationProblemAndDoesNotRegisterOrder()
     {
         // Arrange
         string unregisteredSender = $"{Guid.NewGuid():N}@test.no";
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-        var orderRequestService = await CreateOrderRequestService(orderRepositoryMock.Object);
+        var orderRequestService = new Mock<IOrderRequestService>();
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(SenderOwnershipTestUtil.CreateConfig(enforceEmail: true));
 
-        HttpClient client = GetTestClient(orderRequestService: orderRequestService);
+        HttpClient client = GetTestClient(orderRequestService: orderRequestService.Object, serviceOwnerService: serviceOwnerService);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         // Act
         HttpResponseMessage response = await SendPostRequest(client, CreateFutureEmailOrderChainRequest(unregisteredSender));
         string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        ProblemDetails? problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+        ValidationProblemDetails? problem = JsonSerializer.Deserialize<ValidationProblemDetails>(content, _options);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.NotNull(problem);
-        Assert.Contains(unregisteredSender, problem.Detail);
-        Assert.Contains("NOT-00005", content);
+        Assert.Contains("Recipient.RecipientEmail.Settings.SenderEmailAddress", problem.Errors.Keys);
+        Assert.DoesNotContain(unregisteredSender, content);
 
-        orderRepositoryMock.Verify(
-            r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()),
+        orderRequestService.Verify(
+            s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -920,38 +920,27 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     {
         // Arrange
         string registeredSender = $"{Guid.NewGuid():N}@test.no";
-        await PostgreUtil.InsertServiceOwnerSender("ttd", "Email", registeredSender);
 
-        try
-        {
-            var orderRepositoryMock = new Mock<IOrderRepository>();
-            orderRepositoryMock
-                .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new OrderChainCreateResult
-                {
-                    IsNewlyCreated = true,
-                    OrderChainId = Guid.NewGuid(),
-                    ShipmentId = Guid.NewGuid()
-                });
+        var orderRequestService = new Mock<IOrderRequestService>();
+        orderRequestService
+            .Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrderChainResponse());
 
-            var orderRequestService = await CreateOrderRequestService(orderRepositoryMock.Object);
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(
+            SenderOwnershipTestUtil.CreateConfig(enforceEmail: true),
+            new RegisteredSender("ttd", AddressType.Email, registeredSender));
 
-            HttpClient client = GetTestClient(orderRequestService: orderRequestService);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+        HttpClient client = GetTestClient(orderRequestService: orderRequestService.Object, serviceOwnerService: serviceOwnerService);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
-            // Act
-            HttpResponseMessage response = await SendPostRequest(client, CreateFutureEmailOrderChainRequest(registeredSender));
+        // Act
+        HttpResponseMessage response = await SendPostRequest(client, CreateFutureEmailOrderChainRequest(registeredSender));
 
-            // Assert
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-            orderRepositoryMock.Verify(
-                r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()),
-                Times.Once);
-        }
-        finally
-        {
-            await PostgreUtil.DeleteServiceOwnerSender("ttd", registeredSender);
-        }
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        orderRequestService.Verify(
+            s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -968,7 +957,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object, SetupServiceOwnerService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -1045,7 +1034,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object, SetupServiceOwnerService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -1083,7 +1072,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
 
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object, SetupServiceOwnerService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -1227,20 +1216,18 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     private static Mock<IValidator<NotificationOrderChainRequestExt>> SetupValidator()
     {
         var validatorMock = new Mock<IValidator<NotificationOrderChainRequestExt>>();
-        validatorMock.Setup(v => v.Validate(It.IsAny<NotificationOrderChainRequestExt>()))
+        validatorMock.Setup(v => v.Validate(It.IsAny<IValidationContext>()))
             .Returns(new ValidationResult());
         return validatorMock;
     }
 
-    private static async Task<IOrderRequestService> CreateOrderRequestService(IOrderRepository orderRepository)
+    private static IServiceOwnerService SetupServiceOwnerService()
     {
-        var config = SenderOwnershipTestUtil.CreateConfig(enforceEmail: true);
-        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(config);
-
-        var guidService = SenderOwnershipTestUtil.CreateGuidService();
-        var dateTimeService = SenderOwnershipTestUtil.CreateDateTimeService();
-
-        return new OrderRequestService(guidService.Object, dateTimeService.Object, orderRepository, config, Mock.Of<IContactPointService>(), serviceOwnerService);
+        var serviceOwnerServiceMock = new Mock<IServiceOwnerService>();
+        serviceOwnerServiceMock
+            .Setup(s => s.IsSenderAllowed(It.IsAny<string>(), It.IsAny<AddressType>(), It.IsAny<string>()))
+            .Returns(true);
+        return serviceOwnerServiceMock.Object;
     }
 
     /// <summary>
@@ -1271,8 +1258,9 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     /// </summary>
     /// <param name="expectedResponse">Specific response to be returned by the mock service.</param>
     /// <param name="orderRequestService">Pre-configured order request service.</param>
+    /// <param name="serviceOwnerService">Optional service owner service overriding the default.</param>
     /// <returns>An HTTP client configured for testing.</returns>
-    private HttpClient GetTestClient(NotificationOrderChainResponse? expectedResponse = null, IOrderRequestService? orderRequestService = null)
+    private HttpClient GetTestClient(NotificationOrderChainResponse? expectedResponse = null, IOrderRequestService? orderRequestService = null, IServiceOwnerService? serviceOwnerService = null)
     {
         if (orderRequestService == null)
         {
@@ -1297,6 +1285,12 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         _factory.ResetInstalledMocks();
         _factory.InstallService(orderRequestService);
+
+        if (serviceOwnerService != null)
+        {
+            _factory.InstallService(serviceOwnerService);
+        }
+
         return _factory.SharedClient;
     }
 

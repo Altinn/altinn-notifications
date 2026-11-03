@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -30,7 +31,11 @@ public class FutureOrdersControllerTests
     {
         _orderRequestService = new Mock<IOrderRequestService>();
         var validator = new NotificationOrderChainRequestValidator();
-        _controller = new FutureOrdersController(_orderRequestService.Object, validator)
+        var serviceOwnerService = new Mock<IServiceOwnerService>();
+        serviceOwnerService
+            .Setup(s => s.IsSenderAllowed(It.IsAny<string>(), It.IsAny<AddressType>(), It.IsAny<string?>()))
+            .Returns(true);
+        _controller = new FutureOrdersController(_orderRequestService.Object, validator, serviceOwnerService.Object)
         {
             ControllerContext = new ControllerContext
             {

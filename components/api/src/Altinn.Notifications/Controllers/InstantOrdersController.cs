@@ -1,5 +1,6 @@
 ﻿using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -33,6 +34,7 @@ public class InstantOrdersController : ControllerBase
     private readonly IValidator<InstantNotificationOrderRequestExt> _validator;
     private readonly IValidator<InstantSmsNotificationOrderRequestExt> _smsValidator;
     private readonly IValidator<InstantEmailNotificationOrderRequestExt> _emailValidator;
+    private readonly IServiceOwnerService _serviceOwnerService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InstantOrdersController"/> class.
@@ -42,12 +44,14 @@ public class InstantOrdersController : ControllerBase
         IInstantOrderRequestService instantOrderRequestService,
         IValidator<InstantNotificationOrderRequestExt> validator,
         IValidator<InstantSmsNotificationOrderRequestExt> smsValidator,
-        IValidator<InstantEmailNotificationOrderRequestExt> emailValidator)
+        IValidator<InstantEmailNotificationOrderRequestExt> emailValidator,
+        IServiceOwnerService serviceOwnerService)
     {
         _validator = validator;
         _smsValidator = smsValidator;
         _emailValidator = emailValidator;
         _dateTimeService = dateTimeService;
+        _serviceOwnerService = serviceOwnerService;
         _instantOrderRequestService = instantOrderRequestService;
     }
 
@@ -140,24 +144,26 @@ public class InstantOrdersController : ControllerBase
         string idempotencyId,
         IValidator<TRequest> validator,
         Func<TRequest, string, DateTime, TOrder> mapToOrder,
-        Func<TOrder, CancellationToken, Task<Result<InstantNotificationOrderTracking>>> persistOrder,
+        Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking>> persistOrder,
         CancellationToken cancellationToken)
         where TRequest : class
     {
         try
         {
-            // 1. Validate the instant notification order.
-            var validationError = ValidateRequest(validator, request);
-            if (validationError != null)
+            string? creator = HttpContext.GetOrg();
+
+            // 1. Validate the instant notification order, including that the senders are registered for the organization.
+            var validationResult = validator.Validate(request, creator, _serviceOwnerService);
+            if (!validationResult.IsValid)
             {
-                return validationError;
+                validationResult.AddToModelState(ModelState);
+                return ValidationProblem(ModelState);
             }
 
             // 2. Ensure the request is associated with a valid organization.
-            var creatorError = GetCreatorOrForbid(out string creator);
-            if (creatorError != null)
+            if (string.IsNullOrWhiteSpace(creator))
             {
-                return creatorError;
+                return Forbid();
             }
 
             // 3. Check for existing order by organization short name and idempotency identifier.
@@ -169,14 +175,7 @@ public class InstantOrdersController : ControllerBase
 
             // 4. Map and persist the instant notification order.
             var instantOrder = mapToOrder(request, creator, _dateTimeService.UtcNow());
-            var persistResult = await persistOrder(instantOrder, cancellationToken);
-            if (persistResult.IsProblem)
-            {
-                var problem = persistResult.Problem.ToProblemDetails();
-                return StatusCode(problem.Status!.Value, problem);
-            }
-
-            trackingInformation = persistResult.Value;
+            trackingInformation = await persistOrder(instantOrder, cancellationToken);
 
             // 5. Return tracking information and location header.
             return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
@@ -191,34 +190,5 @@ public class InstantOrdersController : ControllerBase
             var problemDetails = Problems.PlatformDependencyError.ToProblemDetails();
             return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
-    }
-
-    /// <summary>
-    /// Validates a request and returns validation problem if invalid.
-    /// </summary>
-    private ActionResult? ValidateRequest<T>(IValidator<T> validator, T request)
-    {
-        var validationResult = validator.Validate(request);
-        if (!validationResult.IsValid)
-        {
-            validationResult.AddToModelState(ModelState);
-            return ValidationProblem(ModelState);
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Gets organization from HTTP context and returns Forbid if invalid.
-    /// </summary>
-    private ForbidResult? GetCreatorOrForbid(out string creator)
-    {
-        creator = HttpContext.GetOrg() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(creator))
-        {
-            return Forbid();
-        }
-
-        return null;
     }
 }

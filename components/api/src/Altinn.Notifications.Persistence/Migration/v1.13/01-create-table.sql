@@ -20,7 +20,10 @@ CREATE TABLE IF NOT EXISTS notifications.serviceowner (
     senderaddress text NOT NULL,
     CONSTRAINT serviceowner_pkey PRIMARY KEY (id),
     CONSTRAINT serviceowner_addresstypeid_fkey FOREIGN KEY (addresstypeid) REFERENCES notifications.senderaddresstype (id),
-    CONSTRAINT serviceowner_addresstypeid_senderaddress_key UNIQUE (addresstypeid, senderaddress)
+    CONSTRAINT serviceowner_serviceowner_lowercase_check CHECK (serviceowner = lower(serviceowner))
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS serviceowner_addresstypeid_senderaddress_key
+    ON notifications.serviceowner (addresstypeid, lower(senderaddress));
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE notifications.serviceowner TO platform_notifications;

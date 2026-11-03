@@ -18,138 +18,119 @@ public class ServiceOwnerServiceTests
     private const string _owner = "digdir";
 
     [Fact]
-    public async Task ValidateSenders_MatchingIsCaseSensitive()
+    public async Task IsSenderAllowed_SenderMatchingIsCaseInsensitive()
     {
-        var service = await CreateLoadedService(true, false);
+        var service = await CreateLoadedService(true, true);
 
-        Assert.NotNull(service.ValidateSenders(_owner, ["OK@digdir.no"], []));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "OK@Digdir.NO"));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, "DIGDIR"));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "NoReply@Altinn.Cloud"));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, "ALTINN"));
     }
 
     [Fact]
-    public async Task ValidateSenders_ServiceOwnerMatchingIsCaseInsensitive()
+    public async Task IsSenderAllowed_ServiceOwnerMatchingIsCaseInsensitive()
     {
         var service = await CreateLoadedService(true, false);
 
-        Assert.Null(service.ValidateSenders(_owner.ToUpperInvariant(), ["ok@digdir.no"], []));
-    }
-
-    [Fact]
-    public async Task ValidateSenders_OwnerRegisteredWithDifferentCasings_SendersAreMergedCaseInsensitively()
-    {
-        var repository = new Mock<IServiceOwnerRepository>();
-        repository
-            .Setup(r => r.GetRegisteredSenders(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new("Digdir", SenderAddressType.Email, "a@digdir.no"),
-                new("DIGDIR", SenderAddressType.Email, "b@digdir.no")
-            ]);
-
-        var service = CreateService(true, false, repository);
-        await service.LoadSenders(TestContext.Current.CancellationToken);
-
-        Assert.Null(service.ValidateSenders("digdir", ["a@digdir.no", "b@digdir.no"], []));
+        Assert.True(service.IsSenderAllowed(_owner.ToUpperInvariant(), AddressType.Email, "ok@digdir.no"));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
     [InlineData(null)]
-    public async Task ValidateSenders_NullEmptyOrWhitespaceSender_TreatedAsNotSpecified(string? sender)
+    public async Task IsSenderAllowed_NullEmptyOrWhitespaceSender_TreatedAsNotSpecified(string? sender)
     {
         var service = await CreateLoadedService(true, true);
 
-        Assert.Null(service.ValidateSenders(_owner, [sender], [sender]));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, sender));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, sender));
     }
 
-    [Fact]
-    public void ValidateSenders_FlagsOff_DoesNotRequireLoadedSenders()
+    [Theory]
+    [InlineData(AddressType.Email)]
+    [InlineData(AddressType.Sms)]
+    public void IsSenderAllowed_EnforcementOff_DoesNotRequireLoadedSenders(AddressType addressType)
     {
         var service = CreateUnloadedService(false, false);
 
-        Assert.Null(service.ValidateSenders(_owner, ["x@y.no"], ["Unknown"]));
+        Assert.True(service.IsSenderAllowed(_owner, addressType, "Unknown"));
     }
 
     [Fact]
-    public async Task ValidateSenders_UnregisteredSms_RejectedAndNamed()
+    public async Task IsSenderAllowed_EnforcementIsConfiguredPerChannel()
     {
-        var service = await CreateLoadedService(false, true);
+        var emailOnly = await CreateLoadedService(true, false);
+        var smsOnly = await CreateLoadedService(false, true);
 
-        var problem = service.ValidateSenders(_owner, ["anything@x.no"], ["Evil"]);
+        Assert.False(emailOnly.IsSenderAllowed(_owner, AddressType.Email, "bad@x.no"));
+        Assert.True(emailOnly.IsSenderAllowed(_owner, AddressType.Sms, "Unknown"));
 
-        Assert.NotNull(problem);
-        Assert.Contains("Evil", problem.Detail);
+        Assert.True(smsOnly.IsSenderAllowed(_owner, AddressType.Email, "bad@x.no"));
+        Assert.False(smsOnly.IsSenderAllowed(_owner, AddressType.Sms, "Unknown"));
     }
 
     [Fact]
-    public async Task ValidateSenders_FlagsOff_AcceptsUnregisteredSenders()
+    public async Task IsSenderAllowed_DefaultAndRegisteredSenders_Allowed()
     {
-        var service = await CreateLoadedService(false, false);
+        var service = await CreateLoadedService(true, true);
 
-        Assert.Null(service.ValidateSenders(_owner, ["x@y.no"], ["Unknown"]));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "noreply@altinn.cloud"));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "ok@digdir.no"));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, "Altinn"));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, "Digdir"));
     }
 
     [Fact]
-    public async Task LoadRegisteredSenders_CalledAgain_ReplacesPreviousData()
+    public async Task IsSenderAllowed_PaddedRegisteredSender_NotAllowed()
+    {
+        var service = await CreateLoadedService(true, false);
+
+        Assert.False(service.IsSenderAllowed(_owner, AddressType.Email, " ok@digdir.no "));
+    }
+
+    [Fact]
+    public async Task IsSenderAllowed_SenderRegisteredForOtherOwnerOrType_NotAllowed()
+    {
+        var service = await CreateLoadedService(true, true);
+
+        Assert.False(service.IsSenderAllowed(_owner, AddressType.Email, "Digdir"));
+        Assert.False(service.IsSenderAllowed(_owner, AddressType.Sms, "ok@digdir.no"));
+        Assert.False(service.IsSenderAllowed(_owner, AddressType.Email, "other@other.no"));
+    }
+
+    [Fact]
+    public async Task IsSenderAllowed_UnknownOwner_NotAllowed()
+    {
+        var service = await CreateLoadedService(true, true);
+
+        Assert.False(service.IsSenderAllowed("unknown", AddressType.Email, "ok@digdir.no"));
+    }
+
+    [Fact]
+    public void IsSenderAllowed_SendersNotLoaded_ThrowsInvalidOperationException()
+    {
+        var service = CreateUnloadedService(true, false);
+
+        Assert.Throws<InvalidOperationException>(() => service.IsSenderAllowed(_owner, AddressType.Email, "a@x.no"));
+    }
+
+    [Fact]
+    public async Task LoadSenders_CalledAgain_ReplacesPreviousData()
     {
         var repository = new Mock<IServiceOwnerRepository>();
         repository
             .SetupSequence(r => r.GetRegisteredSenders(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new RegisteredSender(_owner, SenderAddressType.Email, "old@digdir.no")])
-            .ReturnsAsync([new RegisteredSender(_owner, SenderAddressType.Email, "new@digdir.no")]);
+            .ReturnsAsync([new RegisteredSender(_owner, AddressType.Email, "old@digdir.no")])
+            .ReturnsAsync([new RegisteredSender(_owner, AddressType.Email, "new@digdir.no")]);
         var service = CreateService(true, false, repository);
 
         await service.LoadSenders(TestContext.Current.CancellationToken);
         await service.LoadSenders(TestContext.Current.CancellationToken);
 
-        Assert.Null(service.ValidateSenders(_owner, ["new@digdir.no"], []));
-        Assert.NotNull(service.ValidateSenders(_owner, ["old@digdir.no"], []));
-    }
-
-    [Fact]
-    public async Task ValidateSenders_NullDefaultAndRegisteredSenders_Accepted()
-    {
-        var service = await CreateLoadedService(true, true);
-
-        Assert.Null(service.ValidateSenders(_owner, [null, "noreply@altinn.cloud", "ok@digdir.no"], [null, "Altinn", "Digdir"]));
-    }
-
-    [Fact]
-    public async Task ValidateSenders_UnregisteredEmails_RejectedAndAllListed()
-    {
-        var service = await CreateLoadedService(true, false);
-
-        var problem = service.ValidateSenders(_owner, ["bad1@x.no", "ok@digdir.no", "bad2@x.no", "bad1@x.no"], []);
-
-        Assert.NotNull(problem);
-        Assert.Contains("bad1@x.no, bad2@x.no", problem.Detail);
-        Assert.DoesNotContain("ok@digdir.no", problem.Detail);
-    }
-
-    [Fact]
-    public async Task ValidateSenders_PaddedRegisteredSender_Rejected()
-    {
-        var service = await CreateLoadedService(true, false);
-
-        Assert.NotNull(service.ValidateSenders(_owner, [" ok@digdir.no "], []));
-    }
-
-    [Fact]
-    public void ValidateSenders_SendersNotLoaded_ThrowsInvalidOperationException()
-    {
-        var service = CreateUnloadedService(true, false);
-
-        Assert.Throws<InvalidOperationException>(() => service.ValidateSenders(_owner, ["a@x.no"], []));
-    }
-
-    [Fact]
-    public async Task ValidateSenders_SenderRegisteredForOtherOwnerOrType_Rejected()
-    {
-        var service = await CreateLoadedService(true, true);
-
-        Assert.NotNull(service.ValidateSenders(_owner, ["Digdir"], []));
-        Assert.NotNull(service.ValidateSenders(_owner, [], ["ok@digdir.no"]));
-        Assert.NotNull(service.ValidateSenders(_owner, ["other@other.no"], []));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "new@digdir.no"));
+        Assert.False(service.IsSenderAllowed(_owner, AddressType.Email, "old@digdir.no"));
     }
 
     /// <summary>
@@ -166,9 +147,9 @@ public class ServiceOwnerServiceTests
             .Setup(r => r.GetRegisteredSenders(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
-                new(_owner, SenderAddressType.Sms, "Digdir"),
-                new(_owner, SenderAddressType.Email, "ok@digdir.no"),
-                new("other", SenderAddressType.Email, "other@other.no")
+                new(_owner, AddressType.Sms, "Digdir"),
+                new(_owner, AddressType.Email, "ok@digdir.no"),
+                new("other", AddressType.Email, "other@other.no")
             ]);
 
         var service = CreateService(enforceEmail, enforceSms, repository);

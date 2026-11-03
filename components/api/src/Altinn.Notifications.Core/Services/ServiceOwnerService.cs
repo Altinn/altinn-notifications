@@ -1,10 +1,9 @@
-using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -12,17 +11,31 @@ namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
 /// Implementation of the <see cref="IServiceOwnerService"/> that keeps the registered senders in memory.
+/// As a hosted service, it loads the registered senders once at startup if sender ownership is enforced for any channel.
+/// A failure to load prevents the application from starting.
 /// </summary>
 public class ServiceOwnerService(
     IServiceOwnerRepository repository,
     IOptions<NotificationConfig> config,
-    ILogger<ServiceOwnerService> logger) : IServiceOwnerService
+    ILogger<ServiceOwnerService> logger) : IServiceOwnerService, IHostedService
 {
     private readonly NotificationConfig _config = config.Value;
     private readonly ILogger<ServiceOwnerService> _logger = logger;
     private readonly IServiceOwnerRepository _repository = repository;
 
-    private volatile Dictionary<SenderAddressType, Dictionary<string, HashSet<string>>>? _registeredSenders;
+    private volatile Dictionary<AddressType, Dictionary<string, HashSet<string>>>? _registeredSenders;
+
+    /// <inheritdoc/>
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (_config.EnforceEmailSenderOwnership || _config.EnforceSmsSenderOwnership)
+        {
+            await LoadSenders(cancellationToken);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task LoadSenders(CancellationToken cancellationToken = default)
@@ -37,72 +50,31 @@ public class ServiceOwnerService(
                     .GroupBy(sender => sender.ServiceOwner, StringComparer.OrdinalIgnoreCase)
                     .ToDictionary(
                         ownerGroup => ownerGroup.Key,
-                        ownerGroup => ownerGroup.Select(sender => sender.SenderAddress).ToHashSet(StringComparer.Ordinal),
+                        ownerGroup => ownerGroup.Select(sender => sender.SenderAddress).ToHashSet(StringComparer.OrdinalIgnoreCase),
                         StringComparer.OrdinalIgnoreCase));
     }
 
     /// <inheritdoc/>
-    public ProblemInstance? ValidateSenders(string serviceOwner, IEnumerable<string?> emailSenders, IEnumerable<string?> smsSenders)
+    public bool IsSenderAllowed(string serviceOwner, AddressType addressType, string? sender)
     {
-        var invalidEmailSenders = FindInvalidSenders(serviceOwner, SenderAddressType.Email, _config.EnforceEmailSenderOwnership, _config.DefaultEmailFromAddress, emailSenders);
-        if (invalidEmailSenders.Count > 0)
+        var (enforce, defaultSender) = addressType == AddressType.Email
+            ? (_config.EnforceEmailSenderOwnership, _config.DefaultEmailFromAddress)
+            : (_config.EnforceSmsSenderOwnership, _config.DefaultSmsSenderNumber);
+
+        if (!enforce || string.IsNullOrWhiteSpace(sender) || string.Equals(sender, defaultSender, StringComparison.OrdinalIgnoreCase))
         {
-            return CreateProblem(Problems.InvalidEmailSender, serviceOwner, "sender email addresses", invalidEmailSenders);
+            return true;
         }
 
-        var invalidSmsSenders = FindInvalidSenders(serviceOwner, SenderAddressType.Sms, _config.EnforceSmsSenderOwnership, _config.DefaultSmsSenderNumber, smsSenders);
-        if (invalidSmsSenders.Count > 0)
-        {
-            return CreateProblem(Problems.InvalidSmsSender, serviceOwner, "SMS senders", invalidSmsSenders);
-        }
-
-        return null;
-    }
-
-    private List<string> FindInvalidSenders(string serviceOwner, SenderAddressType addressType, bool enforce, string defaultSender, IEnumerable<string?> senders)
-    {
-        if (!enforce)
-        {
-            return [];
-        }
-
-        List<string> toLookUp = [.. senders
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .Select(s => s!)
-            .Distinct(StringComparer.Ordinal)
-            .Where(s => !string.Equals(s, defaultSender, StringComparison.Ordinal))];
-
-        if (toLookUp.Count == 0)
-        {
-            return [];
-        }
-
-        return GetUnregisteredSenders(serviceOwner, addressType, toLookUp);
-    }
-
-    private List<string> GetUnregisteredSenders(string serviceOwner, SenderAddressType addressType, List<string> senders)
-    {
         var registered = _registeredSenders ?? throw new InvalidOperationException("The registered senders have not been loaded.");
 
-        HashSet<string>? ownerSenders = null;
-        if (registered.TryGetValue(addressType, out var owners))
+        if (registered.TryGetValue(addressType, out var owners) && owners.TryGetValue(serviceOwner, out var ownerSenders) && ownerSenders.Contains(sender))
         {
-            owners.TryGetValue(serviceOwner, out ownerSenders);
+            return true;
         }
 
-        return [.. senders.Where(s => ownerSenders == null || !ownerSenders.Contains(s))];
-    }
+        _logger.LogWarning("Rejected a {AddressType} sender that is not registered for the service owner.", addressType);
 
-    private ProblemInstance CreateProblem(ProblemDescriptor descriptor, string serviceOwner, string senderKind, List<string> invalidSenders)
-    {
-        string senders = string.Join(", ", invalidSenders);
-
-        _logger.LogWarning(
-            "Rejected {SenderKind} not registered for service owner {ServiceOwner}. InvalidSenderCount={InvalidSenderCount}",
-            senderKind,
-            serviceOwner,
-            invalidSenders.Count);
-
-        return ProblemInstance.Create(descriptor, $"The following {senderKind} are not registered for this service owner: {senders}.");
+        return false;
     }
 }

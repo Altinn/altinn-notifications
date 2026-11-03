@@ -31,8 +31,11 @@ docs {
   Verifies sender ownership enforcement. The sender "unregistered-sender@example.com" is not
   registered for the calling service owner in notifications.serviceowner.
 
-  Expected result when EnforceEmailSenderOwnership is enabled: 400 Bad Request with error
-  code NOT-00005 naming the unregistered sender. When the flag is disabled the order is accepted.
+  Expected result when EnforceEmailSenderOwnership is enabled:   400 Bad Request with a
+    validation problem whose errors name the property path
+    (recipient.recipientEmail.emailSettings.senderEmailAddress). When the flag is disabled the
+    order is accepted.
 
-  The same applies to SMS senders and EnforceSmsSenderOwnership, which is rejected with NOT-00006.
+    The same applies to SMS senders and EnforceSmsSenderOwnership. Email and SMS senders are
+    validated together, so one response reports every unregistered sender.
 }

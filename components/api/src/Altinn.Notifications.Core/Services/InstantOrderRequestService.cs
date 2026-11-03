@@ -1,6 +1,5 @@
 ﻿using System.Web;
 
-using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
@@ -15,7 +14,6 @@ using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -29,7 +27,6 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 {
     private readonly string _defaultSmsSender;
     private readonly string _defaultEmailFromAddress;
-    private readonly IServiceOwnerService _serviceOwnerService;
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly IOrderRepository _orderRepository;
@@ -47,16 +44,14 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         IOptions<NotificationConfig> configurationOptions,
         IShortMessageServiceClient shortMessageServiceClient,
         IInstantEmailServiceClient instantEmailServiceClient,
-        ILogger<InstantOrderRequestService> logger,
-        IServiceOwnerService serviceOwnerService)
+        ILogger<InstantOrderRequestService> logger)
     {
-        _logger = logger;
         _guidService = guidService;
         _dateTimeService = dateTimeService;
-        _serviceOwnerService = serviceOwnerService;
         _orderRepository = instantOrderRepository;
         _shortMessageServiceClient = shortMessageServiceClient;
         _instantEmailServiceClient = instantEmailServiceClient;
+        _logger = logger;
         _defaultSmsSender = configurationOptions.Value.DefaultSmsSenderNumber;
         _defaultEmailFromAddress = configurationOptions.Value.DefaultEmailFromAddress;
     }
@@ -68,15 +63,9 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<InstantNotificationOrderTracking>> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        var smsProblem = _serviceOwnerService.ValidateSenders(instantNotificationOrder.Creator.ShortName, [], [instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender]);
-        if (smsProblem != null)
-        {
-            return smsProblem;
-        }
 
         var deliveryDetails = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails;
         var messageContent = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent;
@@ -114,15 +103,9 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<InstantNotificationOrderTracking>> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        var smsProblem = _serviceOwnerService.ValidateSenders(instantSmsNotificationOrder.Creator.ShortName, [], [instantSmsNotificationOrder.ShortMessageDeliveryDetails.ShortMessageContent.Sender]);
-        if (smsProblem != null)
-        {
-            return smsProblem;
-        }
 
         var deliveryDetails = instantSmsNotificationOrder.ShortMessageDeliveryDetails;
         var messageContent = instantSmsNotificationOrder.ShortMessageDeliveryDetails.ShortMessageContent;
@@ -259,15 +242,9 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<InstantNotificationOrderTracking>> PersistInstantEmailNotificationAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> PersistInstantEmailNotificationAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        var emailProblem = _serviceOwnerService.ValidateSenders(instantEmailNotificationOrder.Creator.ShortName, [instantEmailNotificationOrder.InstantEmailDetails.EmailContent.FromAddress], []);
-        if (emailProblem != null)
-        {
-            return emailProblem;
-        }
 
         var deliveryDetails = instantEmailNotificationOrder.InstantEmailDetails;
         var emailContent = deliveryDetails.EmailContent;

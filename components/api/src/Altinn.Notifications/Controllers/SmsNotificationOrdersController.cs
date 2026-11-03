@@ -1,18 +1,14 @@
-﻿using Altinn.Authorization.ProblemDetails;
-using Altinn.Notifications.Configuration;
+﻿using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators.Extensions;
-
 using FluentValidation;
 using FluentValidation.Results;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
 
@@ -31,14 +27,19 @@ public class SmsNotificationOrdersController : ControllerBase
 {
     private readonly IValidator<SmsNotificationOrderRequestExt> _validator;
     private readonly IOrderRequestService _orderRequestService;
+    private readonly IServiceOwnerService _serviceOwnerService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationOrdersController"/> class.
     /// </summary>
-    public SmsNotificationOrdersController(IValidator<SmsNotificationOrderRequestExt> validator, IOrderRequestService orderRequestService)
+    public SmsNotificationOrdersController(
+        IValidator<SmsNotificationOrderRequestExt> validator,
+        IOrderRequestService orderRequestService,
+        IServiceOwnerService serviceOwnerService)
     {
         _validator = validator;
         _orderRequestService = orderRequestService;
+        _serviceOwnerService = serviceOwnerService;
     }
 
     /// <summary>
@@ -61,14 +62,14 @@ public class SmsNotificationOrdersController : ControllerBase
     [SwaggerResponseHeader(202, "Location", Microsoft.OpenApi.JsonSchemaType.String, "Link to access the newly created notification order.")]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(SmsNotificationOrderRequestExt smsNotificationOrderRequest)
     {
-        ValidationResult validationResult = _validator.Validate(smsNotificationOrderRequest);
+        string? creator = HttpContext.GetOrg();
+
+        ValidationResult validationResult = _validator.Validate(smsNotificationOrderRequest, creator, _serviceOwnerService);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(this.ModelState);
             return ValidationProblem(ModelState);
         }
-
-        string? creator = HttpContext.GetOrg();
 
         if (creator == null)
         {
@@ -76,14 +77,7 @@ public class SmsNotificationOrdersController : ControllerBase
         }
 
         var orderRequest = smsNotificationOrderRequest.MapToOrderRequest(creator);
-        var registration = await _orderRequestService.RegisterNotificationOrder(orderRequest);
-        if (registration.IsProblem)
-        {
-            var problemDetails = registration.Problem.ToProblemDetails();
-            return StatusCode(problemDetails.Status!.Value, problemDetails);
-        }
-
-        NotificationOrderRequestResponse result = registration.Value;
+        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
         return Accepted(result.OrderId.GetSelfLinkFromOrderId(), result.MapToExternal());
     }

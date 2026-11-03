@@ -29,10 +29,12 @@ namespace Altinn.Notifications.Controllers;
 [Authorize(Policy = AuthorizationConstants.POLICY_COMPOSED_EMAIL_CREATE_SCOPE)]
 public class ComposedEmailOrdersController(
     IComposedEmailOrderRequestService service,
-    IValidator<ComposedEmailRequestExt> validator) : ControllerBase
+    IValidator<ComposedEmailRequestExt> validator,
+    IServiceOwnerService serviceOwnerService) : ControllerBase
 {
     private readonly IComposedEmailOrderRequestService _service = service;
     private readonly IValidator<ComposedEmailRequestExt> _validator = validator;
+    private readonly IServiceOwnerService _serviceOwnerService = serviceOwnerService;
 
     /// <summary>
     /// Creates a new composed email notification order.
@@ -55,14 +57,15 @@ public class ComposedEmailOrdersController(
     {
         try
         {
-            var validationResult = _validator.Validate(orderRequest);
+            string? creator = HttpContext.GetOrg();
+
+            var validationResult = _validator.Validate(orderRequest, creator, _serviceOwnerService);
             if (!validationResult.IsValid)
             {
                 validationResult.AddToModelState(ModelState);
                 return ValidationProblem(ModelState);
             }
 
-            string? creator = HttpContext.GetOrg();
             if (creator == null)
             {
                 return Forbid();
@@ -70,14 +73,7 @@ public class ComposedEmailOrdersController(
 
             var notificationOrderChainRequest = orderRequest.MapToNotificationOrderChainRequest(creator);
 
-            var result = await _service.RegisterComposedEmailOrderChain(notificationOrderChainRequest, cancellationToken);
-            if (result.IsProblem)
-            {
-                var problem = result.Problem.ToProblemDetails();
-                return StatusCode(problem.Status!.Value, problem);
-            }
-
-            var response = result.Value;
+            var response = await _service.RegisterComposedEmailOrderChain(notificationOrderChainRequest, cancellationToken);
             var responseExt = response.MapToNotificationOrderChainResponseExt();
 
             if (response.IsNewlyCreated)
