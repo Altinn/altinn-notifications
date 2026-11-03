@@ -68,10 +68,11 @@ CREATE INDEX IF NOT EXISTS sms_metrics_recent_v2_resulttime_idx
 GRANT SELECT ON notifications.email_metrics_recent_v2 TO platform_notifications;
 GRANT SELECT ON notifications.sms_metrics_recent_v2 TO platform_notifications;
 
--- Run manually in each environment after this migration has been applied, by someone with pg_cron rights.
--- The initial populate must be non-concurrent (REFRESH ... CONCURRENTLY requires a populated view), and must
--- be done before the DWH export calls the new endpoint version (until then get_*_metrics_v2 fails with
--- "materialized view ... has not been populated").
+-- Run manually in each environment BEFORE the release with this migration is deployed, by someone with pg_cron rights:
+-- first this file as the migration user (so the views get the same owner as if Yuniql had created them, and
+-- Yuniql skips them on deploy), then the block below. The initial populate must be non-concurrent
+-- (REFRESH ... CONCURRENTLY requires a populated view).
+-- Step-by-step guide with checks: https://github.com/Altinn/altinn-notifications/issues/1880
 /*
 -- Initial populate
 REFRESH MATERIALIZED VIEW notifications.email_metrics_recent_v2;
