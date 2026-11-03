@@ -105,14 +105,41 @@ of concurrent loops:
   in status `Registered`.
 - **Retry loop:** picks up orders in status `Retrying`, after a configurable delay.
 
-Each iteration processes one order inside a single database transaction — evaluating the
-send condition, generating notifications, and persisting the result atomically. If
+Each iteration processes one order inside a single database transaction — generating
+notifications and persisting the result atomically. If
 processing fails, the transaction rolls back to a savepoint (discarding partial work but
 keeping the order row locked) and the order's retry count is incremented; once a
 configurable maximum is exceeded, the order is marked `Failed` instead of being retried
 again.
 
+The order's send condition is not evaluated during order processing. It is evaluated per
+notification at send time, see [Send condition evaluation](#send-condition-evaluation).
+
 See the [order processing flow chart](diagrams/flowchart-order-process.svg) for the full flow.
+Note that the chart still shows the send condition being evaluated as part of order
+processing, which is no longer the case.
+
+### Send condition evaluation
+
+If an order has a `ConditionEndpoint`, the condition is evaluated for each SMS and email
+notification when it is claimed for sending, using the
+[SendConditionClient](https://github.com/Altinn/altinn-notifications/blob/main/components/api/src/Altinn.Notifications.Integrations/SendCondition/SendConditionClient.cs).
+The check runs in the same database transaction as the claim, before the notification is published:
+
+- **Condition met (or no endpoint):** the notification is published as usual.
+- **Condition not met:** the notification gets the terminal result `SendConditionNotMet`
+  and is not published. The notification log and status feed are updated, and the order
+  is completed once all its notifications are final.
+- **Check inconclusive (endpoint or token failure):** the transaction is rolled back, so
+  the claim is released and the notification is picked up again on a later poll until it
+  expires. There is currently no retry limit or backoff.
+
+Because the condition is evaluated per notification, notifications of the same order can
+end with different outcomes, and notifications with a daytime send time policy are
+evaluated when they are sent rather than when the order is processed.
+
+The order-level status `SendConditionNotMet` is no longer set. It still exists so orders
+created before this change can be read.
 
 ### Maskinporten
 
