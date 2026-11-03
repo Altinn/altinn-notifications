@@ -125,7 +125,13 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
     private static async Task<Uri?> ReadConditionEndpointAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
     {
-        string? conditionEndpoint = await reader.GetFieldValueAsync<string?>("conditionendpoint", cancellationToken);
+        int ordinal = reader.GetOrdinal("conditionendpoint");
+        if (await reader.IsDBNullAsync(ordinal, cancellationToken))
+        {
+            return null;
+        }
+
+        string conditionEndpoint = await reader.GetFieldValueAsync<string>(ordinal, cancellationToken);
         return string.IsNullOrEmpty(conditionEndpoint) ? null : new Uri(conditionEndpoint);
     }
 
