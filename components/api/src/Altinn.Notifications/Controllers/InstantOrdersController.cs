@@ -1,6 +1,5 @@
 ﻿using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -22,39 +21,22 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// Handles API requests for creating and processing instant notification orders.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="InstantOrdersController"/> class.
+/// </remarks>
 [ApiController]
 [Route("notifications/api/v1/future/orders/instant")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
-public class InstantOrdersController : ControllerBase
+public class InstantOrdersController(
+    IDateTimeService dateTimeService,
+    IServiceOwnerService serviceOwnerService,
+    IInstantOrderRequestService instantOrderRequestService,
+    IValidator<InstantNotificationOrderRequestExt> validator,
+    IValidator<InstantSmsNotificationOrderRequestExt> smsValidator,
+    IValidator<InstantEmailNotificationOrderRequestExt> emailValidator) : ControllerBase
 {
-    private readonly IDateTimeService _dateTimeService;
-    private readonly IInstantOrderRequestService _instantOrderRequestService;
-    private readonly IValidator<InstantNotificationOrderRequestExt> _validator;
-    private readonly IValidator<InstantSmsNotificationOrderRequestExt> _smsValidator;
-    private readonly IValidator<InstantEmailNotificationOrderRequestExt> _emailValidator;
-    private readonly IServiceOwnerService _serviceOwnerService;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InstantOrdersController"/> class.
-    /// </summary>
-    public InstantOrdersController(
-        IDateTimeService dateTimeService,
-        IInstantOrderRequestService instantOrderRequestService,
-        IValidator<InstantNotificationOrderRequestExt> validator,
-        IValidator<InstantSmsNotificationOrderRequestExt> smsValidator,
-        IValidator<InstantEmailNotificationOrderRequestExt> emailValidator,
-        IServiceOwnerService serviceOwnerService)
-    {
-        _validator = validator;
-        _smsValidator = smsValidator;
-        _emailValidator = emailValidator;
-        _dateTimeService = dateTimeService;
-        _serviceOwnerService = serviceOwnerService;
-        _instantOrderRequestService = instantOrderRequestService;
-    }
-
     /// <summary>
     /// Creates and sends an instant SMS notification to a single recipient (deprecated - use /sms endpoint instead).
     /// </summary>
@@ -63,9 +45,9 @@ public class InstantOrdersController : ControllerBase
     /// <returns>
     /// A response containing tracking information for the created notification order or an error response if the operation fails.
     /// </returns>
-    #pragma warning disable S1133
+#pragma warning disable S1133
     [Obsolete("This endpoint is deprecated. Use the /instant/sms endpoint for SMS notifications instead.")]
-    #pragma warning restore S1133
+#pragma warning restore S1133
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
@@ -78,9 +60,9 @@ public class InstantOrdersController : ControllerBase
         return await ProcessInstantOrderAsync(
             request: request,
             idempotencyId: request.IdempotencyId,
-            validator: _validator,
+            validator: validator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantNotificationOrder(creator, timestamp),
-            persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
+            persistOrder: instantOrderRequestService.PersistInstantSmsNotificationAsync,
             cancellationToken: cancellationToken);
     }
 
@@ -104,9 +86,9 @@ public class InstantOrdersController : ControllerBase
         return await ProcessInstantOrderAsync(
             request: request,
             idempotencyId: request.IdempotencyId,
-            validator: _smsValidator,
+            validator: smsValidator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantSmsNotificationOrder(creator, timestamp),
-            persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
+            persistOrder: instantOrderRequestService.PersistInstantSmsNotificationAsync,
             cancellationToken: cancellationToken);
     }
 
@@ -130,9 +112,9 @@ public class InstantOrdersController : ControllerBase
         return await ProcessInstantOrderAsync(
             request: request,
             idempotencyId: request.IdempotencyId,
-            validator: _emailValidator,
+            validator: emailValidator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantEmailNotificationOrder(creator, timestamp),
-            persistOrder: _instantOrderRequestService.PersistInstantEmailNotificationAsync,
+            persistOrder: instantOrderRequestService.PersistInstantEmailNotificationAsync,
             cancellationToken: cancellationToken);
     }
 
@@ -152,29 +134,29 @@ public class InstantOrdersController : ControllerBase
         {
             string? creator = HttpContext.GetOrg();
 
-            // 1. Validate the instant notification order, including that the senders are registered for the organization.
-            var validationResult = validator.Validate(request, creator, _serviceOwnerService);
+            // 1. Ensure the request is associated with a valid organization.
+            if (string.IsNullOrWhiteSpace(creator))
+            {
+                return Forbid();
+            }
+
+            // 2. Validate the instant notification order, including that the senders are registered for the organization.
+            var validationResult = validator.Validate(request, creator, serviceOwnerService);
             if (!validationResult.IsValid)
             {
                 validationResult.AddToModelState(ModelState);
                 return ValidationProblem(ModelState);
             }
 
-            // 2. Ensure the request is associated with a valid organization.
-            if (string.IsNullOrWhiteSpace(creator))
-            {
-                return Forbid();
-            }
-
             // 3. Check for existing order by organization short name and idempotency identifier.
-            var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, idempotencyId, cancellationToken);
+            var trackingInformation = await instantOrderRequestService.RetrieveTrackingInformation(creator, idempotencyId, cancellationToken);
             if (trackingInformation != null)
             {
                 return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
             }
 
             // 4. Map and persist the instant notification order.
-            var instantOrder = mapToOrder(request, creator, _dateTimeService.UtcNow());
+            var instantOrder = mapToOrder(request, creator, dateTimeService.UtcNow());
             trackingInformation = await persistOrder(instantOrder, cancellationToken);
 
             // 5. Return tracking information and location header.

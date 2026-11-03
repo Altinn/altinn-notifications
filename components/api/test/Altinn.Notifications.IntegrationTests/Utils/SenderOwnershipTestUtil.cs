@@ -18,6 +18,12 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 /// </summary>
 public static class SenderOwnershipTestUtil
 {
+    /// <summary>
+    /// Creates notification options with the sender ownership enforcement flags set as specified.
+    /// </summary>
+    /// <param name="enforceEmail">Whether email sender ownership is enforced.</param>
+    /// <param name="enforceSms">Whether SMS sender ownership is enforced.</param>
+    /// <returns>The configured <see cref="NotificationConfig"/> options.</returns>
     public static IOptions<NotificationConfig> CreateConfig(bool enforceEmail = false, bool enforceSms = false)
     {
         return Options.Create(new NotificationConfig
@@ -29,6 +35,12 @@ public static class SenderOwnershipTestUtil
         });
     }
 
+    /// <summary>
+    /// Creates a <see cref="ServiceOwnerService"/> backed by a mocked repository and loads the given senders into its in-memory lookup.
+    /// </summary>
+    /// <param name="config">The notification options controlling sender ownership enforcement.</param>
+    /// <param name="registeredSenders">The senders the mocked repository returns as registered.</param>
+    /// <returns>A service owner service with the senders already loaded.</returns>
     public static async Task<ServiceOwnerService> CreateLoadedServiceOwnerService(IOptions<NotificationConfig> config, params RegisteredSender[] registeredSenders)
     {
         var serviceOwnerRepository = new Mock<IServiceOwnerRepository>();

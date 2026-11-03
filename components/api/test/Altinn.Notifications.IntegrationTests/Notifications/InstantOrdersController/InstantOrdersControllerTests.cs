@@ -250,7 +250,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
-        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Once);
+        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Never);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Never);
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);

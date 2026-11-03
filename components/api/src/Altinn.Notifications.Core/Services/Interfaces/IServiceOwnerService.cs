@@ -3,7 +3,7 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Provides service owner information, such as the sender addresses each service owner is allowed to use, from an in-memory copy of the notifications.serviceowner table.
+/// Provides service owner information, such as the sender addresses each service owner is allowed to use, from an in-memory copy of the database table.
 /// </summary>
 public interface IServiceOwnerService
 {

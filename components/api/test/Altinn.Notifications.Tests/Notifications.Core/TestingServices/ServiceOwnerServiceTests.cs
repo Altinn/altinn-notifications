@@ -18,18 +18,18 @@ public class ServiceOwnerServiceTests
     private const string _owner = "digdir";
 
     [Fact]
-    public async Task IsSenderAllowed_SenderMatchingIsCaseInsensitive()
+    public async Task WhenSenderCasingDiffers_ThenSenderIsAllowed()
     {
         var service = await CreateLoadedService(true, true);
 
-        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "OK@Digdir.NO"));
         Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, "DIGDIR"));
-        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "NoReply@Altinn.Cloud"));
         Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, "ALTINN"));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "OK@Digdir.NO"));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "NoReply@Altinn.Cloud"));
     }
 
     [Fact]
-    public async Task IsSenderAllowed_ServiceOwnerMatchingIsCaseInsensitive()
+    public async Task WhenServiceOwnerCasingDiffers_ThenSenderIsAllowed()
     {
         var service = await CreateLoadedService(true, false);
 
@@ -37,53 +37,42 @@ public class ServiceOwnerServiceTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    [InlineData(null)]
-    public async Task IsSenderAllowed_NullEmptyOrWhitespaceSender_TreatedAsNotSpecified(string? sender)
-    {
-        var service = await CreateLoadedService(true, true);
-
-        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, sender));
-        Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, sender));
-    }
-
-    [Theory]
     [InlineData(AddressType.Email)]
     [InlineData(AddressType.Sms)]
-    public void IsSenderAllowed_EnforcementOff_DoesNotRequireLoadedSenders(AddressType addressType)
+    public async Task WhenEnforcementIsOff_ThenLoadedSendersAreNotRequired(AddressType addressType)
     {
         var service = CreateUnloadedService(false, false);
 
         Assert.True(service.IsSenderAllowed(_owner, addressType, "Unknown"));
     }
 
-    [Fact]
-    public async Task IsSenderAllowed_EnforcementIsConfiguredPerChannel()
-    {
-        var emailOnly = await CreateLoadedService(true, false);
-        var smsOnly = await CreateLoadedService(false, true);
-
-        Assert.False(emailOnly.IsSenderAllowed(_owner, AddressType.Email, "bad@x.no"));
-        Assert.True(emailOnly.IsSenderAllowed(_owner, AddressType.Sms, "Unknown"));
-
-        Assert.True(smsOnly.IsSenderAllowed(_owner, AddressType.Email, "bad@x.no"));
-        Assert.False(smsOnly.IsSenderAllowed(_owner, AddressType.Sms, "Unknown"));
-    }
-
-    [Fact]
-    public async Task IsSenderAllowed_DefaultAndRegisteredSenders_Allowed()
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public async Task WhenSenderIsNullOrEmptyOrWhitespace_ThenSenderIsTreatedAsNotSpecified(string? sender)
     {
         var service = await CreateLoadedService(true, true);
 
-        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "noreply@altinn.cloud"));
-        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "ok@digdir.no"));
-        Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, "Altinn"));
-        Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, "Digdir"));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Sms, sender));
+        Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, sender));
     }
 
     [Fact]
-    public async Task IsSenderAllowed_PaddedRegisteredSender_NotAllowed()
+    public async Task WhenEnforcementIsEnabledForOneChannel_ThenOnlyThatChannelIsEnforced()
+    {
+        var smsOnly = await CreateLoadedService(false, true);
+        var emailOnly = await CreateLoadedService(true, false);
+
+        Assert.False(smsOnly.IsSenderAllowed(_owner, AddressType.Sms, "Unknown"));
+        Assert.True(smsOnly.IsSenderAllowed(_owner, AddressType.Email, "bad@x.no"));
+
+        Assert.True(emailOnly.IsSenderAllowed(_owner, AddressType.Sms, "Unknown"));
+        Assert.False(emailOnly.IsSenderAllowed(_owner, AddressType.Email, "bad@x.no"));
+    }
+
+    [Fact]
+    public async Task WhenRegisteredSenderIsPadded_ThenSenderIsNotAllowed()
     {
         var service = await CreateLoadedService(true, false);
 
@@ -91,7 +80,7 @@ public class ServiceOwnerServiceTests
     }
 
     [Fact]
-    public async Task IsSenderAllowed_SenderRegisteredForOtherOwnerOrType_NotAllowed()
+    public async Task WhenSenderIsRegisteredForOtherOwnerOrType_ThenSenderIsNotAllowed()
     {
         var service = await CreateLoadedService(true, true);
 
@@ -101,7 +90,7 @@ public class ServiceOwnerServiceTests
     }
 
     [Fact]
-    public async Task IsSenderAllowed_UnknownOwner_NotAllowed()
+    public async Task WhenServiceOwnerIsUnknown_ThenSenderIsNotAllowed()
     {
         var service = await CreateLoadedService(true, true);
 
@@ -109,7 +98,7 @@ public class ServiceOwnerServiceTests
     }
 
     [Fact]
-    public void IsSenderAllowed_SendersNotLoaded_ThrowsInvalidOperationException()
+    public async Task WhenSendersAreNotLoaded_ThenInvalidOperationExceptionIsThrown()
     {
         var service = CreateUnloadedService(true, false);
 
@@ -117,7 +106,7 @@ public class ServiceOwnerServiceTests
     }
 
     [Fact]
-    public async Task LoadSenders_CalledAgain_ReplacesPreviousData()
+    public async Task WhenSendersAreLoadedAgain_ThenPreviousSendersAreReplaced()
     {
         var repository = new Mock<IServiceOwnerRepository>();
         repository
@@ -131,6 +120,17 @@ public class ServiceOwnerServiceTests
 
         Assert.True(service.IsSenderAllowed(_owner, AddressType.Email, "new@digdir.no"));
         Assert.False(service.IsSenderAllowed(_owner, AddressType.Email, "old@digdir.no"));
+    }
+
+    /// <summary>
+    /// Creates a service with an empty repository mock that has not loaded any senders, for testing the behavior before loading.
+    /// </summary>
+    /// <param name="enforceEmail">Whether sender ownership is enforced for email senders.</param>
+    /// <param name="enforceSms">Whether sender ownership is enforced for SMS senders.</param>
+    /// <returns>The service, which has not loaded any senders.</returns>
+    private static ServiceOwnerService CreateUnloadedService(bool enforceEmail, bool enforceSms)
+    {
+        return CreateService(enforceEmail, enforceSms, new Mock<IServiceOwnerRepository>());
     }
 
     /// <summary>
@@ -177,16 +177,5 @@ public class ServiceOwnerServiceTests
         });
 
         return new ServiceOwnerService(repository.Object, config, NullLogger<ServiceOwnerService>.Instance);
-    }
-
-    /// <summary>
-    /// Creates a service with an empty repository mock that has not loaded any senders, for testing the behavior before loading.
-    /// </summary>
-    /// <param name="enforceEmail">Whether sender ownership is enforced for email senders.</param>
-    /// <param name="enforceSms">Whether sender ownership is enforced for SMS senders.</param>
-    /// <returns>The service, which has not loaded any senders.</returns>
-    private static ServiceOwnerService CreateUnloadedService(bool enforceEmail, bool enforceSms)
-    {
-        return CreateService(enforceEmail, enforceSms, new Mock<IServiceOwnerRepository>());
     }
 }

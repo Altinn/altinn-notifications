@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
         services
             .AddHostedService<ProcessItemsBackgroundService>();
 
+        // All registrations must resolve to the same singleton instance.
         services
             .AddSingleton<ServiceOwnerService>()
             .AddSingleton<IServiceOwnerService>(provider => provider.GetRequiredService<ServiceOwnerService>())

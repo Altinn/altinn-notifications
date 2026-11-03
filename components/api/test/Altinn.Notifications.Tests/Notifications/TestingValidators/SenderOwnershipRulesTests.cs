@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models;
@@ -26,68 +22,98 @@ public class SenderOwnershipRulesTests
     private const string _owner = "ttd";
 
     [Fact]
-    public void Validate_LegacyOrderSendersNotAllowed_ReportsEmailAndSmsTogetherWithoutEchoingSenders()
+    public void WhenLegacySmsOrderSenderIsAllowed_ThenOrderIsValid()
     {
-        var service = ServiceReturning(false);
+        var service = CreateServiceOwnerService(true);
 
-        var result = new NotificationOrderRequestValidator().Validate(LegacyOrder(), _owner, service.Object);
-
-        Assert.Equal(2, result.Errors.Count);
-        Assert.Equal("The sender email address is not registered for the service owner.", result.Errors.Single(e => e.PropertyName == "EmailTemplate.FromAddress").ErrorMessage);
-        Assert.Equal("The SMS sender is not registered for the service owner.", result.Errors.Single(e => e.PropertyName == "SmsTemplate.SenderNumber").ErrorMessage);
-        Assert.DoesNotContain(result.Errors, e => e.ErrorMessage.Contains("noreply@altinn.no") || e.ErrorMessage.Contains("TestSender"));
-    }
-
-    [Fact]
-    public void Validate_LegacyOrderSendersAllowed_IsValid()
-    {
-        var service = ServiceReturning(true);
-
-        var result = new NotificationOrderRequestValidator().Validate(LegacyOrder(), _owner, service.Object);
+        var result = new SmsNotificationOrderRequestValidator().Validate(CreateLegacySmsOrderRequest(), _owner, service.Object);
 
         Assert.True(result.IsValid);
-        service.Verify(s => s.IsSenderAllowed(_owner, AddressType.Email, "noreply@altinn.no"), Times.Once);
         service.Verify(s => s.IsSenderAllowed(_owner, AddressType.Sms, "TestSender"), Times.Once);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("  ")]
-    public void Validate_NoServiceOwner_SkipsSenderChecks(string? serviceOwner)
+    [Fact]
+    public void WhenLegacyOrderSendersAreAllowed_ThenOrderIsValid()
     {
-        var service = ServiceReturning(false);
+        var service = CreateServiceOwnerService(true);
 
-        var result = new NotificationOrderRequestValidator().Validate(LegacyOrder(), serviceOwner, service.Object);
+        var result = new NotificationOrderRequestValidator().Validate(CreateNotificationOrderRequest(), _owner, service.Object);
 
         Assert.True(result.IsValid);
+
+        service.Verify(s => s.IsSenderAllowed(_owner, AddressType.Sms, "TestSender"), Times.Once);
+        service.Verify(s => s.IsSenderAllowed(_owner, AddressType.Email, "noreply@altinn.no"), Times.Once);
+    }
+
+    [Fact]
+    public void WhenLegacySmsOrderSenderIsNotAllowed_ThenSmsErrorIsReported()
+    {
+        var service = CreateServiceOwnerService(false);
+
+        var result = new SmsNotificationOrderRequestValidator().Validate(CreateLegacySmsOrderRequest(), _owner, service.Object);
+
+        var error = Assert.Single(result.Errors);
+
+        Assert.Equal("SenderNumber", error.PropertyName);
+        Assert.Equal("The SMS sender is not registered for the service owner.", error.ErrorMessage);
+
+        Assert.DoesNotContain("TestSender", error.ErrorMessage);
+    }
+
+    [Fact]
+    public void WhenLegacyOrderSendersAreNotAllowed_ThenEmailAndSmsErrorsAreReported()
+    {
+        var service = CreateServiceOwnerService(false);
+
+        var result = new NotificationOrderRequestValidator().Validate(CreateNotificationOrderRequest(), _owner, service.Object);
+
+        Assert.Equal(2, result.Errors.Count);
+
+        Assert.Equal("The SMS sender is not registered for the service owner.", result.Errors.Single(e => e.PropertyName == "SmsTemplate.SenderNumber").ErrorMessage);
+        Assert.Equal("The sender email address is not registered for the service owner.", result.Errors.Single(e => e.PropertyName == "EmailTemplate.FromAddress").ErrorMessage);
+        
+        Assert.DoesNotContain(result.Errors, e => e.ErrorMessage.Contains("noreply@altinn.no") || e.ErrorMessage.Contains("TestSender"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("  ")]
+    public void WhenServiceOwnerIsMissing_ThenSenderChecksAreSkipped(string? serviceOwner)
+    {
+        var service = CreateServiceOwnerService(false);
+
+        var result = new NotificationOrderRequestValidator().Validate(CreateNotificationOrderRequest(), serviceOwner, service.Object);
+
+        Assert.True(result.IsValid);
+
         service.Verify(s => s.IsSenderAllowed(It.IsAny<string>(), It.IsAny<AddressType>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
-    public void Validate_ChainSendersNotAllowed_ReportsPathsForRecipientAndReminder()
+    public void WhenSendersInOrderChainAreAllowed_ThenOrderIsValid()
     {
-        var service = ServiceReturning(false);
-
-        var result = new NotificationOrderChainRequestValidator().Validate(ChainOrder(), _owner, service.Object);
-
-        Assert.Contains(result.Errors, e => e.PropertyName == "Recipient.RecipientPerson.EmailSettings.SenderEmailAddress");
-        Assert.Contains(result.Errors, e => e.PropertyName == "Reminders[0].Recipient.RecipientEmail.Settings.SenderEmailAddress");
-        Assert.All(result.Errors.Where(e => e.PropertyName.EndsWith("SenderEmailAddress")), e => Assert.Equal("The sender email address is not registered for the service owner.", e.ErrorMessage));
-    }
-
-    [Fact]
-    public void Validate_ChainSendersAllowed_IsValid()
-    {
-        var result = new NotificationOrderChainRequestValidator().Validate(ChainOrder(), _owner, ServiceReturning(true).Object);
+        var result = new NotificationOrderChainRequestValidator().Validate(CreateOrderChainRequest(), _owner, CreateServiceOwnerService(true).Object);
 
         Assert.True(result.IsValid);
     }
 
     [Fact]
-    public void Validate_SmsSenderWithWhitespace_ChecksTrimmedSenderForOwner()
+    public void WhenSendersInOrderChainAreNotAllowed_ThenErrorsAreReportedForRecipientAndReminder()
     {
-        var service = ServiceReturning(true);
+        var service = CreateServiceOwnerService(false);
+
+        var result = new NotificationOrderChainRequestValidator().Validate(CreateOrderChainRequest(), _owner, service.Object);
+
+        Assert.Equal(2, result.Errors.Count);
+        Assert.Equal("The sender email address is not registered for the service owner.", result.Errors.Single(e => e.PropertyName == "Recipient.RecipientPerson.EmailSettings.SenderEmailAddress").ErrorMessage);
+        Assert.Equal("The SMS sender is not registered for the service owner.", result.Errors.Single(e => e.PropertyName == "Reminders[0].Recipient.RecipientSms.Settings.Sender").ErrorMessage);
+    }
+
+    [Fact]
+    public void WhenSmsSenderHasSurroundingWhitespace_ThenTrimmedSenderIsChecked()
+    {
+        var service = CreateServiceOwnerService(true);
         var options = new SmsSendingOptionsExt { Body = "Body", Sender = " Sender " };
 
         new SmsSendingOptionsValidator().Validate(options, _owner, service.Object);
@@ -96,7 +122,7 @@ public class SenderOwnershipRulesTests
     }
 
     [Fact]
-    public void Validate_ServiceOwnerWithoutServiceOwnerServiceInContext_ThrowsInvalidOperationException()
+    public void WhenServiceOwnerIsSetWithoutServiceOwnerService_ThenInvalidOperationExceptionIsThrown()
     {
         var context = new ValidationContext<SmsSendingOptionsExt?>(new SmsSendingOptionsExt { Body = "Body", Sender = "Sender" });
         context.RootContextData[SenderOwnershipRules.ServiceOwnerContextKey] = _owner;
@@ -104,7 +130,12 @@ public class SenderOwnershipRulesTests
         Assert.Throws<InvalidOperationException>(() => new SmsSendingOptionsValidator().Validate(context));
     }
 
-    private static Mock<IServiceOwnerService> ServiceReturning(bool allowed)
+    /// <summary>
+    /// Creates a mocked service owner service that returns the same result for every sender check.
+    /// </summary>
+    /// <param name="allowed">The result returned by every call to <see cref="IServiceOwnerService.IsSenderAllowed"/>.</param>
+    /// <returns>The mocked service owner service.</returns>
+    private static Mock<IServiceOwnerService> CreateServiceOwnerService(bool allowed)
     {
         var service = new Mock<IServiceOwnerService>();
         service
@@ -114,15 +145,37 @@ public class SenderOwnershipRulesTests
         return service;
     }
 
-    private static NotificationOrderRequestExt LegacyOrder() => new()
+    /// <summary>
+    /// Creates a valid order request for the legacy endpoint <c>notifications/api/v1/orders</c>,
+    /// with the email sender "noreply@altinn.no" and the SMS sender "TestSender".
+    /// </summary>
+    /// <returns>The legacy order request.</returns>
+    private static NotificationOrderRequestExt CreateNotificationOrderRequest() => new()
     {
         NotificationChannel = NotificationChannelExt.EmailPreferred,
-        EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body", FromAddress = "noreply@altinn.no" },
+        Recipients = [new RecipientExt { NationalIdentityNumber = "16069412345" }],
         SmsTemplate = new SmsTemplateExt { Body = "Test Body", SenderNumber = "TestSender" },
+        EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body", FromAddress = "noreply@altinn.no" }
+    };
+
+    /// <summary>
+    /// Creates a valid SMS order request for the legacy endpoint <c>notifications/api/v1/orders/sms</c>,
+    /// with the SMS sender "TestSender".
+    /// </summary>
+    /// <returns>The legacy SMS order request.</returns>
+    private static SmsNotificationOrderRequestExt CreateLegacySmsOrderRequest() => new()
+    {
+        Body = "Test Body",
+        SenderNumber = "TestSender",
         Recipients = [new RecipientExt { NationalIdentityNumber = "16069412345" }]
     };
 
-    private static NotificationOrderChainRequestExt ChainOrder() => new()
+    /// <summary>
+    /// Creates a valid order chain request with the email sender "noreply-te@example.com" for the main recipient
+    /// and the SMS sender "ReminderSender" for its single reminder.
+    /// </summary>
+    /// <returns>The order chain request.</returns>
+    private static NotificationOrderChainRequestExt CreateOrderChainRequest() => new()
     {
         IdempotencyId = "id",
         Recipient = new NotificationRecipientExt
@@ -134,31 +187,30 @@ public class SenderOwnershipRulesTests
                 ChannelSchema = NotificationChannelExt.Email,
                 EmailSettings = new EmailSendingOptionsExt
                 {
-                    SenderEmailAddress = "noreply-te@example.com",
+                    Body = "Body",
                     Subject = "Subject",
-                    Body = "Body"
+                    SenderEmailAddress = "noreply-te@example.com"
                 }
             }
         },
-        Reminders = new List<NotificationReminderExt>
-        {
-            new NotificationReminderExt
+        Reminders =
+        [
+            new()
             {
                 DelayDays = 7,
                 Recipient = new NotificationRecipientExt
                 {
-                    RecipientEmail = new RecipientEmailExt
+                    RecipientSms = new RecipientSmsExt
                     {
-                        EmailAddress = "ola.normann@example.com",
-                        Settings = new EmailSendingOptionsExt
+                        PhoneNumber = "+4799999999",
+                        Settings = new SmsSendingOptionsExt
                         {
-                            SenderEmailAddress = "reminder@example.com",
-                            Subject = "Subject",
-                            Body = "Body"
+                            Body = "Body",
+                            Sender = "ReminderSender"
                         }
                     }
                 }
             }
-        }
+        ]
     };
 }

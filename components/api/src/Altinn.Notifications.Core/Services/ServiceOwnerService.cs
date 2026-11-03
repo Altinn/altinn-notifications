@@ -28,10 +28,12 @@ public class ServiceOwnerService(
     /// <inheritdoc/>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (_config.EnforceEmailSenderOwnership || _config.EnforceSmsSenderOwnership)
+        if (!_config.EnforceEmailSenderOwnership && !_config.EnforceSmsSenderOwnership)
         {
-            await LoadSenders(cancellationToken);
+            return;
         }
+
+        await LoadSenders(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -73,7 +75,8 @@ public class ServiceOwnerService(
             return true;
         }
 
-        _logger.LogWarning("Rejected a {AddressType} sender that is not registered for the service owner.", addressType);
+        var channel = addressType == AddressType.Email ? "Email" : "SMS";
+        _logger.LogWarning("Rejected an {Channel} sender that is not registered for the service owner.", channel);
 
         return false;
     }

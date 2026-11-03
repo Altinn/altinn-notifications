@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
@@ -12,10 +13,14 @@ using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Tests.Notifications.Utils;
+
 using FluentValidation;
 using FluentValidation.Results;
+
 using Microsoft.AspNetCore.Mvc;
+
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.InstantOrdersController;
@@ -132,21 +137,7 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
             }
         };
 
-        var request = new InstantSmsNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            RecipientSms = new ShortMessageDeliveryDetailsExt
-            {
-                PhoneNumber = ValidPhoneNumber,
-                TimeToLiveInSeconds = ValidTimeToLive,
-                ShortMessageContent = new ShortMessageContentExt
-                {
-                    Body = ValidMessageBody,
-                    Sender = SenderIdentifier
-                }
-            }
-        };
+        var request = CreateRequest(SenderIdentifier);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
@@ -197,21 +188,7 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
     public async Task Post_WhenCreatorShortNameIsMissing_ReturnsForbiddenAndDoesNotPersistOrder()
     {
         // Arrange
-        var request = new InstantSmsNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            RecipientSms = new ShortMessageDeliveryDetailsExt
-            {
-                PhoneNumber = ValidPhoneNumber,
-                TimeToLiveInSeconds = ValidTimeToLive,
-                ShortMessageContent = new ShortMessageContentExt
-                {
-                    Body = ValidMessageBody,
-                    Sender = SenderIdentifier
-                }
-            }
-        };
+        var request = CreateRequest(SenderIdentifier);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
@@ -237,7 +214,7 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
-        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Once);
+        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Never);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Never);
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantSmsNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -257,21 +234,7 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
             }
         };
 
-        var request = new InstantSmsNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            RecipientSms = new ShortMessageDeliveryDetailsExt
-            {
-                PhoneNumber = ValidPhoneNumber,
-                TimeToLiveInSeconds = ValidTimeToLive,
-                ShortMessageContent = new ShortMessageContentExt
-                {
-                    Body = ValidMessageBody,
-                    Sender = SenderIdentifier
-                }
-            }
-        };
+        var request = CreateRequest(SenderIdentifier);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);

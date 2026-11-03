@@ -131,22 +131,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             }
         };
 
-        var request = new InstantEmailNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            InstantEmailDetails = new InstantEmailDetailsExt
-            {
-                EmailAddress = ValidEmailAddress,
-                EmailSettings = new InstantEmailContentExt
-                {
-                    Subject = ValidSubject,
-                    Body = ValidBody,
-                    ContentType = EmailContentTypeExt.Plain,
-                    SenderEmailAddress = ValidSenderEmailAddress
-                }
-            }
-        };
+        var request = CreateRequest(ValidSenderEmailAddress);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
@@ -197,22 +182,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
     public async Task Post_WhenCreatorShortNameIsMissing_ReturnsForbiddenAndDoesNotPersistOrder()
     {
         // Arrange
-        var request = new InstantEmailNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            InstantEmailDetails = new InstantEmailDetailsExt
-            {
-                EmailAddress = ValidEmailAddress,
-                EmailSettings = new InstantEmailContentExt
-                {
-                    Subject = ValidSubject,
-                    Body = ValidBody,
-                    ContentType = EmailContentTypeExt.Plain,
-                    SenderEmailAddress = ValidSenderEmailAddress
-                }
-            }
-        };
+        var request = CreateRequest(ValidSenderEmailAddress);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
@@ -238,7 +208,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
-        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Once);
+        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Never);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Never);
         orderRequestServiceMock.Verify(e => e.PersistInstantEmailNotificationAsync(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -258,22 +228,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             }
         };
 
-        var request = new InstantEmailNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            InstantEmailDetails = new InstantEmailDetailsExt
-            {
-                EmailAddress = ValidEmailAddress,
-                EmailSettings = new InstantEmailContentExt
-                {
-                    Subject = ValidSubject,
-                    Body = ValidBody,
-                    ContentType = EmailContentTypeExt.Plain,
-                    SenderEmailAddress = ValidSenderEmailAddress
-                }
-            }
-        };
+        var request = CreateRequest(ValidSenderEmailAddress);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
@@ -435,22 +390,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             }
         };
 
-        var request = new InstantEmailNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            InstantEmailDetails = new InstantEmailDetailsExt
-            {
-                EmailAddress = ValidEmailAddress,
-                EmailSettings = new InstantEmailContentExt
-                {
-                    Subject = ValidSubject,
-                    Body = ValidBody,
-                    ContentType = EmailContentTypeExt.Plain,
-                    SenderEmailAddress = null // Null sender should trigger default
-                }
-            }
-        };
+        var request = CreateRequest(null);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
@@ -622,7 +562,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         serviceMock.Verify(s => s.PersistInstantEmailNotificationAsync(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private static InstantEmailNotificationOrderRequestExt CreateRequest(string senderEmailAddress)
+    private static InstantEmailNotificationOrderRequestExt CreateRequest(string? senderEmailAddress)
     {
         return new InstantEmailNotificationOrderRequestExt
         {

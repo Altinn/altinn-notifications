@@ -58,17 +58,16 @@ public class ComposedEmailOrdersController(
         try
         {
             string? creator = HttpContext.GetOrg();
+            if (string.IsNullOrWhiteSpace(creator))
+            {
+                return Forbid();
+            }
 
             var validationResult = _validator.Validate(orderRequest, creator, _serviceOwnerService);
             if (!validationResult.IsValid)
             {
                 validationResult.AddToModelState(ModelState);
                 return ValidationProblem(ModelState);
-            }
-
-            if (creator == null)
-            {
-                return Forbid();
             }
 
             var notificationOrderChainRequest = orderRequest.MapToNotificationOrderChainRequest(creator);

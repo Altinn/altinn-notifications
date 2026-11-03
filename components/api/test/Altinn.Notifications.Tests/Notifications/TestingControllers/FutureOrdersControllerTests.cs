@@ -1,7 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;

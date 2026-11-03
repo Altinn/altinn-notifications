@@ -7,10 +7,13 @@ using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators.Extensions;
+
 using FluentValidation;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
 
@@ -172,17 +175,16 @@ public class OrdersController : ControllerBase
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(NotificationOrderRequestExt notificationOrderRequest)
     {
         string? creator = HttpContext.GetOrg();
+        if (string.IsNullOrWhiteSpace(creator))
+        {
+            return Forbid();
+        }
 
         var validationResult = _validator.Validate(notificationOrderRequest, creator, _serviceOwnerService);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(this.ModelState);
             return ValidationProblem(ModelState);
-        }
-
-        if (creator == null)
-        {
-            return Forbid();
         }
 
         var orderRequest = notificationOrderRequest.MapToOrderRequest(creator);

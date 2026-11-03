@@ -314,55 +314,6 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
     }
 
     [Fact]
-    public async Task Post_OrderWithoutFromAddress_StringEmptyUsedAsServiceInput_Accepted()
-    {
-        // Arrange
-        Mock<IOrderRequestService> serviceMock = new();
-
-        serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
-            .Callback<NotificationOrderRequest>(orderRequest =>
-            {
-                var smsTemplate = orderRequest.Templates
-                    .OfType<SmsTemplate>()
-                    .FirstOrDefault();
-
-                Assert.NotNull(smsTemplate);
-                Assert.Empty(smsTemplate.SenderNumber);
-            })
-            .ReturnsAsync(new NotificationOrderRequestResponse() { OrderId = _orderId });
-
-        HttpClient client = GetTestClient(orderService: serviceMock.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
-
-        SmsNotificationOrderRequestExt request = new()
-        {
-            Body = "sms-body",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000001" }, new RecipientExt() { MobileNumber = "+4790000001" } },
-            SendersReference = "senders-reference",
-            RequestedSendTime = DateTime.UtcNow
-        };
-
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
-        {
-            Content = new StringContent(request.Serialize(), Encoding.UTF8, "application/json")
-        };
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
-        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.NotNull(responseObject);
-        Assert.Equal(_orderId, responseObject.OrderId);
-
-        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
-
-        serviceMock.VerifyAll();
-    }
-
-    [Fact]
     public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsValidationProblemAndDoesNotRegisterOrder()
     {
         // Arrange

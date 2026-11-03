@@ -1,7 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
@@ -59,13 +55,15 @@ public class ComposedEmailOrdersControllerTests
     {
         // Arrange
         var serviceMock = new Mock<IComposedEmailOrderRequestService>();
-        var controller = CreateController(serviceMock.Object, ValidatorThatPasses().Object, org: null);
+        var validatorMock = ValidatorThatFails();
+        var controller = CreateController(serviceMock.Object, validatorMock.Object, org: null);
 
         // Act
         var result = await controller.Post(ValidRequest(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.IsType<ForbidResult>(result.Result);
+        validatorMock.Verify(v => v.Validate(It.IsAny<IValidationContext>()), Times.Never);
         serviceMock.Verify(s => s.RegisterComposedEmailOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -232,23 +230,22 @@ public class ComposedEmailOrdersControllerTests
     private static ComposedEmailOrdersController CreateController(
         IComposedEmailOrderRequestService service,
         IValidator<ComposedEmailRequestExt> validator,
-        string? org = "ttd",
-        IServiceOwnerService? serviceOwnerService = null)
+        string? org = "ttd")
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = org;
 
-        return new ComposedEmailOrdersController(service, validator, serviceOwnerService ?? ServiceOwnerServiceThatAllowsAll().Object)
+        return new ComposedEmailOrdersController(service, validator, Mock.Of<IServiceOwnerService>())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
     }
 
-    private static Mock<IServiceOwnerService> ServiceOwnerServiceThatAllowsAll()
+    private static Mock<IValidator<ComposedEmailRequestExt>> ValidatorThatFails()
     {
-        var mock = new Mock<IServiceOwnerService>();
-        mock.Setup(s => s.IsSenderAllowed(It.IsAny<string>(), It.IsAny<AddressType>(), It.IsAny<string?>()))
-            .Returns(true);
+        var mock = new Mock<IValidator<ComposedEmailRequestExt>>();
+        mock.Setup(v => v.Validate(It.IsAny<IValidationContext>()))
+            .Returns(new ValidationResult([new ValidationFailure("SasUrl", "Attachment sasUrl must be an absolute HTTPS URI.")]));
         return mock;
     }
 
@@ -257,14 +254,6 @@ public class ComposedEmailOrdersControllerTests
         var mock = new Mock<IValidator<ComposedEmailRequestExt>>();
         mock.Setup(v => v.Validate(It.IsAny<IValidationContext>()))
             .Returns(new ValidationResult());
-        return mock;
-    }
-
-    private static Mock<IValidator<ComposedEmailRequestExt>> ValidatorThatFails()
-    {
-        var mock = new Mock<IValidator<ComposedEmailRequestExt>>();
-        mock.Setup(v => v.Validate(It.IsAny<IValidationContext>()))
-            .Returns(new ValidationResult([new ValidationFailure("SasUrl", "Attachment sasUrl must be an absolute HTTPS URI.")]));
         return mock;
     }
 }

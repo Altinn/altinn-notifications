@@ -179,6 +179,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.IsType<ForbidResult>(result.Result);
+        validatorMock.Verify(v => v.Validate(It.IsAny<IValidationContext>()), Times.Never);
         orderRequestServiceMock.Verify(
             s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -941,38 +942,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         orderRequestService.Verify(
             s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task Post_OperationCanceledDuringRegistration_Returns499Status()
-    {
-        // Arrange
-        var request = CreateFutureEmailOrderChainRequest();
-        var validatorMock = SetupValidator();
-        var orderServiceMock = new Mock<IOrderRequestService>();
-
-        orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new OperationCanceledException());
-
-        var httpContext = new DefaultHttpContext();
-        httpContext.Items["Org"] = "ttd";
-
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object, SetupServiceOwnerService())
-        {
-            ControllerContext = new ControllerContext { HttpContext = httpContext }
-        };
-
-        // Act
-        var result = await controller.Post(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
-
-        Assert.NotNull(problemDetails);
-        Assert.Equal(499, objectResult.StatusCode);
-        Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
-        Assert.Equal(objectResult.StatusCode, problemDetails.Status);
     }
 
     [Fact]

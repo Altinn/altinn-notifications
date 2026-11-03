@@ -26,7 +26,7 @@ public sealed class ServiceOwnerRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetRegisteredSenders_ReturnsSendersWithMappedAddressType()
+    public async Task WhenGettingRegisteredSenders_ThenSendersAreReturnedWithMappedAddressType()
     {
         // Arrange
         ServiceOwnerRepository sut = CreateRepository();
@@ -46,7 +46,7 @@ public sealed class ServiceOwnerRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InsertSender_SameSenderWithDifferentCasing_ThrowsUniqueViolation()
+    public async Task WhenInsertingSameSenderWithDifferentCasing_ThenUniqueViolationIsThrown()
     {
         // Arrange
         string email = $"{Guid.NewGuid():N}@test.no";
@@ -60,7 +60,7 @@ public sealed class ServiceOwnerRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InsertSender_ServiceOwnerNotLowercase_ThrowsCheckViolation()
+    public async Task WhenInsertingSenderWithNonLowercaseServiceOwner_ThenCheckViolationIsThrown()
     {
         // Act
         var exception = await Assert.ThrowsAsync<PostgresException>(() => PostgreUtil.InsertServiceOwnerSender(_owner.ToUpperInvariant(), "Email", $"{Guid.NewGuid():N}@test.no"));
