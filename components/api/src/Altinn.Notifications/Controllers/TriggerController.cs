@@ -130,7 +130,7 @@ public class TriggerController(
         try
         {
             var deletedCount = await _statusFeedService.DeleteOldStatusFeedRecords(cancellationToken);
-            _logger.LogInformation("Deleted {DeletedCount} old status feed records", deletedCount);
+            _logger.Log(deletedCount > 0 ? LogLevel.Information : LogLevel.Debug, "Deleted {DeletedCount} old status feed records", deletedCount);
             return Ok();
         }
         catch (Exception ex)
