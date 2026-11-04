@@ -1020,9 +1020,11 @@ public sealed class NotificationLogRepositoryTests : IAsyncLifetime
         // RequestedSendTime is sourced from the order's own requested send timestamp, set moments ago by the test setup.
         Assert.True(entry.RequestedSendTime <= DateTime.UtcNow && entry.RequestedSendTime > DateTime.UtcNow.AddMinutes(-1));
 
-        // LastUpdateTime is set by the database itself (resulttime) when the notification was marked Delivered,
-        // so it can't be asserted against an exact expected value — only that it's populated and not before the request was made.
-        Assert.True(entry.LastUpdateTime >= entry.RequestedSendTime);
+        // LastUpdateTime is copied from the notification's resulttime, which the database set when the notification was marked Delivered.
+        string notificationTable = channel == "Email" ? "emailnotifications" : "smsnotifications";
+        DateTime expectedLastUpdateTime = await PostgreUtil.RunSqlReturnOutput<DateTime>(
+            $"SELECT resulttime FROM notifications.{notificationTable} WHERE alternateid = '{entry.NotificationId}'");
+        Assert.Equal(expectedLastUpdateTime, entry.LastUpdateTime);
     }
 
     private static NotificationLogRepository GetNotificationLogRepository()

@@ -112,4 +112,70 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
         Assert.Empty(metrics.OperationId);
         Assert.NotEmpty(metrics.ShipmentId);
     }
+
+    [Fact]
+    public async Task GetEmailNotificationsMetrics_ReturnsNonNegativeCounts()
+    {
+        // Arrange
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        // Act
+        var (anytimeCount, daytimeCount, composedCount) = await sut.GetEmailNotificationsMetrics(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(anytimeCount >= 0);
+        Assert.True(daytimeCount >= 0);
+        Assert.True(composedCount >= 0);
+    }
+
+    [Fact]
+    public async Task GetSmsNotificationsMetrics_ReturnsNonNegativeCounts()
+    {
+        // Arrange
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        // Act
+        var (anytimeCount, daytimeCount) = await sut.GetSmsNotificationsMetrics(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(anytimeCount >= 0);
+        Assert.True(daytimeCount >= 0);
+    }
+
+    [Fact]
+    public async Task GetOrderMetrics_ReturnsNonNegativeCounts()
+    {
+        // Arrange
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        // Act
+        var (ordersNotDue, ordersPastDue, ordersFailed) = await sut.GetOrderMetrics(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(ordersNotDue >= 0);
+        Assert.True(ordersPastDue >= 0);
+        Assert.True(ordersFailed >= 0);
+    }
+
+    [Fact]
+    public async Task GetOrderNotDueDistributionMetrics_ReturnsRowsWithNonNegativeCount()
+    {
+        // Arrange
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        // Act
+        List<(DateOnly Day, long Count)> result = await sut.GetOrderNotDueDistributionMetrics(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.DoesNotContain(result, row => row.Count < 0);
+    }
 }
