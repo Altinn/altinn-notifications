@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.Models.Metrics
+﻿using Parquet.Serialization.Attributes;
+
+namespace Altinn.Notifications.Core.Models.Metrics
 {
     /// <summary>
     /// Record describing the notification metrics for a single email
@@ -11,9 +13,14 @@
         public long EmailId { get; init; }
 
         /// <summary>
-        /// The shipment identifier this email belongs to.
+        /// The shipment identifier of the email notification (email.alternateid), as UUID text.
         /// </summary>
-        public string ShipmentId { get; init; } = string.Empty;
+        public string EmailShipmentId { get; init; } = string.Empty;
+
+        /// <summary>
+        /// The shipment identifier of the order the email belongs to (order.alternateid), as UUID text.
+        /// </summary>
+        public string OrderShipmentId { get; init; } = string.Empty;
 
         /// <summary>
         /// The sender's reference associated with the shipment.
@@ -21,9 +28,16 @@
         public string SendersReference { get; init; } = string.Empty;
 
         /// <summary>
-        /// The requested send time for the email.
+        /// The requested send time for the email (UTC). Written as TIMESTAMP_MILLIS.
         /// </summary>
-        public string RequestedSendTime { get; init; } = string.Empty;
+        [ParquetTimestamp(ParquetTimestampResolution.Milliseconds)]
+        public DateTime RequestedSendTime { get; init; }
+
+        /// <summary>
+        /// The time the send result was set for the email (UTC). Written as TIMESTAMP_MILLIS.
+        /// </summary>
+        [ParquetTimestamp(ParquetTimestampResolution.Milliseconds)]
+        public DateTime ResultTime { get; init; }
 
         /// <summary>
         /// The creator (originating service) name for the email.
