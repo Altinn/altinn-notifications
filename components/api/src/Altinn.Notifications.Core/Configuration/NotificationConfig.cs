@@ -16,6 +16,18 @@ public class NotificationConfig
     public string DefaultSmsSenderNumber { get; set; } = string.Empty;
 
     /// <summary>
+    /// Whether email sender addresses specified in orders must be registered for the ordering service owner.
+    /// The registered senders are read at startup, so registration changes require an application restart.
+    /// </summary>
+    public bool EnforceEmailSenderOwnership { get; set; }
+
+    /// <summary>
+    /// Whether SMS senders specified in orders must be registered for the ordering service owner.
+    /// The registered senders are read at startup, so registration changes require an application restart.
+    /// </summary>
+    public bool EnforceSmsSenderOwnership { get; set; }
+
+    /// <summary>
     /// Start hour of the SMS send window
     /// </summary>
     public int SmsSendWindowStartHour { get; set; } = 9;

@@ -20,26 +20,22 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// Controller to handle notification orders that has one or more reminders.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
+/// </remarks>
 [ApiController]
 [Route("notifications/api/v1/future/orders")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
-public class FutureOrdersController : ControllerBase
+public class FutureOrdersController(
+    IOrderRequestService orderRequestService,
+    IValidator<NotificationOrderChainRequestExt> validator,
+    IServiceOwnerService serviceOwnerService) : ControllerBase
 {
-    private readonly IOrderRequestService _orderRequestService;
-    private readonly IValidator<NotificationOrderChainRequestExt> _validator;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
-    /// </summary>
-    public FutureOrdersController(
-        IOrderRequestService orderRequestService,
-        IValidator<NotificationOrderChainRequestExt> validator)
-    {
-        _validator = validator;
-        _orderRequestService = orderRequestService;
-    }
+    private readonly IOrderRequestService _orderRequestService = orderRequestService;
+    private readonly IValidator<NotificationOrderChainRequestExt> _validator = validator;
+    private readonly IServiceOwnerService _serviceOwnerService = serviceOwnerService;
 
     /// <summary>
     /// Creates a new notification order with zero or more reminders
@@ -63,17 +59,17 @@ public class FutureOrdersController : ControllerBase
     {
         try
         {
-            var validationResult = _validator.Validate(notificationOrderRequest);
+            string? creator = HttpContext.GetOrg();
+            if (string.IsNullOrWhiteSpace(creator))
+            {
+                return Forbid();
+            }
+
+            var validationResult = _validator.Validate(notificationOrderRequest, creator, _serviceOwnerService);
             if (!validationResult.IsValid)
             {
                 validationResult.AddToModelState(ModelState);
                 return ValidationProblem(ModelState);
-            }
-
-            string? creator = HttpContext.GetOrg();
-            if (creator == null)
-            {
-                return Forbid();
             }
 
             /* The tax administration is demanding that we use stale contact information for all recipients.
