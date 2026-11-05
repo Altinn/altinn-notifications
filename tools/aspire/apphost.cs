@@ -152,6 +152,12 @@ if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m
         }
     }
 
+    // Since #1948 the names for $recipientName$ come from Register's v2 party query, which has its own base address.
+    if (builder.Configuration.GetValue("Mocks:Register:Enabled", true))
+    {
+        api.WithEnvironment("RegisterSettings__ApiEndpoint", "http://localhost:" + builder.Configuration.GetValue("Mocks:Register:Port", 5121) + "/register/api/");
+    }
+
     if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
     {
         int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
