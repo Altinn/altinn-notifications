@@ -2568,6 +2568,42 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
+        public async Task AddEmailContactPoints_WhenOfficialContactPointsAreUnusable_ShouldQueryRegisterAndEnrichSireOrganization()
+        {
+            // Arrange
+            string organizationNumber = "090080784";
+            string userEmailAddress = "contact-person@example.com";
+            var recipients = new List<Recipient> { new() { OrganizationNumber = organizationNumber } };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([new() { PartyId = 1001, OrganizationNumber = organizationNumber, EmailList = [" "], MobileNumberList = ["invalid"] }]);
+            profileClientMock
+                .Setup(e => e.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), "test-resource"))
+                .ReturnsAsync([new() { PartyId = 1001, OrganizationNumber = organizationNumber, UserContactPoints = [new() { UserId = 200001, Email = userEmailAddress, NationalIdentityNumber = "29326345553" }] }]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), "test-resource", It.IsAny<string?>()))
+                .ReturnsAsync((List<OrganizationContactPoints> cps, string _, string? __) => cps);
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(e => e.QueryOrganizationSources(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([new PartyDetails { OrganizationNumber = organizationNumber, RegistrySource = OrganizationRegistrySource.RegisteredWithSkatteetaten }]);
+
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object, registerClientMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipients, "urn:altinn:resource:test-resource", OrderLifecycleStage.Registration, false);
+
+            // Assert
+            var emailAddress = Assert.Single(Assert.Single(recipients).AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal(userEmailAddress, emailAddress.EmailAddress);
+        }
+
+        [Fact]
         public async Task AddEmailContactPoints_WhenRegisterLookupFails_ShouldThrowPlatformDependencyException()
         {
             // Arrange

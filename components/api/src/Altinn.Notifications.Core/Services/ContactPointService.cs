@@ -783,7 +783,8 @@ public class ContactPointService(
                 .Where(orgNo =>
                        !contactPoints.Exists(
                              contactPoint => string.Equals(contactPoint.OrganizationNumber, orgNo, StringComparison.OrdinalIgnoreCase) &&
-                            (contactPoint.EmailList.Count > 0 || contactPoint.MobileNumberList.Count > 0)))];
+                            (contactPoint.EmailList.Exists(email => !string.IsNullOrWhiteSpace(email)) ||
+                             contactPoint.MobileNumberList.Exists(MobileNumberHelper.IsValidMobileNumber))))];
 
         if (organizationNumbersMissingContactPoints.Count == 0)
         {
