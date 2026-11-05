@@ -130,6 +130,7 @@ public class HostingExtensionsTests
         Assert.False(apiEnvironment.ContainsKey("PlatformSettings__ApiProfileEndpoint"));
         Assert.Equal("False", mockEnvironment["PlatformMocksSettings__Profile__Enabled"]);
         Assert.Equal("http://localhost:6121/register/api/v1/", apiEnvironment["PlatformSettings__ApiRegisterEndpoint"]);
+        Assert.Equal("http://localhost:6121/register/api/", apiEnvironment["RegisterSettings__ApiEndpoint"]);
         Assert.Equal("6121", mockEnvironment["PlatformMocksSettings__Register__Port"]);
         Assert.Equal("http://localhost:5197/token", apiEnvironment["SendConditionClient__MaskinportenSettings__TokenEndpoint"]);
         Assert.NotEmpty(apiEnvironment["SendConditionClient__MaskinportenSettings__EncodedJwk"]);

@@ -84,6 +84,12 @@ public static class PlatformMocksBuilderExtensions
             api.WithEnvironment(system.ApiSetting, "http://localhost:" + system.Port + system.ApiPath);
         }
 
+        // Since #1948 the names for $recipientName$ come from Register's v2 party query, which has its own base address.
+        if (annotation.Systems.Single(s => s.Name == "Register") is { Enabled: true } register)
+        {
+            api.WithEnvironment("RegisterSettings__ApiEndpoint", "http://localhost:" + register.Port + "/register/api/");
+        }
+
         // The condition client gets its token from the Maskinporten mock instead of test.maskinporten.no. The grant still has to be
         // signed, so each run makes a key of its own. The mock does not check it.
         if (annotation.Systems.Single(s => s.Name == "Maskinporten") is { Enabled: true } maskinporten)

@@ -80,6 +80,9 @@ var controlPanel = builder.AddTestHarness(
         builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120))
     .WithTriggers(api, triggersEnabled, builder.Configuration.GetSection("Triggers:Jobs"));
 
+// Values for the Bruno collection that follow from these settings, on top of the test data in aspire.env. See WriteBrunoEnvironment.
+Dictionary<string, string> brunoVariables = [];
+
 // mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
 var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
 if (authMode == "mock")
@@ -87,6 +90,11 @@ if (authMode == "mock")
     var auth = builder.AddMockAuth("mock-auth", builder.Configuration.GetValue("Auth:Port", 5094), controlPanel);
     api.WithMockAuth(auth);
     controlPanel.WithTestMessageCommands(api, auth);
+
+    // With at23 these are left out, so Bruno keeps the Altinn test token generator from the user's own .env.
+    brunoVariables["TOKEN_GENERATOR_URL"] = "http://localhost:" + builder.Configuration.GetValue("Auth:Port", 5094);
+    brunoVariables["TOKEN_BASIC_AUTH_USER"] = "mock";
+    brunoVariables["TOKEN_BASIC_AUTH_PW"] = "mock";
 }
 else if (authMode != "at23")
 {
@@ -140,6 +148,16 @@ if (mocksEnabled)
 {
     var mocks = builder.AddPlatformMocks("wiremock-platform", controlPanel, builder.Configuration.GetSection("Mocks"));
     api.WithPlatformMocks(mocks);
+
+    // The condition URLs to put in orders, as the platform mocks list them in the dashboard.
+    if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
+    {
+        int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
+        foreach (string condition in new[] { "true", "false", "corrupt", "error" })
+        {
+            brunoVariables["TESTDATA_URL_CONDITION_" + condition.ToUpperInvariant()] = "http://local.altinn.cloud:" + conditionsPort + "/condition/" + condition;
+        }
+    }
 }
 
 // What the settings above started, in the control panel's details in the dashboard.
@@ -158,6 +176,11 @@ AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
 AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
 AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
 
+if (builder.ExecutionContext.IsRunMode)
+{
+    WriteBrunoEnvironment(brunoVariables);
+}
+
 var app = builder.Build();
 
 HashSet<string> pendingRestarts = [];
@@ -174,6 +197,34 @@ app.Run();
 foreach (var watcher in watchers)
 {
     watcher.Dispose();
+}
+
+// Writes ".env.v2 aspire" in the Bruno collection: the test data in aspire.env with the values that follow from these settings.
+// Bruno builds that read .env.<environment name> files use it while "v2 aspire" is selected, over every other .env file.
+// It is written again on every start, so it always matches the stack that runs from this checkout.
+void WriteBrunoEnvironment(Dictionary<string, string> variables)
+{
+    string collection = Path.Combine(builder.AppHostDirectory, Components, "api", "test", "bruno");
+    Dictionary<string, string> remaining = new(variables);
+    List<string> lines =
+    [
+        "# Written by tools/aspire/apphost.cs on every start, from aspire.env and the app host settings. Edits here are lost.",
+    ];
+
+    foreach (string line in File.ReadAllLines(Path.Combine(collection, "aspire.env")))
+    {
+        int separator = line.IndexOf('=');
+        if (line.StartsWith('#') || separator < 1)
+        {
+            continue;
+        }
+
+        string key = line[..separator];
+        lines.Add(remaining.Remove(key, out string? value) ? key + "=" + value : line);
+    }
+
+    lines.AddRange(remaining.Select(variable => variable.Key + "=" + variable.Value));
+    File.WriteAllLines(Path.Combine(collection, ".env.v2 aspire"), lines);
 }
 
 void StartContainer(string workingDirectory, string[] runtimeArgs, Dictionary<string, string>? environment = null)
