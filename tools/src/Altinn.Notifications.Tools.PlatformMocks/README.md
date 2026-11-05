@@ -41,6 +41,8 @@ These identifiers are exceptions, set in `appsettings.json`:
 
 `POST /register/api/v1/parties/nameslookup` names persons `Testperson <nin>` and organisations `Testorganisasjon <orgno> AS`, so `$recipientName$` is filled in.
 
+`POST /register/api/v2/internal/parties/query` gives the same names for a list of party URNs (`urn:altinn:person:identifier-no:<nin>` and `urn:altinn:organization:identifier-no:<orgno>`). The API uses it since #1948, and only for numbers with valid check digits.
+
 ### Authorization
 
 `POST /authorization/api/v1/decision` permits every request in a XACML multi-request, except for the user ids in `DeniedUsers`. Each result echoes the attributes the request marked with `IncludeInResult`, since the API matches results to users and parties by them.
@@ -84,7 +86,7 @@ Then start the API with its endpoints pointing at the mocks:
 
 ```bash
 PlatformSettings__ApiProfileEndpoint=http://localhost:5131/profile/api/v1/ \
-PlatformSettings__ApiRegisterEndpoint=http://localhost:5121/register/api/v1/ \
+PlatformSettings__ApiRegisterEndpoint=http://localhost:5121/register/api/v1/ RegisterSettings__ApiEndpoint=http://localhost:5121/register/api/ \
 PlatformSettings__ApiAuthorizationEndpoint=http://localhost:5151/authorization/api/v1/ \
 SendConditionClient__MaskinportenSettings__TokenEndpoint=http://localhost:5197/token \
 SendConditionClient__MaskinportenSettings__AssertionAudience=http://localhost:5197/ \

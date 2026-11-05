@@ -137,6 +137,34 @@ public class PlatformMocksServiceTests
         Assert.Equal("Testperson 12345678901", Assert.Single(parties, p => p.NationalIdentityNumber == Person).Name);
     }
 
+    [Fact]
+    public async Task Register_PartyQuery_NamesEveryPartyLikeTheV2Api()
+    {
+        await using var mocks = await StartAsync();
+        using var http = new HttpClient();
+        string query = """{"data":["urn:altinn:organization:identifier-no:310000019","urn:altinn:person:identifier-no:01019010046","urn:altinn:party:id:1"]}""";
+
+        using var response = await http.PostAsync(
+            mocks.Urls["register"] + RegisterMock.PartiesQueryPath,
+            new StringContent(query, Encoding.UTF8, "application/json"),
+            TestContext.Current.CancellationToken);
+
+        // The fields Altinn.Register.Contracts needs to read a person or an organisation, with the same names as the v1 lookup.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var parties = body.RootElement.GetProperty("data").EnumerateArray().ToList();
+        Assert.Equal(2, parties.Count);
+        Assert.All(parties, party => Assert.Equal(1, party.GetProperty("versionId").GetInt32()));
+
+        var organization = Assert.Single(parties, p => p.GetProperty("partyType").GetString() == "organization");
+        Assert.Equal("310000019", organization.GetProperty("organizationIdentifier").GetString());
+        Assert.Equal("Testorganisasjon 310000019 AS", organization.GetProperty("displayName").GetString());
+
+        var person = Assert.Single(parties, p => p.GetProperty("partyType").GetString() == "person");
+        Assert.Equal("01019010046", person.GetProperty("personIdentifier").GetString());
+        Assert.Equal("Testperson 01019010046", person.GetProperty("displayName").GetString());
+    }
+
     [Theory]
     [InlineData("/condition/true", true)]
     [InlineData("/condition/false", false)]
@@ -379,6 +407,7 @@ public class PlatformMocksServiceTests
                 {
                     ["PlatformSettings:ApiProfileEndpoint"] = Url("profile") + "/profile/api/v1/",
                     ["PlatformSettings:ApiRegisterEndpoint"] = Url("register") + "/register/api/v1/",
+                    ["RegisterSettings:ApiEndpoint"] = Url("register") + "/register/api/",
                     ["PlatformSettings:ApiAuthorizationEndpoint"] = Url("authorization") + "/authorization/api/v1/",
                     ["NotificationConfig:AuthorizationBatchSize"] = "500",
                 })
