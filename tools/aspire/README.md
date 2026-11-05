@@ -263,7 +263,10 @@ Both run against the stack with the default `Auth:Mode` = `mock` (the `mock-auth
 
 `components/api/test/bruno/aspire.env` has test data that matches the platform mocks.
 
-* **Bruno app** (`Bruno.exe`): copy `aspire.env` to `.env` in the collection folder, open the collection, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use the token.
+On every start the app host also writes `.env.v2 aspire` next to it: the values from `aspire.env`, the condition URLs on the configured `Mocks:Conditions:Port` and, with `Auth:Mode` = `mock`, `TOKEN_GENERATOR_URL`, `TOKEN_BASIC_AUTH_USER` and `TOKEN_BASIC_AUTH_PW` for `mock-auth`. It is ignored by git and overwritten on the next start, so change `aspire.env` or the app host settings instead.
+
+* **Bruno app with environment specific .env files** (`.env.<environment name>`): open the collection in the checkout the app host runs from and select the `v2 aspire` environment. Bruno takes the `process.env` values from `.env.v2 aspire` over your own `.env`, so nothing needs copying. Run `test-util/new auth token`, and the other requests then use the token.
+* **Bruno app** (`Bruno.exe`) without them: copy `aspire.env` to `.env` in the collection folder, open the collection, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use the token.
 * **Bruno CLI in Docker**: mount the collection read-only, or the CLI writes the token into `environments/v2 aspire.bru`, and point it at the host:
 
   ```bash
