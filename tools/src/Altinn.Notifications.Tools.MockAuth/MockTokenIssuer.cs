@@ -39,7 +39,9 @@ internal sealed class MockTokenIssuer
         identity.AddClaim(new Claim("urn:altinn:org", org, ClaimValueTypes.String, ClaimIssuer));
         if (!string.IsNullOrEmpty(scopes))
         {
-            identity.AddClaim(new Claim("urn:altinn:scope", scopes, ClaimValueTypes.String, "maskinporten"));
+            // The Altinn test token generator takes a comma-separated list, like k6 sends, and the scope claim is space-separated.
+            string scopeClaim = string.Join(' ', scopes.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries));
+            identity.AddClaim(new Claim("urn:altinn:scope", scopeClaim, ClaimValueTypes.String, "maskinporten"));
         }
 
         identity.AddClaim(new Claim("urn:altinn:orgNumber", orgNumber, ClaimValueTypes.Integer32, ClaimIssuer));
