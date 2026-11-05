@@ -772,16 +772,11 @@ public class ContactPointService(
     /// <param name="contactPoints">The official contact points already retrieved for the organizations.</param>
     /// <returns>
     /// The organization numbers without official contact points that are registered with Skatteetaten.
-    /// An empty list is returned without calling Register when <paramref name="organizationNumbers"/> is empty.
+    /// An empty list is returned without calling Register when every organization already has official contact points.
     /// </returns>
     /// <exception cref="PlatformDependencyException">Thrown when the Register lookup fails.</exception>
     private async Task<List<string>> FindSireOrganizationsLackingContactPoints(List<string> organizationNumbers, List<OrganizationContactPoints> contactPoints)
     {
-        if (organizationNumbers.Count == 0)
-        {
-            return [];
-        }
-
         List<string> organizationNumbersMissingContactPoints =
             [..organizationNumbers
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -789,6 +784,11 @@ public class ContactPointService(
                        !contactPoints.Exists(
                              contactPoint => string.Equals(contactPoint.OrganizationNumber, orgNo, StringComparison.OrdinalIgnoreCase) &&
                             (contactPoint.EmailList.Count > 0 || contactPoint.MobileNumberList.Count > 0)))];
+
+        if (organizationNumbersMissingContactPoints.Count == 0)
+        {
+            return [];
+        }
 
         try
         {
