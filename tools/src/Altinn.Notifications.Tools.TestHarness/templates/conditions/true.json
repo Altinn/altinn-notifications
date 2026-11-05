@@ -1,0 +1,6 @@
+{
+  "name": "200 sendNotification true",
+  "status": 200,
+  "headers": { "Content-Type": "application/json" },
+  "body": { "sendNotification": true }
+}
