@@ -106,6 +106,9 @@ if (!interceptEnabled)
     controlPanel.WaitFor(api);
 }
 
+// Values for the Bruno collection that follow from these settings, on top of the test data in aspire.env. See WriteBrunoEnvironment.
+Dictionary<string, string> brunoVariables = [];
+
 // mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
 var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
 if (authMode == "mock")
@@ -119,6 +122,11 @@ if (authMode == "mock")
 
     api.WithEnvironment("GeneralSettings__OpenIdWellKnownEndpoint", authUrl + "/authentication/api/v1/openid/")
         .WaitFor(auth);
+
+    // With at23 these are left out, so Bruno keeps the Altinn test token generator from the user's own .env.
+    brunoVariables["TOKEN_GENERATOR_URL"] = authUrl;
+    brunoVariables["TOKEN_BASIC_AUTH_USER"] = "mock";
+    brunoVariables["TOKEN_BASIC_AUTH_PW"] = "mock";
 }
 else if (authMode != "at23")
 {
@@ -243,6 +251,12 @@ if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m
         }
     }
 
+    // Since #1948 the names for $recipientName$ come from Register's v2 party query, which has its own base address.
+    if (builder.Configuration.GetValue("Mocks:Register:Enabled", true))
+    {
+        api.WithEnvironment("RegisterSettings__ApiEndpoint", "http://localhost:" + builder.Configuration.GetValue("Mocks:Register:Port", 5121) + "/register/api/");
+    }
+
     if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
     {
         int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
@@ -250,7 +264,9 @@ if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m
         // The API only accepts condition URLs with a top-level domain, so the URLs to put in orders use local.altinn.cloud, which resolves to 127.0.0.1.
         foreach (string condition in new[] { "true", "false", "corrupt", "error" })
         {
-            mocks.WithUrl("http://local.altinn.cloud:" + conditionsPort + "/condition/" + condition, "Condition " + condition);
+            string conditionUrl = "http://local.altinn.cloud:" + conditionsPort + "/condition/" + condition;
+            mocks.WithUrl(conditionUrl, "Condition " + condition);
+            brunoVariables["TESTDATA_URL_CONDITION_" + condition.ToUpperInvariant()] = conditionUrl;
         }
     }
 
@@ -271,6 +287,11 @@ if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m
 AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
 AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
 AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
+
+if (builder.ExecutionContext.IsRunMode)
+{
+    WriteBrunoEnvironment(brunoVariables);
+}
 
 var app = builder.Build();
 
@@ -314,6 +335,34 @@ static string CreateSigningKey()
     return Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(jwk));
 
     static string Base64Url(byte[]? bytes) => Convert.ToBase64String(bytes!).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+}
+
+// Writes ".env.v2 aspire" in the Bruno collection: the test data in aspire.env with the values that follow from these settings.
+// Bruno builds that read .env.<environment name> files use it while "v2 aspire" is selected, over every other .env file.
+// It is written again on every start, so it always matches the stack that runs from this checkout.
+void WriteBrunoEnvironment(Dictionary<string, string> variables)
+{
+    string collection = Path.Combine(builder.AppHostDirectory, Components, "api", "test", "bruno");
+    Dictionary<string, string> remaining = new(variables);
+    List<string> lines =
+    [
+        "# Written by tools/aspire/apphost.cs on every start, from aspire.env and the app host settings. Edits here are lost.",
+    ];
+
+    foreach (string line in File.ReadAllLines(Path.Combine(collection, "aspire.env")))
+    {
+        int separator = line.IndexOf('=');
+        if (line.StartsWith('#') || separator < 1)
+        {
+            continue;
+        }
+
+        string key = line[..separator];
+        lines.Add(remaining.Remove(key, out string? value) ? key + "=" + value : line);
+    }
+
+    lines.AddRange(remaining.Select(variable => variable.Key + "=" + variable.Value));
+    File.WriteAllLines(Path.Combine(collection, ".env.v2 aspire"), lines);
 }
 
 void StartContainer(string workingDirectory, string[] runtimeArgs, Dictionary<string, string>? environment = null)
