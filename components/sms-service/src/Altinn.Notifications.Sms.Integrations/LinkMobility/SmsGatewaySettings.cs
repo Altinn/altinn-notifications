@@ -44,5 +44,11 @@
         /// Gets or sets the simulated delay time in milliseconds for receiving a delivery report when using the mock SMS client.
         /// </summary>
         public int MockDeliveryReportDelayTimeMs { get; set; } = 2000;
+
+        /// <summary>
+        /// Gets or sets how the requests to and responses from the SMS gateway are logged. Defaults to <see cref="PayloadLogMode.Off"/>.
+        /// <see cref="PayloadLogMode.Plain"/> logs recipient numbers and message texts, and is refused in Production.
+        /// </summary>
+        public PayloadLogMode LogPayloads { get; set; } = PayloadLogMode.Off;
     }
 }
