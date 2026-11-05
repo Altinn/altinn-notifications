@@ -2,6 +2,7 @@
 using System.Text.Json;
 
 using Altinn.Common.AccessTokenClient.Services;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
@@ -56,14 +57,32 @@ public class RegisterClient : IRegisterClient
 
         foreach (var batch in partyUrns.Chunk(_partyQueryMaxItems))
         {
-            var parties = await GetParties(batch, cancellationToken);
+            var parties = await GetParties(batch, null, cancellationToken);
+
             partyDetails.AddRange(parties.Select(ToPartyDetails).OfType<PartyDetails>());
         }
 
         return partyDetails;
     }
 
-    private async Task<List<Party>> GetParties(Altinn.Register.Contracts.PartyUrn[] parties, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public async Task<List<PartyDetails>> QueryOrganizationSources(IReadOnlyCollection<string> organizationNumbers, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(organizationNumbers);
+
+        var partyUrns = CreatePartyUrns(organizationNumbers, []);
+        var organizations = new List<PartyDetails>();
+
+        foreach (var batch in partyUrns.Chunk(_partyQueryMaxItems))
+        {
+            var parties = await GetParties(batch, "org.source", cancellationToken);
+            organizations.AddRange(parties.Select(ToPartyDetails).OfType<PartyDetails>().Where(e => e.OrganizationNumber is not null));
+        }
+
+        return organizations;
+    }
+
+    private async Task<List<Party>> GetParties(PartyUrn[] parties, string? fields, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(parties);
 
@@ -74,7 +93,8 @@ public class RegisterClient : IRegisterClient
 
         try
         {
-            using HttpRequestMessage requestMessage = new(HttpMethod.Post, _partiesQueryEndpoint)
+            var endpoint = string.IsNullOrWhiteSpace(fields) ? _partiesQueryEndpoint : $"{_partiesQueryEndpoint}?fields={fields}";
+            using HttpRequestMessage requestMessage = new(HttpMethod.Post, endpoint)
             {
                 Content = JsonContent.Create(new PartyQueryList<PartyUrn> { Data = [.. parties] }, options: _jsonSerializerOptions)
             };
@@ -169,6 +189,14 @@ public class RegisterClient : IRegisterClient
         return urns;
     }
 
+    /// <summary>
+    /// Maps a party returned by Register to <see cref="PartyDetails"/>.
+    /// </summary>
+    /// <param name="party">The party returned by Register.</param>
+    /// <returns>
+    /// The mapped <see cref="PartyDetails"/>. For organizations, <see cref="PartyDetails.RegistrySource"/> is populated when
+    /// the source was requested from Register. Returns <c>null</c> for party types other than person and organization.
+    /// </returns>
     private static PartyDetails? ToPartyDetails(Party party)
     {
         var name = party.DisplayName.HasValue ? party.DisplayName.Value : null;
@@ -176,7 +204,34 @@ public class RegisterClient : IRegisterClient
         return party switch
         {
             Person person => new PartyDetails { Name = name, NationalIdentityNumber = person.PersonIdentifier.ToString() },
-            Organization organization => new PartyDetails { Name = name, OrganizationNumber = organization.OrganizationIdentifier.ToString() },
+            Organization organization => new PartyDetails
+            {
+                Name = name,
+                RegistrySource = ToRegistrySource(organization),
+                OrganizationNumber = organization.OrganizationIdentifier.ToString()
+            },
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Maps the organization source reported by Register to an <see cref="OrganizationRegistrySource"/>.
+    /// </summary>
+    /// <param name="organization">The organization returned by Register.</param>
+    /// <returns>
+    /// The matching <see cref="OrganizationRegistrySource"/>, or <c>null</c> when the source was not requested or is not recognized.
+    /// </returns>
+    private static OrganizationRegistrySource? ToRegistrySource(Organization organization)
+    {
+        if (!organization.Source.HasValue)
+        {
+            return null;
+        }
+
+        return organization.Source.Value.Value switch
+        {
+            OrganizationSource.RegisteredWithSkatteetaten => OrganizationRegistrySource.RegisteredWithSkatteetaten,
+            OrganizationSource.CentralCoordinatingRegister => OrganizationRegistrySource.CentralCoordinatingRegister,
             _ => null
         };
     }
