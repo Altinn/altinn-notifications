@@ -56,6 +56,16 @@ The **Triggers** tab (`http://localhost:5096/#triggers`) lists the API's trigger
 * A job never overlaps itself: a run that is due while the previous one is still going is skipped, and **Run now** answers 409.
 * Changes made in the GUI live in memory until the control panel restarts. The defaults can be changed with `TriggerSettings:Jobs`.
 
+## Phone
+
+The **Phone** tab (`http://localhost:5096/#phone`) shows the SMS the LinkMobility mock received, as the recipient's phone would. It is read-only: nothing you do there reaches the mocks or the services.
+
+* One conversation per recipient number. Each message shows the sender name above the bubble, the time it arrived and a status that updates live: `Sent` when the mock accepted it, then `Delivered`, `Failed` or `Expired` when the mock sends its delivery report. Hover the status for the gateway state, e.g. `UNDELIV`, and the ⓘ for the reference, scenario and TTL.
+* It shows delivered messages by default. **Show all** also shows the ones still on their way, rejected at once (`Invalid RCV`) or failed.
+* The mock sends a copy of each send to `POST /mirror/sms` and the delivery state to `POST /mirror/sms/{reference}/status`, when its `MirrorUrl` is set. The app host sets it. The copy is posted in the background: when the control panel is slow or stopped, the copy is dropped and the send goes on as before.
+* The texts and numbers are shown **unmasked**. They are local test data, and the control panel only listens on localhost. The mocks' logs stay masked.
+* The last `MirrorSize` messages are kept in memory. They are gone when the control panel restarts.
+
 ## Templates
 
 Templates are JSON files in `templates/<system>/<id>.json`. The ones in `templates/generic` are offered for every system.
@@ -98,6 +108,10 @@ The GUI uses these, and they work from scripts too:
 | `PUT /api/triggers` | `{"enabled":false}` pauses every trigger, `true` resumes them |
 | `POST /api/triggers/{name}/run` | Runs the trigger now and answers with the run, or 409 when it is already running |
 | `GET /api/events` | Server-sent events, one `changed` each time something changes |
+| `POST /mirror/sms` | A copy of an SMS for the Phone tab: `{"sender":"Altinn","recipient":"+4799999999","text":"Hei","ttl":2880,"reference":"<gateway ref>","scenario":"Delivered"}`. 201. `id` defaults to `reference`. |
+| `POST /mirror/{channel}/{id}/status` | `{"status":"Delivered","detail":"DELIVRD"}`, with `Sent`, `Delivered`, `Failed` or `Expired`. 204, or 404 for an unknown message. |
+| `GET /api/mirror/{channel}` | The kept messages of `sms`, newest first |
+| `DELETE /api/mirror/{channel}` | Forgets the kept messages |
 
 ## Prerequisites
 
@@ -130,6 +144,7 @@ curl -i http://localhost:5096/intercept/profile/profile/api/v1/anything
 | `TestHarnessSettings:TimeoutSeconds` | `120` | How long a request is held before it gets 504 with `X-Simulator: timeout` |
 | `TestHarnessSettings:TemplatesPath` | `templates` | The template folder, relative to the output folder |
 | `TestHarnessSettings:HistorySize` | `200` | How many handled requests the history keeps |
+| `TestHarnessSettings:MirrorSize` | `200` | How many messages the Phone tab keeps. The oldest are dropped. |
 | `TestHarnessSettings:DashboardUrl` | empty | The Aspire dashboard, for trace links. The app host sets it. |
 | `TriggerSettings:Enabled` | `true` | `false` starts every trigger paused |
 | `TriggerSettings:ApiBaseUrl` | `http://localhost:5090` | The API the triggers are sent to |
@@ -143,7 +158,7 @@ There are no secrets.
 
 ## Limits
 
-* Held requests, history, auto-replies and changes to the triggers live in memory.
+* Held requests, history, auto-replies, changes to the triggers and the Phone tab's messages live in memory.
 * The triggers are not cron: a job runs once every interval from when the control panel started, not on the minute.
 * Bodies are shown as text. A binary body is shown as broken text, and answers are always text.
-* Anyone who can reach the port can answer requests. It only listens on localhost.
+* Anyone who can reach the port can answer requests and read the Phone tab's messages unmasked. It only listens on localhost.

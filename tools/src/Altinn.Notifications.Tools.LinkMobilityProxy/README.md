@@ -44,6 +44,12 @@ In interactive mode the scenario only picks the report's `STATE`: the operator d
 
 With `FallbackUrl` set, requests the stub does not recognise, such as another path or a body that is not a `SESSION`, go to `{FallbackUrl}linkmobility/{path}`, e.g. `http://localhost:5096/intercept/linkmobility/unknown`. Without it they get 404.
 
+## Copies to the control panel
+
+With `MirrorUrl` set, e.g. to `http://localhost:5096/mirror/`, the stub sends a copy of each message it receives (sender, recipient, text, TTL, gateway reference and scenario) to the [test harness control panel](../Altinn.Notifications.Tools.TestHarness/README.md#phone)'s Phone tab, and the state of each delivery report it sends. The copies are unmasked, so only point `MirrorUrl` at localhost.
+
+The copies are queued and posted in the background, two seconds at most each. When the control panel is slow or not running, they are dropped: a send is never held up or failed by them. Proxy mode sends no copies.
+
 ## Logs
 
 In all modes every request and response is logged with:
@@ -88,6 +94,7 @@ The default delivery report user and password, `username` and `password`, match 
 | `LinkMobilityProxySettings:DeliveryReportUsername` | `username` | Basic auth user, the SMS service's `SmsDeliveryReportSettings:UserSettings:Username` |
 | `LinkMobilityProxySettings:DeliveryReportPassword` | `password` | Basic auth password, the SMS service's `SmsDeliveryReportSettings:UserSettings:Password` |
 | `LinkMobilityProxySettings:DeliveryReportDelaySeconds` | `2` | Delay between an accepted send and its delivery report |
+| `LinkMobilityProxySettings:MirrorUrl` | empty | Where [copies](#copies-to-the-control-panel) of sends and delivery states go, e.g. `http://localhost:5096/mirror/`. Empty means none. |
 
 The proxy has no secrets of its own. In proxy mode the SMS service still sends its own LinkMobility credentials, so set them in the **SMS service's** user secrets:
 
