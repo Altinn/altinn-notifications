@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
@@ -17,12 +18,15 @@ namespace Altinn.Notifications.Core.Services;
 /// </remarks>
 public class ContactPointService(
     IProfileClient profile,
-    IAuthorizationService authorizationService) : IContactPointService
+    IAuthorizationService authorizationService,
+    IRegisterClient registerClient) : IContactPointService
 {
     private const string _profileClientName = "ProfileClient";
+    private const string _registerClientName = "RegisterClient";
     private const string _authorizationServiceName = "AuthorizationService";
 
     private readonly IProfileClient _profileClient = profile;
+    private readonly IRegisterClient _registerClient = registerClient;
     private readonly IAuthorizationService _authorizationService = authorizationService;
 
     /// <inheritdoc/>
@@ -564,7 +568,9 @@ public class ContactPointService(
     /// If <c>null</c> or empty, only official organization contact points are returned.
     /// </param>
     /// <param name="orderLifecycleStage">
-    /// Represents the current phase of the order processing. This parameter can be used to determine whether to include user-registered contact points
+    /// Represents the current phase of the order processing.
+    /// During processing, all organizations are enriched with user-registered contact points.
+    /// During registration, only organizations registered with Skatteetaten that have no official email addresses or mobile numbers are enriched.
     /// </param>
     /// <param name="resourceAction">
     /// An optional action to authorize against the resource. Defaults to "read" when not specified.
@@ -587,9 +593,16 @@ public class ContactPointService(
         List<OrganizationContactPoints> contactPoints = await GetOfficialOrganizationContactPoints(organizationNumbers);
 
         var sanitizedResourceId = GetSanitizedResourceId(resourceId);
-        if (!string.IsNullOrWhiteSpace(sanitizedResourceId) && orderLifecycleStage == OrderLifecycleStage.Processing)
+        if (!string.IsNullOrWhiteSpace(sanitizedResourceId))
         {
-            await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbers, sanitizedResourceId, resourceAction);
+            List<string> organizationNumbersToEnrich = orderLifecycleStage == OrderLifecycleStage.Processing
+                ? organizationNumbers
+                : await FindSireOrganizationsLackingContactPoints(organizationNumbers, contactPoints);
+
+            if (organizationNumbersToEnrich.Count > 0)
+            {
+                await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbersToEnrich, sanitizedResourceId, resourceAction);
+            }
         }
 
         CleanupOrganizationContactPoints(contactPoints);
@@ -748,6 +761,47 @@ public class ContactPointService(
             }
 
             yield return userContact;
+        }
+    }
+
+    /// <summary>
+    /// Finds the organizations that have no official email address or mobile number, queries Register for their
+    /// registry source, and returns the numbers of those registered with Skatteetaten (SIRE) rather than the Central Coordinating Register.
+    /// </summary>
+    /// <param name="organizationNumbers">The organization numbers to check.</param>
+    /// <param name="contactPoints">The official contact points already retrieved for the organizations.</param>
+    /// <returns>
+    /// The organization numbers without official contact points that are registered with Skatteetaten.
+    /// An empty list is returned without calling Register when every organization already has official contact points.
+    /// </returns>
+    /// <exception cref="PlatformDependencyException">Thrown when the Register lookup fails.</exception>
+    private async Task<List<string>> FindSireOrganizationsLackingContactPoints(List<string> organizationNumbers, List<OrganizationContactPoints> contactPoints)
+    {
+        List<string> organizationNumbersMissingContactPoints =
+            [..organizationNumbers
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(orgNo =>
+                       !contactPoints.Exists(
+                             contactPoint => string.Equals(contactPoint.OrganizationNumber, orgNo, StringComparison.OrdinalIgnoreCase) &&
+                            (contactPoint.EmailList.Exists(email => !string.IsNullOrWhiteSpace(email)) ||
+                             contactPoint.MobileNumberList.Exists(MobileNumberHelper.IsValidMobileNumber))))];
+
+        if (organizationNumbersMissingContactPoints.Count == 0)
+        {
+            return [];
+        }
+
+        try
+        {
+            List<PartyDetails> partyDetails = await _registerClient.QueryOrganizationSources(organizationNumbersMissingContactPoints);
+
+            return [.. partyDetails
+                .Where(e => e.RegistrySource == OrganizationRegistrySource.RegisteredWithSkatteetaten && !string.IsNullOrWhiteSpace(e.OrganizationNumber))
+                .Select(e => e.OrganizationNumber!)];
+        }
+        catch (Exception ex) when (ex is not PlatformDependencyException)
+        {
+            throw new PlatformDependencyException(_registerClientName, "QueryOrganizationSources", ex);
         }
     }
 }
