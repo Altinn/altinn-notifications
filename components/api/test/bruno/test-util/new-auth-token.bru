@@ -5,14 +5,14 @@ meta {
 }
 
 get {
-  url: {{token_generator_url}}/api/GetEnterpriseToken?env={{Environment}}&scopes=altinn:serviceowner/notifications.create&org=ttd
+  url: {{token_generator_url}}/api/GetEnterpriseToken?env={{Environment}}&scopes=altinn:serviceowner/notifications.create,altinn:serviceowner/notifications.composedemail.create&org=ttd
   body: none
   auth: basic
 }
 
 params:query {
   env: {{Environment}}
-  scopes: altinn:serviceowner/notifications.create
+  scopes: altinn:serviceowner/notifications.create,altinn:serviceowner/notifications.composedemail.create
   org: ttd
 }
 
