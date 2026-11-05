@@ -22,7 +22,7 @@ internal static class AcsEndpoints
         app.Map("{**path}", FallbackAsync);
     }
 
-    private static async Task SendAsync(HttpContext context, EmailOperationStore store, IOptions<AcsMockSettings> options, TimeProvider timeProvider, ILogger<AcsMockLog> logger)
+    private static async Task SendAsync(HttpContext context, EmailOperationStore store, EmailMirror mirror, IOptions<AcsMockSettings> options, TimeProvider timeProvider, ILogger<AcsMockLog> logger)
     {
         var settings = options.Value;
         byte[] body = await ReadBodyAsync(context);
@@ -47,12 +47,22 @@ internal static class AcsEndpoints
                 EmailScenario.Throttled when store.IsFirstAttempt(HmacValidator.ContentHash(body)) => Throttled(context, settings.ThrottleRetryAfterSeconds),
                 _ => Accept(context, store, timeProvider, settings, scenario.Value, sender, recipients),
             };
+
+            // A throttled first attempt is left out, since the email service sends it again.
+            if (scenario == EmailScenario.InvalidAddress)
+            {
+                mirror.Received(requestBody, null, scenario.Value, "Invalid format for email address.");
+            }
+            else if (context.Response.Headers.TryGetValue("operation-id", out var operationId))
+            {
+                mirror.Received(requestBody, operationId.ToString(), scenario.Value);
+            }
         }
 
         await LogAndExecuteAsync(context, result, requestBody, scenario, logger);
     }
 
-    private static async Task GetOperationAsync(HttpContext context, string operationId, EmailOperationStore store, DeliveryReportService deliveryReports, IOptions<AcsMockSettings> options, TimeProvider timeProvider, ILogger<AcsMockLog> logger)
+    private static async Task GetOperationAsync(HttpContext context, string operationId, EmailOperationStore store, DeliveryReportService deliveryReports, EmailMirror mirror, IOptions<AcsMockSettings> options, TimeProvider timeProvider, ILogger<AcsMockLog> logger)
     {
         var operation = store.Get(operationId);
 
@@ -71,6 +81,10 @@ internal static class AcsEndpoints
             if (status == "Succeeded")
             {
                 deliveryReports.Queue(operation);
+            }
+            else if (status == "Failed" && operation.MarkFailureMirrored())
+            {
+                mirror.Completed(operation.Id, operation.Scenario == EmailScenario.Suppressed ? "EmailDroppedAllRecipientsSuppressed" : "EmailSendFailed");
             }
 
             result = Results.Json(new { id = operation.Id, status, error = OperationError(operation, status) });

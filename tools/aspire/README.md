@@ -171,6 +171,7 @@ With `TestHarness:Intercept` set to `true`, the `mock-acs`, `wiremock-linkmobili
 
 * The **Control panel** link in the URLs column opens the GUI.
 * The **Phone** link opens its [Phone tab](../src/Altinn.Notifications.Tools.TestHarness/README.md#phone), where every SMS `wiremock-linkmobility` receives shows up as on the recipient's phone, with its delivery status. The app host sets `LinkMobilityProxySettings__MirrorUrl` so the mock sends copies there. They are unmasked, since it is local test data and the control panel only listens on localhost; the mock's own log stays masked.
+* The **Inbox** link opens its [Inbox tab](../src/Altinn.Notifications.Tools.TestHarness/README.md#inbox), the same for every email `mock-acs` receives, with the HTML body in a sandbox without scripts. The app host sets `AcsMockSettings__MirrorUrl` for it.
 * Each held request links to its trace in the dashboard when it has a `traceparent`.
 * The mapped endpoints are still answered by the mocks. To try it, call a mock on a path it does not know, e.g. `curl -i http://localhost:5131/profile/api/v1/unknown`, and answer it in the GUI.
 * Per system, **Auto-reply** answers at once with a template, e.g. to make every unknown Profile call a 500 while k6 runs.

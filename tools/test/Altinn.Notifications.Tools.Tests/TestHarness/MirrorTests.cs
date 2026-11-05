@@ -121,6 +121,42 @@ public class MirrorTests : IDisposable
     }
 
     [Fact]
+    public async Task Email_IsListedWithItsBodies_AndGetsItsStatus()
+    {
+        var client = _factory.CreateClient();
+
+        var created = await client.PostAsJsonAsync(
+            "/mirror/email",
+            new { sender = "noreply@altinn.example", to = new[] { "ola@example.com" }, subject = "Hei", plainText = "Hei Ola", html = "<p>Hei <b>Ola</b></p>", operationId = "op-1", scenario = "Delivered" },
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        var status = await client.PostAsJsonAsync("/mirror/email/op-1/status", new { status = "Failed", detail = "Bounced" }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.NoContent, status.StatusCode);
+
+        var message = Assert.Single(await client.GetFromJsonAsync<JsonElement[]>("/api/mirror/email", TestContext.Current.CancellationToken) ?? []);
+        Assert.Equal("op-1", message.GetProperty("id").GetString());
+        Assert.Equal("Failed", message.GetProperty("status").GetString());
+        Assert.Equal("Bounced", message.GetProperty("detail").GetString());
+        var content = message.GetProperty("content");
+        Assert.Equal(["ola@example.com"], content.GetProperty("to").EnumerateArray().Select(a => a.GetString()));
+        Assert.Empty(content.GetProperty("cc").EnumerateArray());
+        Assert.Equal("<p>Hei <b>Ola</b></p>", content.GetProperty("html").GetString());
+        Assert.Equal("Hei Ola", content.GetProperty("plainText").GetString());
+        Assert.Empty(await GetSmsAsync(client));
+    }
+
+    [Fact]
+    public async Task Email_WithoutRecipients_IsRejected()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/mirror/email", new { subject = "Nobody" }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task UnknownChannel_IsNotFound()
     {
         var client = _factory.CreateClient();

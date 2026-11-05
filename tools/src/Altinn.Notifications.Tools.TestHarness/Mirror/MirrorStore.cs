@@ -140,12 +140,13 @@ internal sealed class MirrorStore(string channel, int capacity, TimeProvider tim
 internal sealed class MirrorStores
 {
     public const string Sms = "sms";
+    public const string Email = "email";
 
     private readonly Dictionary<string, MirrorStore> _stores;
 
     public MirrorStores(int capacity, TimeProvider timeProvider)
     {
-        _stores = new[] { Sms }.ToDictionary(c => c, c => new MirrorStore(c, capacity, timeProvider), StringComparer.OrdinalIgnoreCase);
+        _stores = new[] { Sms, Email }.ToDictionary(c => c, c => new MirrorStore(c, capacity, timeProvider), StringComparer.OrdinalIgnoreCase);
     }
 
     public IEnumerable<MirrorStore> All => _stores.Values;
