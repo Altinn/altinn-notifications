@@ -43,7 +43,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         // Arrange
         Uri conditionEndpoint = new($"https://vg.no/condition/{Guid.NewGuid()}");
         Mock<IConditionClient> conditionClient = new();
-        conditionClient.Setup(c => c.CheckSendCondition(conditionEndpoint)).ReturnsAsync(false);
+        conditionClient.Setup(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>())).ReturnsAsync(false);
         _factory.InstallService(conditionClient.Object);
 
         Guid orderId = await PostOrder(conditionEndpoint);
@@ -56,7 +56,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         Assert.Equal("Completed", await GetOrderProcessedStatus(orderId));
         Assert.Equal(1, await PostgreUtil.SelectNotificationLogEntryCount(orderId));
         Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
-        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint), Times.Once);
+        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         // Arrange
         Uri conditionEndpoint = new($"https://vg.no/condition/{Guid.NewGuid()}");
         Mock<IConditionClient> conditionClient = new();
-        conditionClient.Setup(c => c.CheckSendCondition(conditionEndpoint)).ReturnsAsync(true);
+        conditionClient.Setup(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>())).ReturnsAsync(true);
         _factory.InstallService(conditionClient.Object);
 
         Guid orderId = await PostOrder(conditionEndpoint);
@@ -76,7 +76,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         // Assert
         Assert.Equal("Sending", await GetNotificationResult(orderId));
         Assert.NotEqual("Completed", await GetOrderProcessedStatus(orderId));
-        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint), Times.Once);
+        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         Uri conditionEndpoint = new($"https://vg.no/condition/{Guid.NewGuid()}");
         Mock<IConditionClient> conditionClient = new();
         conditionClient
-            .Setup(c => c.CheckSendCondition(conditionEndpoint))
+            .Setup(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ConditionClientError { StatusCode = 503, Message = "unavailable" });
         _factory.InstallService(conditionClient.Object);
 
@@ -98,7 +98,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         // Assert
         Assert.Equal("New", await GetNotificationResult(orderId));
         Assert.NotEqual("Completed", await GetOrderProcessedStatus(orderId));
-        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint), Times.AtLeastOnce);
+        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     public ValueTask InitializeAsync()

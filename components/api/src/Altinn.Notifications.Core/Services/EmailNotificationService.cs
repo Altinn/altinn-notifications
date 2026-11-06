@@ -1,5 +1,6 @@
 using System.Diagnostics;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
@@ -12,6 +13,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -26,10 +28,12 @@ public class EmailNotificationService(
     IComposedEmailCommandPublisher composedEmailCommandPublisher,
     IUnitOfWorkRepository unitOfWorkRepository,
     ILogger<EmailNotificationService> logger,
-    IConditionClient conditionClient) : IEmailNotificationService
+    IConditionClient conditionClient,
+    IOptions<NotificationConfig> config) : IEmailNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
     private readonly IConditionClient _conditionClient = conditionClient;
+    private readonly TimeSpan _conditionTimeout = TimeSpan.FromSeconds(Math.Max(1, config.Value.SendConditionTimeoutSeconds));
     private readonly IGuidService _guidService = guidService;
     private readonly ILogger<EmailNotificationService> _logger = logger;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
@@ -182,7 +186,7 @@ public class EmailNotificationService(
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            bool? isSendConditionMet = await EvaluateSendCondition(claimedNotification, operationName);
+            bool? isSendConditionMet = await EvaluateSendCondition(claimedNotification, operationName, cancellationToken);
             if (isSendConditionMet is null)
             {
                 // Releasing the claim makes the notification eligible for a new attempt on a later poll.
@@ -227,14 +231,21 @@ public class EmailNotificationService(
     /// Evaluates the send condition of the order the notification belongs to.
     /// </summary>
     /// <returns><c>true</c> if met or no condition endpoint is configured, <c>false</c> if not met, <c>null</c> if the check was inconclusive.</returns>
-    private async Task<bool?> EvaluateSendCondition(Email email, string operationName)
+    private async Task<bool?> EvaluateSendCondition(Email email, string operationName, CancellationToken cancellationToken)
     {
         if (email.ConditionEndpoint is null)
         {
             return true;
         }
 
-        var result = await _conditionClient.CheckSendCondition(email.ConditionEndpoint);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(_conditionTimeout);
+
+        var result = await _conditionClient.CheckSendCondition(email.ConditionEndpoint, timeoutCts.Token);
+
+        // A cancellation caused by shutdown must not be mistaken for a timed out condition check.
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (result.IsSuccess)
         {
             if (!result.Value)

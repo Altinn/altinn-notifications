@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
@@ -12,6 +13,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -22,6 +24,7 @@ public class SmsNotificationService : ISmsNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
     private readonly IConditionClient _conditionClient;
+    private readonly TimeSpan _conditionTimeout;
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
@@ -41,9 +44,11 @@ public class SmsNotificationService : ISmsNotificationService
         IUnitOfWorkRepository unitOfWorkRepository,
         ILogger<SmsNotificationService> logger,
         ISmsSenderSubstitutionService senderSubstitutionService,
-        IConditionClient conditionClient)
+        IConditionClient conditionClient,
+        IOptions<NotificationConfig> config)
     {
         _conditionClient = conditionClient;
+        _conditionTimeout = TimeSpan.FromSeconds(Math.Max(1, config.Value.SendConditionTimeoutSeconds));
         _guidService = guidService;
         _dateTimeService = dateTimeService;
         _repository = repository;
@@ -125,7 +130,7 @@ public class SmsNotificationService : ISmsNotificationService
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            bool? isSendConditionMet = await EvaluateSendCondition(newSmsNotification);
+            bool? isSendConditionMet = await EvaluateSendCondition(newSmsNotification, cancellationToken);
             if (isSendConditionMet is null)
             {
                 // Releasing the claim makes the notification eligible for a new attempt on a later poll.
@@ -208,14 +213,21 @@ public class SmsNotificationService : ISmsNotificationService
     /// Evaluates the send condition of the order the notification belongs to.
     /// </summary>
     /// <returns><c>true</c> if met or no condition endpoint is configured, <c>false</c> if not met, <c>null</c> if the check was inconclusive.</returns>
-    private async Task<bool?> EvaluateSendCondition(Sms sms)
+    private async Task<bool?> EvaluateSendCondition(Sms sms, CancellationToken cancellationToken)
     {
         if (sms.ConditionEndpoint is null)
         {
             return true;
         }
 
-        var result = await _conditionClient.CheckSendCondition(sms.ConditionEndpoint);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(_conditionTimeout);
+
+        var result = await _conditionClient.CheckSendCondition(sms.ConditionEndpoint, timeoutCts.Token);
+
+        // A cancellation caused by shutdown must not be mistaken for a timed out condition check.
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (result.IsSuccess)
         {
             if (!result.Value)
