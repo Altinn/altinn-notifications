@@ -275,12 +275,6 @@ public interface IOrderRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Atomically sets the order status to <see cref="OrderProcessingStatus.SendConditionNotMet"/> and
-    /// inserts the corresponding status feed entry within a single database transaction.
-    /// </summary>
-    Task SetOrderSendConditionNotMetAsync(UnitOfWork unitOfWork, NotificationOrder order, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Sets the order status to <see cref="OrderProcessingStatus.Retrying"/> and records the reason for retrying.
     /// </summary>
     /// <param name="unitOfWork">The unit of work for database operations.</param>

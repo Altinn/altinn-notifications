@@ -132,6 +132,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             RegisterDelegatedService<IValidator<InstantSmsNotificationOrderRequestExt>>(services);
             RegisterDelegatedService<IValidator<InstantEmailNotificationOrderRequestExt>>(services);
             RegisterDelegatedService<IDialogportenClient>(services);
+            RegisterDelegatedService<IConditionClient>(services);
 
             services.Replace(ServiceDescriptor.Singleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>());
             services.Replace(ServiceDescriptor.Singleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>());
