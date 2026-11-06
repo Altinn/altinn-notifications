@@ -80,7 +80,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
     }
 
     [Fact]
-    public async Task EmailOrder_ConditionCheckFails_NotificationStaysNew()
+    public async Task EmailOrder_ConditionCheckFailsTwice_RetryIsScheduledThenNotificationIsSentWithoutCondition()
     {
         // Arrange
         Uri conditionEndpoint = new($"https://vg.no/condition/{Guid.NewGuid()}");
@@ -92,13 +92,48 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
 
         Guid orderId = await PostOrder(conditionEndpoint);
 
-        // Act
+        // Act: the first inconclusive check schedules a retry and keeps the notification New
         await ProcessOrderAndSendNotification(orderId, expectResolved: false);
 
         // Assert
         Assert.Equal("New", await GetNotificationResult(orderId));
+        Assert.Equal("true", await GetIsRetryScheduledInFuture(orderId));
+        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint), Times.Once);
+
+        // Act: once the retry is due, a second inconclusive check sends the notification as if no condition was configured
+        await MakeRetryDue(orderId);
+        await SendNotification(orderId);
+
+        // Assert
+        Assert.Equal("Sending", await GetNotificationResult(orderId));
         Assert.NotEqual("Completed", await GetOrderProcessedStatus(orderId));
-        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint), Times.AtLeastOnce);
+        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task EmailOrder_ConditionCheckFailsThenConditionNotMet_NotificationIsSendConditionNotMet()
+    {
+        // Arrange
+        Uri conditionEndpoint = new($"https://vg.no/condition/{Guid.NewGuid()}");
+        Mock<IConditionClient> conditionClient = new();
+        conditionClient
+            .SetupSequence(c => c.CheckSendCondition(conditionEndpoint))
+            .ReturnsAsync(new ConditionClientError { StatusCode = 503, Message = "unavailable" })
+            .ReturnsAsync(false);
+        _factory.InstallService(conditionClient.Object);
+
+        Guid orderId = await PostOrder(conditionEndpoint);
+        await ProcessOrderAndSendNotification(orderId, expectResolved: false);
+        Assert.Equal("New", await GetNotificationResult(orderId));
+
+        // Act
+        await MakeRetryDue(orderId);
+        await SendNotification(orderId);
+
+        // Assert
+        Assert.Equal("SendConditionNotMet", await GetNotificationResult(orderId));
+        Assert.Equal("Completed", await GetOrderProcessedStatus(orderId));
+        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint), Times.Exactly(2));
     }
 
     public ValueTask InitializeAsync()
@@ -127,6 +162,30 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
     private static Task<string> GetOrderProcessedStatus(Guid orderId)
     {
         return PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus::text FROM notifications.orders WHERE alternateid = '{orderId}'");
+    }
+
+    private static Task<string> GetIsRetryScheduledInFuture(Guid orderId)
+    {
+        return PostgreUtil.RunSqlReturnOutput<string>(
+            $"SELECT (e.nextattempt > now())::text FROM notifications.emailnotifications e JOIN notifications.orders o ON o._id = e._orderid WHERE o.alternateid = '{orderId}'");
+    }
+
+    private static Task MakeRetryDue(Guid orderId)
+    {
+        return PostgreUtil.RunSql(
+            $"UPDATE notifications.emailnotifications SET nextattempt = now() - interval '1 second' WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')");
+    }
+
+    private async Task SendNotification(Guid orderId)
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IEmailNotificationService emailNotificationService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
+
+        // The database is shared with other tests, so claims are repeated until this notification has been handled.
+        for (int attempt = 0; attempt < 50 && await GetNotificationResult(orderId) == "New"; attempt++)
+        {
+            await emailNotificationService.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+        }
     }
 
     private async Task ProcessOrderAndSendNotification(Guid orderId, bool expectResolved = true)

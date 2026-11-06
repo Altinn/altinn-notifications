@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v3()
     RETURNS TABLE(
         alternateid  uuid,
         subject      text,
@@ -7,7 +7,8 @@ CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v2()
         toaddress    text,
         contenttype  text,
         attachments  jsonb,
-        conditionendpoint text
+        conditionendpoint text,
+        isconditionretry boolean
     )
     LANGUAGE 'plpgsql'
 AS $BODY$
@@ -44,6 +45,7 @@ BEGIN
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
             AND email.iscomposed = true
+            AND (email.nextattempt IS NULL OR email.nextattempt <= now())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
@@ -59,7 +61,8 @@ BEGIN
             claimed.customizedsubject,
             claimed.customizedbody,
             claimed.toaddress,
-            claimed._orderid
+            claimed._orderid,
+            email.nextattempt
     )
     SELECT
         updated.alternateid,
@@ -69,16 +72,17 @@ BEGIN
         updated.toaddress,
         txt.contenttype,
         COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint
+        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint,
+        updated.nextattempt IS NOT NULL AS isconditionretry
     FROM updated_rows updated
     JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
     JOIN notifications.orders o       ON o._id = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_composed_email_v2()
+ALTER FUNCTION notifications.claim_composed_email_v3()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_composed_email_v2()
+COMMENT ON FUNCTION notifications.claim_composed_email_v3()
     IS 'Claims and returns a single email notification for Composed orders (iscomposed = true).
 Returns an empty JSON array when no attachments are present.';

@@ -66,6 +66,12 @@ public class NotificationConfig
     public int RetryOrdersDBDelaySeconds { get; set; } = 60;
 
     /// <summary>
+    /// The number of seconds to wait before a notification with an inconclusive send condition check can be claimed again.
+    /// An inconclusive check is retried once. If the retry is also inconclusive, the notification is sent as if no condition endpoint was configured.
+    /// </summary>
+    public int SendConditionRetryDelaySeconds { get; set; } = 60;
+
+    /// <summary>
     /// The maximum number of retry attempts for a retry order.
     /// </summary>
     public int RetryOrdersMaxCount { get; set; } = 10;
