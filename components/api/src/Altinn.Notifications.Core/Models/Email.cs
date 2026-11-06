@@ -50,6 +50,12 @@ public class Email
     public Uri? ConditionEndpoint { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether an earlier send condition check was inconclusive for this email.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsConditionRetry { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Email"/> class.
     /// </summary>
     public Email(Guid notificationId, string subject, string body, string fromAddress, string toAddress, EmailContentType contentType)

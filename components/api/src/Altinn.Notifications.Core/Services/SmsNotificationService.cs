@@ -128,9 +128,16 @@ public class SmsNotificationService : ISmsNotificationService
             bool? isSendConditionMet = await EvaluateSendCondition(newSmsNotification);
             if (isSendConditionMet is null)
             {
-                // Releasing the claim makes the notification eligible for a new attempt on a later poll.
-                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-                return false;
+                if (!newSmsNotification.IsConditionRetry)
+                {
+                    await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, SendConditionRetryPolicy.Delay, cancellationToken);
+                    await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+                    return false;
+                }
+
+                _logger.LogWarning(
+                    "// SmsNotificationService // SendNotification // Condition check was inconclusive again for notification '{NotificationId}'. Sending as if no condition endpoint was configured.",
+                    newSmsNotification.NotificationId);
             }
 
             if (isSendConditionMet == false)
@@ -230,7 +237,7 @@ public class SmsNotificationService : ISmsNotificationService
         }
 
         _logger.LogWarning(
-            "// SmsNotificationService // EvaluateSendCondition // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. The claim is released.",
+            "// SmsNotificationService // EvaluateSendCondition // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'.",
             sms.NotificationId,
             sms.ConditionEndpoint,
             result.Error!.StatusCode,

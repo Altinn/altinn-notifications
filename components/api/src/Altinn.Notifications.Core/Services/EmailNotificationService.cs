@@ -185,9 +185,17 @@ public class EmailNotificationService(
             bool? isSendConditionMet = await EvaluateSendCondition(claimedNotification, operationName);
             if (isSendConditionMet is null)
             {
-                // Releasing the claim makes the notification eligible for a new attempt on a later poll.
-                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-                return false;
+                if (!claimedNotification.IsConditionRetry)
+                {
+                    await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, SendConditionRetryPolicy.Delay, cancellationToken);
+                    await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+                    return false;
+                }
+
+                _logger.LogWarning(
+                    "// EmailNotificationService // {OperationName} // Condition check was inconclusive again for notification '{NotificationId}'. Sending as if no condition endpoint was configured.",
+                    operationName,
+                    claimedNotification.NotificationId);
             }
 
             if (isSendConditionMet == false)
@@ -250,7 +258,7 @@ public class EmailNotificationService(
         }
 
         _logger.LogWarning(
-            "// EmailNotificationService // {OperationName} // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. The claim is released.",
+            "// EmailNotificationService // {OperationName} // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'.",
             operationName,
             email.NotificationId,
             email.ConditionEndpoint,

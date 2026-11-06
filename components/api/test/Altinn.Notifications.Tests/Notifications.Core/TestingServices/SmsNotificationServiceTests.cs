@@ -9,6 +9,7 @@ using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
 
@@ -228,7 +229,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotification_ConditionInconclusive_RollsBackWithoutPublishingOrSettingStatus()
+    public async Task SendNotification_ConditionInconclusiveOnFirstAttempt_SchedulesRetryWithoutPublishingOrSettingStatus()
     {
         var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), false, false);
 
@@ -236,11 +237,43 @@ public class SmsNotificationServiceTests
 
         Assert.False(result);
         publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, It.IsAny<Guid>(), SendConditionRetryPolicy.Delay, It.IsAny<CancellationToken>()), Times.Once);
         repo.Verify(
             r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
-        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
-        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotification_ConditionInconclusiveOnRetry_PublishesAsIfNoConditionWasConfigured()
+    {
+        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), false, false, isRetry: true);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Once);
+        repo.Verify(r => r.ScheduleConditionRetryAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendNotification_ConditionNotMetOnRetry_SetsSendConditionNotMet()
+    {
+        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), true, false, isRetry: true);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(unitOfWork, It.IsAny<Guid?>(), SmsNotificationResultType.SendConditionNotMet, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
     }
 
     [Fact]
@@ -747,9 +780,9 @@ public class SmsNotificationServiceTests
         return new UnitOfWork();
     }
 
-    private static (SmsNotificationService Service, Mock<ISmsNotificationRepository> Repo, Mock<ISmsCommandPublisher> Publisher, Mock<IUnitOfWorkRepository> UnitOfWorkRepository, UnitOfWork UnitOfWork) CreateConditionScenario(Uri endpoint, bool checkSucceeds, bool conditionMet)
+    private static (SmsNotificationService Service, Mock<ISmsNotificationRepository> Repo, Mock<ISmsCommandPublisher> Publisher, Mock<IUnitOfWorkRepository> UnitOfWorkRepository, UnitOfWork UnitOfWork) CreateConditionScenario(Uri endpoint, bool checkSucceeds, bool conditionMet, bool isRetry = false)
     {
-        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint };
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint, IsConditionRetry = isRetry };
 
         var repo = new Mock<ISmsNotificationRepository>();
         repo
