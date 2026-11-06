@@ -303,8 +303,8 @@ public static class PostgreUtil
     public static async Task RefreshMaterializedViews()
     {
         string sql = @"
-            REFRESH MATERIALIZED VIEW notifications.email_metrics_recent;
-            REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent;";
+            REFRESH MATERIALIZED VIEW notifications.email_metrics_recent_v2;
+            REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent_v2;";
         await using NpgsqlCommand pgcom = AdminDataSource.CreateCommand(sql);
         await pgcom.ExecuteNonQueryAsync();
     }
@@ -643,7 +643,7 @@ public static class PostgreUtil
         Guid dialogId,
         string transmissionId,
         string toAddress = "log-test@example.com",
-        string operationId = "op-id-test-abc123",
+        string? operationId = null,
         string creatorName = "ttd",
         string resourceId = "ttd-resource")
     {
@@ -779,7 +779,7 @@ public static class PostgreUtil
             await using (NpgsqlCommand cmd = new(updateEmailSql, connection, transaction))
             {
                 cmd.Parameters.AddWithValue("@result", NpgsqlTypes.NpgsqlDbType.Text, "Delivered");
-                cmd.Parameters.AddWithValue("@operationid", NpgsqlTypes.NpgsqlDbType.Text, operationId);
+                cmd.Parameters.AddWithValue("@operationid", NpgsqlTypes.NpgsqlDbType.Text, operationId ?? $"op-id-test-{Guid.NewGuid()}");
                 cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, notificationId);
                 cmd.Parameters.AddWithValue("@totalattachmentsizebytes", NpgsqlTypes.NpgsqlDbType.Bigint, 0L);
                 await cmd.ExecuteNonQueryAsync();
@@ -811,7 +811,7 @@ public static class PostgreUtil
         Guid dialogId,
         string transmissionId,
         string mobileNumber = "+4799999999",
-        string gatewayReference = "gw-ref-test-123",
+        string? gatewayReference = null,
         string creatorName = "ttd",
         string resourceId = "ttd-resource")
     {
@@ -942,7 +942,7 @@ public static class PostgreUtil
             await using (NpgsqlCommand cmd = new(updateSmsSql, connection, transaction))
             {
                 cmd.Parameters.AddWithValue("@result", NpgsqlTypes.NpgsqlDbType.Text, "Delivered");
-                cmd.Parameters.AddWithValue("@gatewayreference", NpgsqlTypes.NpgsqlDbType.Text, gatewayReference);
+                cmd.Parameters.AddWithValue("@gatewayreference", NpgsqlTypes.NpgsqlDbType.Text, gatewayReference ?? $"gw-ref-test-{Guid.NewGuid()}");
                 cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, notificationId);
                 await cmd.ExecuteNonQueryAsync();
             }
