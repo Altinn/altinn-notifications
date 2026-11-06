@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
@@ -12,6 +13,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -22,6 +24,7 @@ public class SmsNotificationService : ISmsNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
     private readonly IConditionClient _conditionClient;
+    private readonly TimeSpan _conditionRetryDelay;
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
@@ -41,9 +44,11 @@ public class SmsNotificationService : ISmsNotificationService
         IUnitOfWorkRepository unitOfWorkRepository,
         ILogger<SmsNotificationService> logger,
         ISmsSenderSubstitutionService senderSubstitutionService,
-        IConditionClient conditionClient)
+        IConditionClient conditionClient,
+        IOptions<NotificationConfig> config)
     {
         _conditionClient = conditionClient;
+        _conditionRetryDelay = TimeSpan.FromSeconds(config.Value.SendConditionRetryDelaySeconds);
         _guidService = guidService;
         _dateTimeService = dateTimeService;
         _repository = repository;
@@ -130,7 +135,7 @@ public class SmsNotificationService : ISmsNotificationService
             {
                 if (!newSmsNotification.IsConditionRetry)
                 {
-                    await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, SendConditionRetryPolicy.Delay, cancellationToken);
+                    await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, _conditionRetryDelay, cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
                     return false;
                 }

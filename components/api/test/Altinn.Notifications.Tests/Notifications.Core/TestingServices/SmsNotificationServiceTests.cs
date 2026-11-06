@@ -1,3 +1,4 @@
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
@@ -9,9 +10,9 @@ using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Moq;
 
@@ -237,7 +238,7 @@ public class SmsNotificationServiceTests
 
         Assert.False(result);
         publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
-        repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, It.IsAny<Guid>(), SendConditionRetryPolicy.Delay, It.IsAny<CancellationToken>()), Times.Once);
+        repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, It.IsAny<Guid>(), TimeSpan.FromSeconds(new NotificationConfig().SendConditionRetryDelaySeconds), It.IsAny<CancellationToken>()), Times.Once);
         repo.Verify(
             r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -833,6 +834,7 @@ public class SmsNotificationServiceTests
             unitOfWorkRepository,
             logger ?? new Mock<ILogger<SmsNotificationService>>().Object,
             senderSubstitutionService,
-            conditionClient ?? new Mock<IConditionClient>().Object);
+            conditionClient ?? new Mock<IConditionClient>().Object,
+            Options.Create(new NotificationConfig()));
     }
 }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
@@ -12,6 +13,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -26,9 +28,11 @@ public class EmailNotificationService(
     IComposedEmailCommandPublisher composedEmailCommandPublisher,
     IUnitOfWorkRepository unitOfWorkRepository,
     ILogger<EmailNotificationService> logger,
-    IConditionClient conditionClient) : IEmailNotificationService
+    IConditionClient conditionClient,
+    IOptions<NotificationConfig> config) : IEmailNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
+    private readonly TimeSpan _conditionRetryDelay = TimeSpan.FromSeconds(config.Value.SendConditionRetryDelaySeconds);
     private readonly IConditionClient _conditionClient = conditionClient;
     private readonly IGuidService _guidService = guidService;
     private readonly ILogger<EmailNotificationService> _logger = logger;
@@ -187,7 +191,7 @@ public class EmailNotificationService(
             {
                 if (!claimedNotification.IsConditionRetry)
                 {
-                    await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, SendConditionRetryPolicy.Delay, cancellationToken);
+                    await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, _conditionRetryDelay, cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
                     return false;
                 }

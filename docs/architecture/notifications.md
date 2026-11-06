@@ -131,9 +131,10 @@ The check runs in the same database transaction as the claim, before the notific
   and is not published. The notification log is updated. When all notifications of the
   order are final, the order is completed and its status feed entry is written.
 - **Check inconclusive (endpoint or token failure), first attempt:** the notification
-  stays `New` and its `nextattempt` timestamp is set one minute ahead
-  (`SendConditionRetryPolicy.Delay`). The claim functions skip rows whose `nextattempt`
-  is in the future, so the notification is picked up again once the delay has passed.
+  stays `New` and its `nextattempt` timestamp is set ahead by
+  `NotificationConfig:SendConditionRetryDelaySeconds` (default 60 seconds). The claim
+  functions skip rows whose `nextattempt` is in the future, so the notification is picked
+  up again once the delay has passed.
 - **Check inconclusive again (the retry):** there is only one retry. A claimed notification
   with a non-null `nextattempt` is on its retry, and is sent as if no condition endpoint
   was configured. A conclusive result on the retry is handled as above.
