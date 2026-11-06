@@ -47,8 +47,8 @@ public enum ProcessingLifecycle
     /// The order was not processed because predefined conditions for sending were not satisfied.
     /// </summary>
     /// <remarks>
-    /// This occurs when an order has conditional sending requirements that weren't met,
-    /// such as when a condition endpoint returned a negative result.
+    /// Legacy value, only present on orders persisted before the send condition was moved to per-notification evaluation at send time.
+    /// New orders never get this status; see <see cref="SMS_SendConditionNotMet"/> and <see cref="Email_SendConditionNotMet"/>.
     /// </remarks>
     Order_SendConditionNotMet,
 
@@ -196,6 +196,11 @@ public enum ProcessingLifecycle
     SMS_Failed_ContentTooLarge,
 
     /// <summary>
+    /// The SMS notification was not sent because the send condition of the order was not met at send time.
+    /// </summary>
+    SMS_SendConditionNotMet,
+
+    /// <summary>
     /// The email notification has been received and registered in the system but processing has not yet begun.
     /// </summary>
     /// <remarks>
@@ -317,5 +322,10 @@ public enum ProcessingLifecycle
     /// <summary>
     /// The email notification was not sent because the message was too large to be queued for sending.
     /// </summary>
-    Email_Failed_ContentTooLarge
+    Email_Failed_ContentTooLarge,
+
+    /// <summary>
+    /// The email notification was not sent because the send condition of the order was not met at send time.
+    /// </summary>
+    Email_SendConditionNotMet
 }

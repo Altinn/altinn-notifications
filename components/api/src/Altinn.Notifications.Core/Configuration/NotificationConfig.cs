@@ -6,6 +6,12 @@ namespace Altinn.Notifications.Core.Configuration;
 public class NotificationConfig
 {
     /// <summary>
+    /// The number of seconds to wait for the send condition endpoint before the http call is cancelled.
+    /// A timed out check is treated as inconclusive.
+    /// </summary>
+    public int SendConditionTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>
     /// Default from address for email notifications
     /// </summary>
     public string DefaultEmailFromAddress { get; set; } = string.Empty;
