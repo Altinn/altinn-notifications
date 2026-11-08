@@ -19,7 +19,7 @@ BEGIN
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
       AND sms.sendingtimepolicy = 1
-      AND (sms.nextattempt IS NULL OR sms.nextattempt <= now())
+      AND (sms.nextattempt IS NULL OR sms.nextattempt <= clock_timestamp())
     ORDER BY sms.expirytime
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT 1

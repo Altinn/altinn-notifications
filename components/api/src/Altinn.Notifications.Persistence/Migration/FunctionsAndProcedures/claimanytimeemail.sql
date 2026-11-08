@@ -46,7 +46,7 @@ BEGIN
             AND email.expirytime >= now()
             AND email.iscomposed = false
             AND email.sendingtimepolicy = 1
-            AND (email.nextattempt IS NULL OR email.nextattempt <= now())
+            AND (email.nextattempt IS NULL OR email.nextattempt <= clock_timestamp())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
