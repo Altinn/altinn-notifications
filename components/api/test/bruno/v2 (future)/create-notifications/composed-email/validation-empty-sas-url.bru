@@ -1,0 +1,56 @@
+meta {
+  name: Validation - empty sasUrl
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/composed-email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{senders_reference_guid}}",
+    "requestedSendTime": "{{process.env.TESTDATA_REQUESTED_SEND_TIME}}",
+    "recipient": {
+      "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+      "emailSettings": {
+        "subject": "(TEST) Should fail - empty sasUrl",
+        "body": "(TEST) This should be rejected",
+        "contentType": "Plain",
+        "sendingTimePolicy": "Anytime",
+        "attachments": [
+          {
+            "filename": "document.pdf",
+            "mimeType": "application/pdf",
+            "sasUrl": ""
+          }
+        ]
+      }
+    }
+  }
+}
+
+tests {
+  test("should return 400 status code", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("should report that sasUrl must be an absolute HTTPS URI", function() {
+    const body = JSON.stringify(res.getBody());
+    expect(body).to.contain("sasUrl must be an absolute HTTPS URI.");
+  });
+}
+
+docs {
+  Validation: the sasUrl is an empty string, which deserializes to a relative URI.
+  The request must be rejected with 400 Bad Request.
+
+  Regression test for https://github.com/Altinn/altinn-notifications/issues/1972,
+  where this request returned 500 (InvalidOperationException from Uri.Query on a relative URI).
+
+  Expected: 400 Bad Request with a validation error stating the sasUrl must be an absolute HTTPS URI.
+}
