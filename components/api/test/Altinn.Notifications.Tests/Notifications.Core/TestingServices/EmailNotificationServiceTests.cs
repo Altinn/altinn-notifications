@@ -469,7 +469,7 @@ public class EmailNotificationServiceTests
 
         var publisherMock = new Mock<IComposedEmailCommandPublisher>();
         var conditionClient = new Mock<IConditionClient>();
-        conditionClient.Setup(c => c.CheckSendCondition(endpoint)).ReturnsAsync(false);
+        conditionClient.Setup(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
         var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object, conditionClient: conditionClient.Object);
 
@@ -1281,7 +1281,7 @@ public class EmailNotificationServiceTests
 
         var conditionClient = new Mock<IConditionClient>();
         conditionClient
-            .Setup(c => c.CheckSendCondition(endpoint))
+            .Setup(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()))
             .ReturnsAsync(checkSucceeds ? conditionMet : new ConditionClientError { StatusCode = 503, Message = "unavailable" });
 
         var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object, conditionClient: conditionClient.Object);

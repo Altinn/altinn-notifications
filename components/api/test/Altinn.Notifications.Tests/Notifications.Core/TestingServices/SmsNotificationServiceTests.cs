@@ -278,6 +278,56 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotification_ConditionCheckExceedsTimeout_CancelsTokenAndRollsBack()
+    {
+        var endpoint = new Uri("https://condition.example/check");
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint };
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+
+        var publisher = new Mock<ISmsCommandPublisher>();
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = CreateUnitOfWork();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+
+        bool tokenCancelledByTimeout = false;
+        var conditionClient = new Mock<IConditionClient>();
+        conditionClient
+            .Setup(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()))
+            .Returns(async (Uri _, CancellationToken token) =>
+            {
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    tokenCancelledByTimeout = true;
+                }
+
+                return new ConditionClientError { Message = "Request timed out" };
+            });
+
+        var service = GetService(
+            repository: repo.Object,
+            commandPublisher: publisher.Object,
+            unitOfWorkRepository: unitOfWorkRepository.Object,
+            conditionClient: conditionClient.Object,
+            config: new NotificationConfig { SendConditionTimeoutSeconds = 1 });
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result);
+        Assert.True(tokenCancelledByTimeout);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendNotification_DaytimeSmsWhereConditionFlipsBetweenEvaluations_IsSentThenStopped()
     {
         var endpoint = new Uri("https://condition.example/check");
@@ -293,7 +343,7 @@ public class SmsNotificationServiceTests
         // The condition holds at the first send and is no longer met when the next notification is sent
         var conditionClient = new Mock<IConditionClient>();
         conditionClient
-            .SetupSequence(c => c.CheckSendCondition(endpoint))
+            .SetupSequence(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true)
             .ReturnsAsync(false);
 
@@ -306,7 +356,7 @@ public class SmsNotificationServiceTests
         await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
         await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
 
-        conditionClient.Verify(c => c.CheckSendCondition(endpoint), Times.Exactly(2));
+        conditionClient.Verify(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()), Times.Exactly(2));
         publisher.Verify(p => p.PublishAsync(first, It.IsAny<CancellationToken>()), Times.Once);
         publisher.Verify(p => p.PublishAsync(second, It.IsAny<CancellationToken>()), Times.Never);
         repo.Verify(
@@ -335,7 +385,7 @@ public class SmsNotificationServiceTests
         var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result);
-        conditionClient.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Never);
+        conditionClient.Verify(c => c.CheckSendCondition(It.IsAny<Uri>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -797,7 +847,7 @@ public class SmsNotificationServiceTests
 
         var conditionClient = new Mock<IConditionClient>();
         conditionClient
-            .Setup(c => c.CheckSendCondition(endpoint))
+            .Setup(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()))
             .ReturnsAsync(checkSucceeds ? conditionMet : new ConditionClientError { StatusCode = 503, Message = "unavailable" });
 
         var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, conditionClient: conditionClient.Object);
@@ -813,7 +863,8 @@ public class SmsNotificationServiceTests
         IUnitOfWorkRepository? unitOfWorkRepository = null,
         ISmsSenderSubstitutionService? senderSubstitutionService = null,
         ILogger<SmsNotificationService>? logger = null,
-        IConditionClient? conditionClient = null)
+        IConditionClient? conditionClient = null,
+        NotificationConfig? config = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService.Setup(g => g.NewGuid()).Returns(guidOutput ?? Guid.NewGuid());
@@ -835,6 +886,6 @@ public class SmsNotificationServiceTests
             logger ?? new Mock<ILogger<SmsNotificationService>>().Object,
             senderSubstitutionService,
             conditionClient ?? new Mock<IConditionClient>().Object,
-            Options.Create(new NotificationConfig()));
+            Options.Create(config ?? new NotificationConfig()));
     }
 }
