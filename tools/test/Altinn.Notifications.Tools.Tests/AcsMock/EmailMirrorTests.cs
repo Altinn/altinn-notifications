@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 
 using Altinn.Notifications.Tools.AcsMock.Configuration;
+using Altinn.Notifications.Tools.Tests.Utils;
 
 using Azure;
 using Azure.Communication.Email;
@@ -21,16 +22,16 @@ namespace Altinn.Notifications.Tools.Tests.AcsMock;
 /// <summary>
 /// The copies the mock sends to the test harness control panel's <c>/mirror/</c>, here a WireMock server in its place.
 /// </summary>
-public sealed class EmailMirrorTests : IDisposable
+public sealed class EmailMirrorTests : IAsyncLifetime
 {
     private const string Sender = "noreply@altinn.example";
 
     private readonly AcsMockFactory _factory = new();
-    private readonly WireMockServer _controlPanel = WireMockServer.Start();
+    private WireMockServer _controlPanel = null!;
 
-    public EmailMirrorTests()
+    public async ValueTask InitializeAsync()
     {
-        _controlPanel.Given(Request.Create().UsingPost()).RespondWith(WireMock.ResponseBuilders.Response.Create().WithStatusCode(201));
+        _controlPanel = await MirrorControlPanel.StartAsync();
     }
 
     [Fact]
@@ -123,10 +124,10 @@ public sealed class EmailMirrorTests : IDisposable
         Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2), $"The sends took {stopwatch.Elapsed}.");
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _factory.Dispose();
-        _controlPanel.Dispose();
+        await _factory.DisposeAsync();
+        _controlPanel?.Dispose();
     }
 
     private static EmailMessage Message(string recipient)
