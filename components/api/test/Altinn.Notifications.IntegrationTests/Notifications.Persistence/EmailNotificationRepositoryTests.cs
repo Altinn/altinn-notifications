@@ -500,7 +500,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_OrderWithMultipleRecipients_WritesOneStatusFeedEntryAndOneNotificationLogEntryPerRecipient()
+    public async Task UpdateSendStatus_OrderWithMultipleRecipients_LogsEachRecipientWhenItsResultIsFinalAndWritesOneStatusFeedEntryOnCompletion()
     {
         // Arrange — simulates an organization resolving to multiple contact points on the same order.
         OrderRepository orderRepo = (OrderRepository)ServiceUtil
@@ -546,10 +546,11 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await sut.UpdateSendStatusAsync(unitOfWork, notifications[1].Id, EmailNotificationResultType.Delivered, cancellationToken: TestContext.Current.CancellationToken);
         await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
+        // Assert — no status feed yet, but the two delivered recipients are already logged
         int statusFeedCountBeforeLastDelivery = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         int notificationLogCountBeforeLastDelivery = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
         Assert.Equal(0, statusFeedCountBeforeLastDelivery);
-        Assert.Equal(0, notificationLogCountBeforeLastDelivery);
+        Assert.Equal(2, notificationLogCountBeforeLastDelivery);
 
         // Deliver the last recipient — the order now completes, triggering the status feed and notification log inserts
         unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
@@ -561,6 +562,123 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         var notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
         Assert.Equal(notifications.Count, notificationLogCount);
+    }
+
+    private static async Task UpdateEmailStatusAsync(EmailNotificationRepository repo, Guid notificationId, EmailNotificationResultType status, string? operationId = null)
+    {
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await repo.UpdateSendStatusAsync(unitOfWork, notificationId, status, operationId, cancellationToken: TestContext.Current.CancellationToken);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+    }
+
+    private static async Task UpdateSmsStatusAsync(SmsNotificationRepository repo, Guid notificationId, SmsNotificationResultType status)
+    {
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await repo.UpdateSendStatusAsync(unitOfWork, notificationId, status, cancellationToken: TestContext.Current.CancellationToken);
+        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_EmailDeliveredWhileSmsPending_LogsOnlyTheEmailAndWritesNoStatusFeed()
+    {
+        // Arrange
+        (Guid orderId, EmailNotification email, _) = await CreateOrderWithPendingEmailAndSmsAsync();
+        EmailNotificationRepository sut = GetEmailRepository();
+
+        // Act
+        await UpdateEmailStatusAsync(sut, email.Id, EmailNotificationResultType.Delivered);
+
+        // Assert
+        await AssertLoggedAsync(orderId, ("Email", email.Recipient.ToAddress!, "Delivered"));
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_SmsDeliveredWhileEmailPending_LogsOnlyTheSmsAndWritesNoStatusFeed()
+    {
+        // Arrange
+        (Guid orderId, _, SmsNotification sms) = await CreateOrderWithPendingEmailAndSmsAsync();
+        SmsNotificationRepository smsRepo = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // Act
+        await UpdateSmsStatusAsync(smsRepo, sms.Id, SmsNotificationResultType.Delivered);
+
+        // Assert
+        await AssertLoggedAsync(orderId, ("Sms", sms.Recipient.MobileNumber!, "Delivered"));
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_EmailFailedWhileSmsPending_LogsTheFailedEmail()
+    {
+        // Arrange
+        (Guid orderId, EmailNotification email, _) = await CreateOrderWithPendingEmailAndSmsAsync();
+        EmailNotificationRepository sut = GetEmailRepository();
+
+        // Act
+        await UpdateEmailStatusAsync(sut, email.Id, EmailNotificationResultType.Failed_RecipientNotIdentified);
+
+        // Assert
+        await AssertLoggedAsync(orderId, ("Email", email.Recipient.ToAddress!, "Failed_RecipientNotIdentified"));
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_IntermediateResultWhileSmsPending_LogsNothing()
+    {
+        // Arrange
+        (Guid orderId, EmailNotification email, _) = await CreateOrderWithPendingEmailAndSmsAsync();
+        EmailNotificationRepository sut = GetEmailRepository();
+
+        // Act
+        await UpdateEmailStatusAsync(sut, email.Id, EmailNotificationResultType.Succeeded, "operation-id");
+
+        // Assert
+        await AssertLoggedAsync(orderId);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_LaterFinalResultOfSibling_AddsOneRowAndKeepsEarlierEntry()
+    {
+        // Arrange
+        (Guid orderId, EmailNotification email, SmsNotification sms) = await CreateOrderWithPendingEmailAndSmsAsync();
+        EmailNotificationRepository sut = GetEmailRepository();
+        SmsNotificationRepository smsRepo = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        await UpdateEmailStatusAsync(sut, email.Id, EmailNotificationResultType.Delivered);
+        await AssertLoggedAsync(orderId, ("Email", email.Recipient.ToAddress!, "Delivered"));
+
+        // Act
+        await UpdateSmsStatusAsync(smsRepo, sms.Id, SmsNotificationResultType.Delivered);
+
+        // Assert — one row per notification, exactly one status feed entry now that the order is complete
+        await AssertLoggedAsync(orderId, ("Email", email.Recipient.ToAddress!, "Delivered"), ("Sms", sms.Recipient.MobileNumber!, "Delivered"));
+        Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
+    }
+
+    [Fact]
+    public async Task TerminateExpiredNotifications_WhileSmsPending_LogsOnlyTheExpiredEmail()
+    {
+        // Arrange
+        (Guid orderId, EmailNotification email, _) = await CreateOrderWithPendingEmailAndSmsAsync();
+        EmailNotificationRepository sut = GetEmailRepository();
+
+        await PostgreUtil.RunSql($@"
+            UPDATE notifications.emailnotifications
+            SET result = 'Succeeded',
+                expirytime = NOW() - INTERVAL '3 day'
+            WHERE alternateid = '{email.Id}';");
+
+        // Act
+        await sut.TerminateExpiredNotifications();
+
+        // Assert
+        await AssertLoggedAsync(orderId, ("Email", email.Recipient.ToAddress!, "Failed_TTL"));
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
     }
 
     [Fact]
@@ -879,10 +997,10 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InsertOrderStatusCompletedOrder_ValidAlternateId_InsertsStatusFeedAndNotificationLogEntries()
+    public async Task InsertOrderStatusCompletedOrder_ValidAlternateId_InsertsStatusFeedOnly()
     {
         // Arrange
-        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true, resultType: EmailNotificationResultType.Delivered);
         _orderIdsToDelete.Add(order.Id);
 
         EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
@@ -893,20 +1011,18 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
-        // Act - should not throw and should insert status feed and notification log
-        // Note: alternateId is the notification ID, not the order ID
+        // Act - alternateId is the notification ID, not the order ID
         var method = typeof(NotificationRepositoryBase).GetMethod("InsertOrderStatusCompletedOrder", BindingFlags.NonPublic | BindingFlags.Instance);
         var task = (Task)method!.Invoke(repo, [connection, transaction, emailNotification.Id])!;
         await task;
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
-        // Assert - verify status feed entry was inserted
+        // Assert - status feed is written; logging is done per notification by LogFinalNotificationResult
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
 
-        // Assert - verify notification log entry was inserted for the completed order
         int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
-        Assert.Equal(1, notificationLogCount);
+        Assert.Equal(0, notificationLogCount);
     }
 
     [Fact]
@@ -1291,6 +1407,60 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         Assert.NotNull(claimedAsStandardEmail);
         Assert.Equal(emailNotification.Id, claimedAsStandardEmail.NotificationId);
+    }
+
+    private static EmailNotificationRepository GetEmailRepository()
+    {
+        return (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+    }
+
+    private async Task<(Guid OrderId, EmailNotification Email, SmsNotification Sms)> CreateOrderWithPendingEmailAndSmsAsync()
+    {
+        OrderRepository orderRepo = (OrderRepository)ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        SmsNotificationRepository smsRepo = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("ttd"),
+            SendersReference = $"log-per-notification-{Guid.NewGuid():N}",
+            Type = OrderType.Notification,
+            Templates =
+            [
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
+                new SmsTemplate("Altinn", "sms-body")
+            ]
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await orderRepo.Create(order);
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+
+        var email = new EmailNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { ToAddress = $"{Guid.NewGuid():N}@example.com" }, SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow) };
+        var sms = new SmsNotification { Id = Guid.NewGuid(), OrderId = order.Id, RequestedSendTime = DateTime.UtcNow, Recipient = new() { MobileNumber = "+4791111111" }, SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow) };
+
+        await GetEmailRepository().AddNotification(email, DateTime.UtcNow.AddDays(1));
+        await smsRepo.AddNotification(sms, DateTime.UtcNow.AddDays(1));
+
+        return (order.Id, email, sms);
+    }
+
+    private static async Task AssertLoggedAsync(Guid shipmentId, params (string Channel, string Destination, string Status)[] expected)
+    {
+        var logged = (await PostgreUtil.GetNotificationLogEntries(shipmentId))
+            .Select(e => (e.Channel, e.Destination, e.Status))
+            .Order()
+            .ToList();
+
+        Assert.Equal(expected.Order().ToList(), logged);
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
