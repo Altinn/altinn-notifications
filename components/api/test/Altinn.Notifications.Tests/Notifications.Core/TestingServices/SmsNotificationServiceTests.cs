@@ -278,7 +278,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotification_ConditionCheckExceedsTimeout_CancelsTokenAndRollsBack()
+    public async Task SendNotification_ConditionCheckExceedsTimeout_CancelsTokenAndSchedulesRetry()
     {
         var endpoint = new Uri("https://condition.example/check");
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint };
@@ -323,8 +323,9 @@ public class SmsNotificationServiceTests
         Assert.False(result);
         Assert.True(tokenCancelledByTimeout);
         publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
-        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
-        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+        repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, It.IsAny<Guid>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
 
     [Fact]
