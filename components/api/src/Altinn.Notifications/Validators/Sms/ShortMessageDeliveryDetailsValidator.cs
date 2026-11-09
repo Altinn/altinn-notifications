@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Models.Sms;
+using Altinn.Notifications.Validators.Rules;
 
 using FluentValidation;
 
@@ -22,5 +23,11 @@ internal sealed class ShortMessageDeliveryDetailsValidator : AbstractValidator<S
         RuleFor(recipient => recipient.TimeToLiveInSeconds)
             .InclusiveBetween(60, 172800)
             .WithMessage("Time-to-live must be between 60 and 172800 seconds (48 hours).");
+
+        When(recipient => recipient.ShortMessageContent != null, () =>
+        {
+            RuleFor(recipient => recipient.ShortMessageContent.Sender)
+                .MustBeAllowedSmsSender();
+        });
     }
 }

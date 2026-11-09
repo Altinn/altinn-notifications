@@ -57,18 +57,17 @@ public class EmailNotificationOrdersController : ControllerBase
     [SwaggerResponseHeader(202, "Location", Microsoft.OpenApi.JsonSchemaType.String, "Link to access the newly created notification order.")]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {
+        string? creator = HttpContext.GetOrg();
+        if (string.IsNullOrWhiteSpace(creator))
+        {
+            return Forbid();
+        }
+
         var validationResult = _validator.Validate(emailNotificationOrderRequest);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(this.ModelState);
             return ValidationProblem(ModelState);
-        }
-
-        string? creator = HttpContext.GetOrg();
-
-        if (creator == null)
-        {
-            return Forbid();
         }
 
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);

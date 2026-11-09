@@ -20,6 +20,9 @@ internal sealed class SmsNotificationOrderRequestValidator : AbstractValidator<S
         RuleFor(order => order)
             .ValidateSmsTemplateContent();
 
+        RuleFor(order => order.SenderNumber)
+            .MustBeAllowedSmsSender();
+
         RuleFor(order => order.Recipients)
             .ValidateSmsRecipients();
     }

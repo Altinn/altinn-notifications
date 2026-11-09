@@ -49,7 +49,7 @@ public static partial class OrderMapper
         if (extRequest.EmailTemplate != null)
         {   
             var emailTemplate = new EmailTemplate(
-                extRequest.EmailTemplate.FromAddress,
+                extRequest.EmailTemplate.FromAddress?.Trim(),
                 NormalizeLineEndingsRegex().Replace(extRequest.EmailTemplate.Subject, SingleWhiteSpace),
                 extRequest.EmailTemplate.Body,
                 (EmailContentType)extRequest.EmailTemplate.ContentType);
@@ -59,7 +59,7 @@ public static partial class OrderMapper
 
         if (extRequest.SmsTemplate != null)
         {
-            INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SmsTemplate.SenderNumber, extRequest.SmsTemplate.Body);
+            INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SmsTemplate.SenderNumber?.Trim(), extRequest.SmsTemplate.Body);
 
             templateList.Add(smsTemplate);
         }
@@ -121,7 +121,7 @@ public static partial class OrderMapper
     /// </summary>
     public static NotificationOrderRequest MapToOrderRequest(this SmsNotificationOrderRequestExt extRequest, string creator)
     {
-        INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SenderNumber, extRequest.Body);
+        INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SenderNumber?.Trim(), extRequest.Body);
 
         List<Recipient> recipients =
           extRequest.Recipients
