@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 
 using Altinn.Notifications.Tools.LinkMobilityProxy;
+using Altinn.Notifications.Tools.Tests.Utils;
 
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -21,7 +22,7 @@ public class SmsMirrorTests
     [Fact]
     public async Task Send_PostsCopyAndThenDeliveryState()
     {
-        using var controlPanel = StartControlPanel();
+        using var controlPanel = await MirrorControlPanel.StartAsync();
         await using var host = await ProxyHost.StartAsync(s => s.MirrorUrl = controlPanel.Url + "/mirror/");
 
         using var http = new HttpClient();
@@ -47,7 +48,7 @@ public class SmsMirrorTests
     [InlineData("+4799999902", "Expired", "EXPIRED")]
     public async Task DeliveryState_IsMappedToMirrorStatus(string recipient, string status, string state)
     {
-        using var controlPanel = StartControlPanel();
+        using var controlPanel = await MirrorControlPanel.StartAsync();
         await using var host = await ProxyHost.StartAsync(s => s.MirrorUrl = controlPanel.Url + "/mirror/");
 
         using var http = new HttpClient();
@@ -61,7 +62,7 @@ public class SmsMirrorTests
     [Fact]
     public async Task RejectedRecipient_IsCopiedAsFailed()
     {
-        using var controlPanel = StartControlPanel();
+        using var controlPanel = await MirrorControlPanel.StartAsync();
         await using var host = await ProxyHost.StartAsync(s => s.MirrorUrl = controlPanel.Url + "/mirror/");
 
         using var http = new HttpClient();
@@ -117,13 +118,6 @@ public class SmsMirrorTests
         using var http = new HttpClient();
         using var response = await PostAsync(http, host.Url, ProxyHost.SendRequest("+4799123456"));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    private static WireMockServer StartControlPanel()
-    {
-        var server = WireMockServer.Start();
-        server.Given(Request.Create().UsingPost()).RespondWith(Response.Create().WithStatusCode(201));
-        return server;
     }
 
     private static async Task<JsonElement> WaitForBodyAsync(WireMockServer server, string pathEnd)
