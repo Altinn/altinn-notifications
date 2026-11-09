@@ -1672,6 +1672,50 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ScheduleConditionRetryAsync_GivenEmptyNotificationId_ThrowsInvalidNotificationIdentifierException()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(
+            () => repo.ScheduleConditionRetryAsync(new UnitOfWork(), Guid.Empty, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal("The provided Email identifier is invalid.", exception.Message);
+    }
+
+    [Fact]
+    public async Task ScheduleConditionRetryAsync_GivenNonExistentNotificationId_ThrowsNotificationNotFoundException()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        Guid nonExistentNotificationId = Guid.NewGuid();
+
+        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        var unitOfWork = new UnitOfWork
+        {
+            Connection = connection,
+            Transaction = transaction
+        };
+
+        // Act
+        var ex = await Assert.ThrowsAsync<NotificationNotFoundException>(
+            () => repo.ScheduleConditionRetryAsync(unitOfWork, nonExistentNotificationId, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(NotificationChannel.Email, ex.Channel);
+        Assert.Equal(SendStatusIdentifierType.NotificationId, ex.IdentifierType);
+        Assert.Equal(nonExistentNotificationId.ToString(), ex.Identifier);
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_WithDeliveryReport_PersistsDeliveryReportToDatabase()
     {
         // Arrange
