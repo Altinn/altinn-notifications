@@ -236,7 +236,7 @@ public class SmsNotificationServiceTests
 
         var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.False(result);
+        Assert.True(result);
         publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
         repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, It.IsAny<Guid>(), TimeSpan.FromSeconds(new NotificationConfig().SendConditionRetryDelaySeconds), It.IsAny<CancellationToken>()), Times.Once);
         repo.Verify(
@@ -320,7 +320,7 @@ public class SmsNotificationServiceTests
 
         var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.False(result);
+        Assert.True(result);
         Assert.True(tokenCancelledByTimeout);
         publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
         repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, It.IsAny<Guid>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);

@@ -424,7 +424,7 @@ public class EmailNotificationServiceTests
 
         bool result = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
-        Assert.False(result);
+        Assert.True(result);
         publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
         repoMock.Verify(r => r.ScheduleConditionRetryAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), TimeSpan.FromSeconds(new NotificationConfig().SendConditionRetryDelaySeconds), It.IsAny<CancellationToken>()), Times.Once);
         repoMock.Verify(r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);

@@ -194,7 +194,7 @@ public class EmailNotificationService(
                 {
                     await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, _conditionRetryDelay, cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-                    return false;
+                    return true;
                 }
 
                 _logger.LogWarning(

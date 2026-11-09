@@ -139,7 +139,7 @@ public class SmsNotificationService : ISmsNotificationService
                 {
                     await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, _conditionRetryDelay, cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-                    return false;
+                    return true;
                 }
 
                 _logger.LogWarning(
