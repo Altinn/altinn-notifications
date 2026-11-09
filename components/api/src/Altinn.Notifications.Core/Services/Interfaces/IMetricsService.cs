@@ -26,5 +26,10 @@ namespace Altinn.Notifications.Core.Services.Interfaces
         /// Creates a Parquet file stream from the provided daily metrics (SMS or email).
         /// </summary>
         Task<MetricsSummary> GetParquetFile<T>(DailyMetrics<T> metrics, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Triggers retrieval and emission of frequently used custom metrics.
+        /// </summary>
+        Task TriggerGetMetrics(CancellationToken cancellationToken);
     }
 }
