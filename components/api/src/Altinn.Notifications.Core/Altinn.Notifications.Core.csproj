@@ -37,8 +37,4 @@
 		</AssemblyAttribute>
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="BackgroundQueue\" />
-	</ItemGroup>
-
 </Project>
