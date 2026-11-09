@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
@@ -17,12 +18,15 @@ namespace Altinn.Notifications.Core.Services;
 /// </remarks>
 public class ContactPointService(
     IProfileClient profile,
-    IAuthorizationService authorizationService) : IContactPointService
+    IAuthorizationService authorizationService,
+    IRegisterClient registerClient) : IContactPointService
 {
     private const string _profileClientName = "ProfileClient";
+    private const string _registerClientName = "RegisterClient";
     private const string _authorizationServiceName = "AuthorizationService";
 
     private readonly IProfileClient _profileClient = profile;
+    private readonly IRegisterClient _registerClient = registerClient;
     private readonly IAuthorizationService _authorizationService = authorizationService;
 
     /// <inheritdoc/>
@@ -430,10 +434,29 @@ public class ContactPointService(
         OrganizationContactPoints? organizationContactPoints = organizationContactPointsList
             .Find(e => string.Equals(e.OrganizationNumber, recipient.OrganizationNumber, StringComparison.OrdinalIgnoreCase));
 
-        if (organizationContactPoints != null)
+        if (organizationContactPoints is null)
         {
-            applyContactPoints(recipient, organizationContactPoints);
+            return;
         }
+
+        applyContactPoints(recipient, organizationContactPoints);
+
+        RemoveDuplicateAddressInfoEntries(recipient);
+    }
+
+    private static void RemoveDuplicateAddressInfoEntries(Recipient recipient)
+    {
+        var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        recipient.AddressInfo = [.. recipient.AddressInfo
+            .Where(x => x switch
+            {
+                // HashSet.Add returns false for values already seen, so only the first occurrence is kept.
+                EmailAddressPoint email => seenEmails.Add(email.EmailAddress),
+                SmsAddressPoint sms => seenMobiles.Add(sms.MobileNumber),
+                _ => true
+            })];
     }
 
     private static void ApplyExternalIdentityContactPoints(
@@ -545,7 +568,9 @@ public class ContactPointService(
     /// If <c>null</c> or empty, only official organization contact points are returned.
     /// </param>
     /// <param name="orderLifecycleStage">
-    /// Represents the current phase of the order processing. This parameter can be used to determine whether to include user-registered contact points
+    /// Represents the current phase of the order processing.
+    /// During processing, all organizations are enriched with user-registered contact points.
+    /// During registration, only organizations registered with Skatteetaten that have no official email addresses or mobile numbers are enriched.
     /// </param>
     /// <param name="resourceAction">
     /// An optional action to authorize against the resource. Defaults to "read" when not specified.
@@ -568,9 +593,16 @@ public class ContactPointService(
         List<OrganizationContactPoints> contactPoints = await GetOfficialOrganizationContactPoints(organizationNumbers);
 
         var sanitizedResourceId = GetSanitizedResourceId(resourceId);
-        if (!string.IsNullOrWhiteSpace(sanitizedResourceId) && orderLifecycleStage == OrderLifecycleStage.Processing)
+        if (!string.IsNullOrWhiteSpace(sanitizedResourceId))
         {
-            await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbers, sanitizedResourceId, resourceAction);
+            List<string> organizationNumbersToEnrich = orderLifecycleStage == OrderLifecycleStage.Processing
+                ? organizationNumbers
+                : await FindSireOrganizationsLackingContactPoints(organizationNumbers, contactPoints);
+
+            if (organizationNumbersToEnrich.Count > 0)
+            {
+                await EnrichWithUserRegisteredContactPoints(contactPoints, organizationNumbersToEnrich, sanitizedResourceId, resourceAction);
+            }
         }
 
         CleanupOrganizationContactPoints(contactPoints);
@@ -700,51 +732,32 @@ public class ContactPointService(
                 .Where(e => !string.IsNullOrWhiteSpace(e))
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-            // Keep only user contact points with unique and valid contact details.
+            // Keep only user contact points with valid contact details.
             contactPoint.UserContactPoints = [..
-                NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
-                .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
+                NormalizeUserMobileNumbers(contactPoint.UserContactPoints)
                 .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || MobileNumberHelper.IsValidMobileNumber(userContact.MobileNumber))
                 ];
         });
     }
 
     /// <summary>
-    /// Scans a collection of <see cref="UserContactPoints"/> and clears duplicate contact fields within the list.
-    /// Only the first occurrence of each unique email address or mobile number is retained across the collection.
-    /// Subsequent duplicates have the corresponding field set to an empty string.
+    /// Normalizes the mobile number of each <see cref="UserContactPoints"/> by ensuring a country code is present on valid numbers.
+    /// Values are not removed or deduplicated here, so that the preferred/fallback channel selection sees the original contact details.
+    /// Duplicates are removed after channel selection.
     /// </summary>
     /// <param name="userContacts">
-    /// The collection of user contact points to process for internal deduplication.
+    /// The collection of user contact points whose mobile numbers should be normalized.
     /// </param>
     /// <returns>
-    /// A sequence of <see cref="UserContactPoints"/> where duplicate email and mobile number values have been nullified.
+    /// The same <see cref="UserContactPoints"/> instances, with mobile numbers normalized in place.
     /// </returns>
-    private static IEnumerable<UserContactPoints> NullifyDuplicateContactAddress(IEnumerable<UserContactPoints> userContacts)
+    private static IEnumerable<UserContactPoints> NormalizeUserMobileNumbers(IEnumerable<UserContactPoints> userContacts)
     {
-        var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         foreach (var userContact in userContacts)
         {
-            if (!string.IsNullOrWhiteSpace(userContact.Email))
-            {
-                var duplicateEmail = !seenEmails.Add(userContact.Email);
-                if (duplicateEmail)
-                {
-                    userContact.Email = string.Empty;
-                }
-            }
-
             if (!string.IsNullOrWhiteSpace(userContact.MobileNumber))
             {
                 userContact.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContact.MobileNumber);
-
-                var duplicateMobileNumber = !seenMobiles.Add(userContact.MobileNumber);
-                if (duplicateMobileNumber)
-                {
-                    userContact.MobileNumber = string.Empty;
-                }
             }
 
             yield return userContact;
@@ -752,40 +765,43 @@ public class ContactPointService(
     }
 
     /// <summary>
-    /// Scans the specified <see cref="UserContactPoints"/> for contact details (email and mobile number) 
-    /// that are already present in the specified <see cref="OrganizationContactPoints"/>. 
-    /// If a match is found, the corresponding field in the user contact is cleared (set to an empty string).
+    /// Finds the organizations that have no official email address or mobile number, queries Register for their
+    /// registry source, and returns the numbers of those registered with Skatteetaten (SIRE) rather than the Central Coordinating Register.
     /// </summary>
-    /// <param name="userContact">
-    /// The user contact information to evaluate and modify if duplicates are found.
-    /// </param>
-    /// <param name="organizationContactPoints">
-    /// The organization's official contact point data containing email addresses and mobile numbers.
-    /// </param>
+    /// <param name="organizationNumbers">The organization numbers to check.</param>
+    /// <param name="contactPoints">The official contact points already retrieved for the organizations.</param>
     /// <returns>
-    /// The same <see cref="UserContactPoints"/> instance with duplicate email and/or mobile number fields cleared.
-    /// If both fields become empty, the caller is responsible for removing the contact from the list.
+    /// The organization numbers without official contact points that are registered with Skatteetaten.
+    /// An empty list is returned without calling Register when every organization already has official contact points.
     /// </returns>
-    private static UserContactPoints NullifyDuplicateContactAddress(UserContactPoints userContact, OrganizationContactPoints organizationContactPoints)
+    /// <exception cref="PlatformDependencyException">Thrown when the Register lookup fails.</exception>
+    private async Task<List<string>> FindSireOrganizationsLackingContactPoints(List<string> organizationNumbers, List<OrganizationContactPoints> contactPoints)
     {
-        var isDuplicateEmail =
-            !string.IsNullOrWhiteSpace(userContact.Email) &&
-            organizationContactPoints.EmailList.Any(e => string.Equals(e, userContact.Email, StringComparison.OrdinalIgnoreCase));
+        List<string> organizationNumbersMissingContactPoints =
+            [..organizationNumbers
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(orgNo =>
+                       !contactPoints.Exists(
+                             contactPoint => string.Equals(contactPoint.OrganizationNumber, orgNo, StringComparison.OrdinalIgnoreCase) &&
+                            (contactPoint.EmailList.Exists(email => !string.IsNullOrWhiteSpace(email)) ||
+                             contactPoint.MobileNumberList.Exists(MobileNumberHelper.IsValidMobileNumber))))];
 
-        if (isDuplicateEmail)
+        if (organizationNumbersMissingContactPoints.Count == 0)
         {
-            userContact.Email = string.Empty;
+            return [];
         }
 
-        var isDuplicateMobileNumber =
-            !string.IsNullOrWhiteSpace(userContact.MobileNumber) &&
-            organizationContactPoints.MobileNumberList.Any(m => string.Equals(m, userContact.MobileNumber, StringComparison.OrdinalIgnoreCase));
-
-        if (isDuplicateMobileNumber)
+        try
         {
-            userContact.MobileNumber = string.Empty;
-        }
+            List<PartyDetails> partyDetails = await _registerClient.QueryOrganizationSources(organizationNumbersMissingContactPoints);
 
-        return userContact;
+            return [.. partyDetails
+                .Where(e => e.RegistrySource == OrganizationRegistrySource.RegisteredWithSkatteetaten && !string.IsNullOrWhiteSpace(e.OrganizationNumber))
+                .Select(e => e.OrganizationNumber!)];
+        }
+        catch (Exception ex) when (ex is not PlatformDependencyException)
+        {
+            throw new PlatformDependencyException(_registerClientName, "QueryOrganizationSources", ex);
+        }
     }
 }
