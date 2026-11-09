@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
@@ -8,10 +9,12 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Shared;
 
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
@@ -1337,6 +1340,241 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
+        public async Task AddPreferredContactPoints_WhenEmailPreferredAndUserEmailDuplicatesOrganizationEmail_ShouldNotFallbackToSms()
+        {
+            // Arrange
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: ["org@example.com"],
+                organizationMobileNumbers: [],
+                userContactPoints: [(Email: "org@example.com", MobileNumber: "+4795555555")]);
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            var email = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal("org@example.com", email.EmailAddress);
+            Assert.Empty(recipient.AddressInfo.OfType<SmsAddressPoint>());
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenSmsPreferredAndUserMobileDuplicatesOrganizationMobile_ShouldNotFallbackToEmail()
+        {
+            // Arrange
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: [],
+                organizationMobileNumbers: ["+4799999999"],
+                userContactPoints: [(Email: "user@example.com", MobileNumber: "+4799999999")]);
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            var sms = Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>());
+            Assert.Equal("+4799999999", sms.MobileNumber);
+            Assert.Empty(recipient.AddressInfo.OfType<EmailAddressPoint>());
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenEmailPreferredAndTwoUsersShareEmail_ShouldNotFallbackToSms()
+        {
+            // Arrange
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: [],
+                organizationMobileNumbers: [],
+                userContactPoints:
+                [
+                    (Email: "shared@example.com", MobileNumber: "+4795555555"),
+                    (Email: "shared@example.com", MobileNumber: "+4796666666")
+                ]);
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            var email = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal("shared@example.com", email.EmailAddress);
+            Assert.Empty(recipient.AddressInfo.OfType<SmsAddressPoint>());
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenEmailPreferredAndUserDuplicatesOrganizationEmailAndMobile_ShouldSendOnlyEmail()
+        {
+            // Arrange
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: ["org@example.com"],
+                organizationMobileNumbers: ["+4799999999"],
+                userContactPoints: [(Email: "org@example.com", MobileNumber: "+4799999999")]);
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            var email = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal("org@example.com", email.EmailAddress);
+            Assert.Empty(recipient.AddressInfo.OfType<SmsAddressPoint>());
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenEmailPreferredAndOneUserHasOnlyMobile_ShouldStillFallbackToSmsForThatUser()
+        {
+            // Arrange
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: [],
+                organizationMobileNumbers: [],
+                userContactPoints:
+                [
+                    (Email: "first@example.com", MobileNumber: string.Empty),
+                    (Email: string.Empty, MobileNumber: "+4796666666")
+                ]);
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            Assert.Equal("first@example.com", Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>()).EmailAddress);
+            Assert.Equal("+4796666666", Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>()).MobileNumber);
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenEmailPreferredAndOrganizationHasOnlyMobileNumber_ShouldFallbackToOrganizationSms()
+        {
+            // Arrange
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: [],
+                organizationMobileNumbers: ["+4799999999"],
+                userContactPoints: []);
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            Assert.Equal("+4799999999", Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>()).MobileNumber);
+            Assert.Empty(recipient.AddressInfo.OfType<EmailAddressPoint>());
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenSmsPreferredAndOneUserHasOnlyEmail_ShouldStillFallbackToEmailForThatUser()
+        {
+            // Arrange
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: [],
+                organizationMobileNumbers: [],
+                userContactPoints:
+                [
+                    (Email: string.Empty, MobileNumber: "+4795555555"),
+                    (Email: "second@example.com", MobileNumber: string.Empty)
+                ]);
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            Assert.Equal("+4795555555", Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>()).MobileNumber);
+            Assert.Equal("second@example.com", Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>()).EmailAddress);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenOrganizationNotReturnedByProfileClient_ShouldLeaveRecipientUnchanged()
+        {
+            // Arrange
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([]);
+
+            var service = GetTestService(profileClientMock.Object, new Mock<IAuthorizationService>().Object);
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddEmailContactPoints(recipients, null, OrderLifecycleStage.Registration, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            Assert.Empty(recipient.AddressInfo);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenRecipientHasOtherAddressPointType_ShouldKeepItWhileRemovingDuplicates()
+        {
+            // Arrange
+            var otherAddressPoint = new OtherAddressPoint();
+
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: ["org@example.com"],
+                organizationMobileNumbers: [],
+                userContactPoints: [(Email: "org@example.com", MobileNumber: string.Empty)]);
+
+            var recipients = new List<Recipient>
+            {
+                new() { OrganizationNumber = "987654321", AddressInfo = [otherAddressPoint] }
+            };
+
+            // Act
+            await service.AddEmailContactPoints(recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            Assert.Equal(2, recipient.AddressInfo.Count);
+            Assert.Contains(otherAddressPoint, recipient.AddressInfo);
+            Assert.Equal("org@example.com", Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>()).EmailAddress);
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenUserContactPointsDuplicateOrganizationAndEachOther_ShouldNotAddDuplicateAddressPoints()
+        {
+            // Arrange
+            var service = GetOrganizationServiceWithUserContactPoints(
+                organizationEmails: ["org@example.com"],
+                organizationMobileNumbers: ["+4799999999"],
+                userContactPoints:
+                [
+                    (Email: "org@example.com", MobileNumber: "+4799999999"),
+                    (Email: "user@example.com", MobileNumber: "+4795555555"),
+                    (Email: "USER@example.com", MobileNumber: "+4795555555")
+                ]);
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "987654321" } };
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipients, "test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+
+            var emails = recipient.AddressInfo.OfType<EmailAddressPoint>().Select(e => e.EmailAddress).ToList();
+            Assert.Equal(2, emails.Count);
+            Assert.Contains("org@example.com", emails);
+            Assert.Contains("user@example.com", emails, StringComparer.OrdinalIgnoreCase);
+
+            var mobileNumbers = recipient.AddressInfo.OfType<SmsAddressPoint>().Select(e => e.MobileNumber).ToList();
+            Assert.Equal(2, mobileNumbers.Count);
+            Assert.Contains("+4799999999", mobileNumbers);
+            Assert.Contains("+4795555555", mobileNumbers);
+        }
+
+        [Fact]
         public async Task AddPreferredContactPoints_WhenUsingOrganizationNumberAndSmsPreferred_ShouldEnrichRecipientsWithMobileNumberWhenNoEmailAddressAvailable()
         {
             // Arrange
@@ -2146,10 +2384,262 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             authorizationServiceMock.VerifyNoOtherCalls();
         }
 
+        private sealed class OtherAddressPoint : IAddressPoint
+        {
+            public AddressType AddressType => AddressType.Email;
+        }
+
+        private static ContactPointService GetOrganizationServiceWithUserContactPoints(
+            List<string> organizationEmails,
+            List<string> organizationMobileNumbers,
+            List<(string Email, string MobileNumber)> userContactPoints)
+        {
+            const string organizationNumber = "987654321";
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync(
+                [
+                    new OrganizationContactPoints
+                    {
+                        PartyId = 1,
+                        EmailList = organizationEmails,
+                        OrganizationNumber = organizationNumber,
+                        MobileNumberList = organizationMobileNumbers
+                    }
+                ]);
+
+            profileClientMock
+                .Setup(e => e.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.IsAny<string>()))
+                .ReturnsAsync(
+                [
+                    new OrganizationContactPoints
+                    {
+                        PartyId = 1,
+                        OrganizationNumber = organizationNumber,
+                        UserContactPoints =
+                        [
+                            .. userContactPoints.Select((e, index) => new UserContactPoints
+                            {
+                                Email = e.Email,
+                                UserId = index + 1,
+                                IsReserved = false,
+                                MobileNumber = e.MobileNumber,
+                                NationalIdentityNumber = $"0101011234{index}"
+                            })
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.IsAny<string>(), It.IsAny<string?>()))
+                .ReturnsAsync((List<OrganizationContactPoints> cps, string _, string? __) => cps);
+
+            return GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenSireOrganizationHasNoOfficialContactPointsAtRegistration_ShouldEnrichWithAuthorizedUserContactPoints()
+        {
+            // Arrange
+            string organizationNumber = "090080784";
+            string resourceId = "urn:altinn:resource:test-resource";
+            string userEmailAddress = "contact-person@example.com";
+
+            var recipients = new List<Recipient> { new() { OrganizationNumber = organizationNumber } };
+
+            var userContactPoints = new List<OrganizationContactPoints>
+            {
+                new()
+                {
+                    PartyId = 1001,
+                    OrganizationNumber = organizationNumber,
+                    UserContactPoints = [new() { UserId = 200001, Email = userEmailAddress, NationalIdentityNumber = "29326345553" }]
+                }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(l => l.Contains(organizationNumber))))
+                .ReturnsAsync([new() { PartyId = 1001, OrganizationNumber = organizationNumber }]);
+            profileClientMock
+                .Setup(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(l => l.Contains(organizationNumber)), "test-resource"))
+                .ReturnsAsync(userContactPoints);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), "test-resource", It.IsAny<string?>()))
+                .ReturnsAsync((List<OrganizationContactPoints> cps, string _, string? __) => cps);
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(e => e.QueryOrganizationSources(It.Is<IReadOnlyCollection<string>>(l => l.Contains(organizationNumber)), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([new PartyDetails { OrganizationNumber = organizationNumber, RegistrySource = OrganizationRegistrySource.RegisteredWithSkatteetaten }]);
+
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object, registerClientMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipients, resourceId, OrderLifecycleStage.Registration, false);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            var emailAddress = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal(userEmailAddress, emailAddress.EmailAddress);
+            registerClientMock.Verify(e => e.QueryOrganizationSources(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenProcessing_ShouldNotQueryRegister()
+        {
+            // Arrange
+            string organizationNumber = "090080784";
+            var recipients = new List<Recipient> { new() { OrganizationNumber = organizationNumber } };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([new() { PartyId = 1001, OrganizationNumber = organizationNumber }]);
+            profileClientMock
+                .Setup(e => e.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), "test-resource"))
+                .ReturnsAsync([]);
+
+            var registerClientMock = new Mock<IRegisterClient>();
+
+            var service = GetTestService(profileClientMock.Object, registerClient: registerClientMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipients, "urn:altinn:resource:test-resource", OrderLifecycleStage.Processing, false);
+
+            // Assert
+            registerClientMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenCcrOrganizationHasNoOfficialContactPoints_ShouldNotLookUpUserContactPoints()
+        {
+            // Arrange
+            string organizationNumber = "987654321";
+            var recipients = new List<Recipient> { new() { OrganizationNumber = organizationNumber } };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([]);
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(e => e.QueryOrganizationSources(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([new PartyDetails { OrganizationNumber = organizationNumber, RegistrySource = OrganizationRegistrySource.CentralCoordinatingRegister }]);
+
+            var service = GetTestService(profileClientMock.Object, registerClient: registerClientMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipients, "urn:altinn:resource:test-resource", OrderLifecycleStage.Registration, false);
+
+            // Assert
+            Assert.Empty(Assert.Single(recipients).AddressInfo);
+            profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenOrganizationHasOfficialContactPoints_ShouldNotQueryRegister()
+        {
+            // Arrange
+            string organizationNumber = "987654321";
+            var recipients = new List<Recipient> { new() { OrganizationNumber = organizationNumber } };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([new() { PartyId = 1001, OrganizationNumber = organizationNumber, EmailList = ["org@example.com"] }]);
+
+            var registerClientMock = new Mock<IRegisterClient>();
+
+            var service = GetTestService(profileClientMock.Object, registerClient: registerClientMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipients, "urn:altinn:resource:test-resource", OrderLifecycleStage.Registration, false);
+
+            // Assert
+            Assert.Single(Assert.Single(recipients).AddressInfo);
+            registerClientMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenOfficialContactPointsAreUnusable_ShouldQueryRegisterAndEnrichSireOrganization()
+        {
+            // Arrange
+            string organizationNumber = "090080784";
+            string userEmailAddress = "contact-person@example.com";
+            var recipients = new List<Recipient> { new() { OrganizationNumber = organizationNumber } };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([new() { PartyId = 1001, OrganizationNumber = organizationNumber, EmailList = [" "], MobileNumberList = ["invalid"] }]);
+            profileClientMock
+                .Setup(e => e.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), "test-resource"))
+                .ReturnsAsync([new() { PartyId = 1001, OrganizationNumber = organizationNumber, UserContactPoints = [new() { UserId = 200001, Email = userEmailAddress, NationalIdentityNumber = "29326345553" }] }]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), "test-resource", It.IsAny<string?>()))
+                .ReturnsAsync((List<OrganizationContactPoints> cps, string _, string? __) => cps);
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(e => e.QueryOrganizationSources(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([new PartyDetails { OrganizationNumber = organizationNumber, RegistrySource = OrganizationRegistrySource.RegisteredWithSkatteetaten }]);
+
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object, registerClientMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipients, "urn:altinn:resource:test-resource", OrderLifecycleStage.Registration, false);
+
+            // Assert
+            var emailAddress = Assert.Single(Assert.Single(recipients).AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal(userEmailAddress, emailAddress.EmailAddress);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenRegisterLookupFails_ShouldThrowPlatformDependencyException()
+        {
+            // Arrange
+            var recipients = new List<Recipient> { new() { OrganizationNumber = "090080784" } };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([]);
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(e => e.QueryOrganizationSources(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("Register unavailable"));
+
+            var service = GetTestService(profileClientMock.Object, registerClient: registerClientMock.Object);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<PlatformDependencyException>(
+                () => service.AddEmailContactPoints(recipients, "urn:altinn:resource:test-resource", OrderLifecycleStage.Registration, false));
+        }
+
         private static ContactPointService GetTestService(
             IProfileClient? profileClient = null,
-            IAuthorizationService? authorizationService = null)
+            IAuthorizationService? authorizationService = null,
+            IRegisterClient? registerClient = null)
         {
+            if (registerClient == null)
+            {
+                var registerClientMock = new Mock<IRegisterClient>();
+                registerClientMock
+                    .Setup(e => e.QueryOrganizationSources(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync([]);
+                registerClient = registerClientMock.Object;
+            }
+
             if (profileClient == null)
             {
                 var profileClientMock = new Mock<IProfileClient>();
@@ -2162,7 +2652,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 authorizationService = authorizationServiceMock.Object;
             }
 
-            return new ContactPointService(profileClient, authorizationService);
+            return new ContactPointService(profileClient, authorizationService, registerClient);
         }
     }
 }
