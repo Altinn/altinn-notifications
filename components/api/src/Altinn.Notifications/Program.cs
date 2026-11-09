@@ -9,6 +9,7 @@ using Altinn.Common.PEP.Authorization;
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
@@ -156,7 +157,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
-                DeliveryReportMetrics.MeterName);
+                DeliveryReportMetrics.MeterName,
+                BacklogMetrics.MeterName);
         })
         .WithTracing(tracing =>
         {
@@ -223,6 +225,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);
     services.AddCoreServices(config);
+    services.AddSingleton<IBacklogMetrics, BacklogMetrics>();
     services.AddAuthorizationService(config);
     services.AddWolverineServices(config, builder.Environment);
 
