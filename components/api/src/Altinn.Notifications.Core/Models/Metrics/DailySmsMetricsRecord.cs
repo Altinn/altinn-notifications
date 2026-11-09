@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.Models.Metrics
+﻿using Parquet.Serialization.Attributes;
+
+namespace Altinn.Notifications.Core.Models.Metrics
 {
     /// <summary>
     /// Record describing the notification metrics for a single sms
@@ -11,9 +13,14 @@
         public long SmsId { get; init; }
 
         /// <summary>
-        /// Gets or sets the shipment identifier this SMS belongs to.
+        /// Gets or sets the shipment identifier of the SMS notification (sms.alternateid), as UUID text.
         /// </summary>
-        public string ShipmentId { get; init; } = string.Empty;
+        public string SmsShipmentId { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the shipment identifier of the order the SMS belongs to (order.alternateid), as UUID text.
+        /// </summary>
+        public string OrderShipmentId { get; init; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the sender's reference associated with the shipment.
@@ -21,9 +28,16 @@
         public string SendersReference { get; init; } = string.Empty;
 
         /// <summary>
-        /// Gets or sets the requested send time for the SMS.
+        /// Gets or sets the requested send time for the SMS (UTC). Written as TIMESTAMP_MILLIS.
         /// </summary>
-        public string RequestedSendTime { get; init; } = string.Empty;
+        [ParquetTimestamp(ParquetTimestampResolution.Milliseconds)]
+        public DateTime RequestedSendTime { get; init; }
+
+        /// <summary>
+        /// Gets or sets the time the send result was set for the SMS (UTC). Written as TIMESTAMP_MILLIS.
+        /// </summary>
+        [ParquetTimestamp(ParquetTimestampResolution.Milliseconds)]
+        public DateTime ResultTime { get; init; }
 
         /// <summary>
         /// Gets or sets the creator (originating service) name for the SMS.
@@ -46,7 +60,7 @@
         public string GatewayReference { get; init; } = string.Empty;
 
         /// <summary>
-        /// Gets or sets the rate category or tariff used for the SMS.
+        /// Gets or sets the rate category for the SMS: 'innland' (+47/0047), 'utland' or 'n/a' (no mobile number).
         /// </summary>
         public string Rate { get; init; } = string.Empty;
 
@@ -54,20 +68,5 @@
         /// Gets or sets the mobile number prefix (country code) used for the SMS recipient.
         /// </summary>
         public string MobileNumberPrefix { get; init; } = string.Empty;
-
-        /// <summary>
-        /// Gets or sets the number of Altinn SMS messages used to send the message (segments).
-        /// </summary>
-        public int AltinnSmsCount { get; init; }
-
-        /// <summary>
-        /// Gets or sets the length of the Altinn SMS body in characters, if available.
-        /// </summary>
-        public int AltinnSmsBodyLength { get; init; }
-
-        /// <summary>
-        /// Gets or sets the length of any customized SMS body in characters.
-        /// </summary>
-        public int AltinnSmsCustomBodyLength { get; init; }
     }
 }
