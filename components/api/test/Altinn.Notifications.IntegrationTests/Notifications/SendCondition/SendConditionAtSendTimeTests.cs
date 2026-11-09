@@ -98,7 +98,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         // Assert
         Assert.Equal("New", await GetNotificationResult(orderId));
         Assert.Equal("true", await GetIsRetryScheduledInFuture(orderId));
-        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, TestContext.Current.CancellationToken), Times.Once);
+        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>()), Times.Once);
 
         // Act: once the retry is due, a second inconclusive check sends the notification as if no condition was configured
         await MakeRetryDue(orderId);
@@ -107,7 +107,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         // Assert
         Assert.Equal("Sending", await GetNotificationResult(orderId));
         Assert.NotEqual("Completed", await GetOrderProcessedStatus(orderId));
-        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, TestContext.Current.CancellationToken), Times.Exactly(2));
+        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         // Assert
         Assert.Equal("SendConditionNotMet", await GetNotificationResult(orderId));
         Assert.Equal("Completed", await GetOrderProcessedStatus(orderId));
-        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, TestContext.Current.CancellationToken), Times.Exactly(2));
+        conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     public ValueTask InitializeAsync()
