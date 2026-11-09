@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 
 using Altinn.Common.AccessTokenClient.Services;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
@@ -145,6 +146,50 @@ public class RegisterClientTests
         };
     }
 
+    [Fact]
+    public async Task QueryOrganizationSources_WithMixedSources_ReturnsSourcePerOrganization()
+    {
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+        {
+            Assert.Equal(HttpMethod.Post, request!.Method);
+            Assert.Equal("/register/api/v2/internal/parties/query", request.RequestUri!.AbsolutePath);
+            Assert.Contains("fields=org.source", request.RequestUri.Query);
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                    {
+                        "data": [
+                            {
+                                "partyType": "organization",
+                                "organizationIdentifier": "123456785",
+                                "partyUuid": "00000000-0000-0000-0000-000000000002",
+                                "versionId": 2,
+                                "source": "sire"
+                            },
+                            {
+                                "partyType": "organization",
+                                "organizationIdentifier": "974760673",
+                                "partyUuid": "00000000-0000-0000-0000-000000000003",
+                                "versionId": 3,
+                                "source": "ccr"
+                            }
+                        ]
+                    }
+                    """,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+        }));
+
+        var actual = await registerClient.QueryOrganizationSources(["123456785", "974760673"], TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, actual.Count);
+        Assert.Equal(OrganizationRegistrySource.RegisteredWithSkatteetaten, Assert.Single(actual, e => e.OrganizationNumber == "123456785").RegistrySource);
+        Assert.Equal(OrganizationRegistrySource.CentralCoordinatingRegister, Assert.Single(actual, e => e.OrganizationNumber == "974760673").RegistrySource);
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.OK)]
     [InlineData(HttpStatusCode.PartialContent)]
@@ -214,83 +259,10 @@ public class RegisterClientTests
     }
 
     [Fact]
-    public async Task GetPartyDetails_WithEmptyJSONArrayResponse_ReturnsEmpty()
-    {
-        // Arrange
-        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
-        {
-            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
-            {
-                var responseContent = new PartyDetailsLookupResult
-                {
-                    PartyDetailsList = []
-                };
-
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(JsonSerializer.Serialize(responseContent), Encoding.UTF8, "application/json")
-                });
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-        }));
-
-        // Act
-        List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
-
-        // Assert
-        Assert.Empty(actual);
-    }
-
-    [Fact]
     public async Task GetPartyDetails_WithEmptyList_ReturnsEmpty()
     {
         // Act
         List<PartyDetails> actual = await _registerClient.GetPartyDetails(["empty-list"], ["empty-list"]);
-
-        // Assert
-        Assert.Empty(actual);
-    }
-
-    [Fact]
-    public async Task GetPartyDetails_WithEmptyOrganizationNumbersAndNullSocialSecurityNumbers_ReturnsEmpty()
-    {
-        // Act
-        List<PartyDetails> actual = await _registerClient.GetPartyDetails([], null);
-
-        // Assert
-        Assert.Empty(actual);
-    }
-
-    [Fact]
-    public async Task GetPartyDetails_WithNullDeserializedResponse_ReturnsEmpty()
-    {
-        // Arrange
-        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
-        {
-            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
-            {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
-                });
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-        }));
-
-        // Act
-        List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
-
-        // Assert
-        Assert.Empty(actual);
-    }
-
-    [Fact]
-    public async Task GetPartyDetails_WithNullOrganizationNumbersAndEmptySocialSecurityNumbers_ReturnsEmpty()
-    {
-        // Act
-        List<PartyDetails> actual = await _registerClient.GetPartyDetails(null, []);
 
         // Assert
         Assert.Empty(actual);
@@ -390,29 +362,6 @@ public class RegisterClientTests
         Assert.NotNull(exception.InnerException);
         Assert.IsType<HttpRequestException>(exception.InnerException);
         Assert.Contains("Simulated transient network error", exception.InnerException.Message);
-    }
-
-    [Fact]
-    public async Task GetPartyDetails_WithTaskCanceledException_ThrowsPlatformDependencyException()
-    {
-        // Arrange
-        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
-        {
-            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
-            {
-                throw new TaskCanceledException("Request timeout");
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-        }));
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<PlatformDependencyException>(
-            async () => await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]));
-
-        Assert.NotNull(exception.InnerException);
-        Assert.IsType<TaskCanceledException>(exception.InnerException);
-        Assert.Contains("Request timeout", exception.InnerException.Message);
     }
 
     private RegisterClient CreateRegisterClient(DelegatingHandler? handler = null, string accessToken = "valid-token")

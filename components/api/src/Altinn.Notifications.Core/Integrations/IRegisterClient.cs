@@ -37,4 +37,16 @@ public interface IRegisterClient
     /// </returns>
     /// <exception cref="Shared.PlatformDependencyException">Thrown when the register service is unavailable or returns an error.</exception>
     Task<List<PartyDetails>> GetPartyDetails(List<string>? organizationNumbers, List<string>? socialSecurityNumbers);
+
+    /// <summary>
+    /// Retrieves organization details from Register, including the registry each organization originates from.
+    /// </summary>
+    /// <param name="organizationNumbers">The organization numbers to look up.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// The details of the matching organizations, with <see cref="PartyDetails.RegistrySource"/> populated.
+    /// Missing organizations and identifiers that are not valid are omitted.
+    /// </returns>
+    /// <exception cref="Shared.PlatformDependencyException">Thrown when the register service is unavailable or returns an invalid response.</exception>
+    Task<List<PartyDetails>> QueryOrganizationSources(IReadOnlyCollection<string> organizationNumbers, CancellationToken cancellationToken = default);
 }
