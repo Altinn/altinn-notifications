@@ -32,7 +32,13 @@ public abstract class NotificationRepositoryBase
     protected abstract NotificationChannel Channel { get; }
 
     private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed_v3(@alternateid)";
-    
+
+    private const string _getShipmentIdSql = @"
+        SELECT o.alternateid FROM notifications.emailnotifications e JOIN notifications.orders o ON o._id = e._orderid WHERE e.alternateid = @alternateid
+        UNION ALL
+        SELECT o.alternateid FROM notifications.smsnotifications s JOIN notifications.orders o ON o._id = s._orderid WHERE s.alternateid = @alternateid
+        LIMIT 1";
+
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted(@notificationid, @sourceidentifier)";
 
     private readonly string _updateExpiredNotifications = "SELECT * FROM notifications.updateexpirednotifications(@source, @limit, @offset)";
@@ -144,10 +150,7 @@ public abstract class NotificationRepositoryBase
 
             foreach (var alternateId in expiredIds)
             {
-                if (await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction))
-                {
-                    await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
-                }
+                await ProcessFinalNotificationResult(connection, transaction, alternateId);
             }
 
             await transaction.CommitAsync();
@@ -160,7 +163,46 @@ public abstract class NotificationRepositoryBase
     }
 
     /// <summary>
+    /// Handles a notification that has just reached a final result: logs it right away, then completes the order and writes the status feed if all notifications of the order are final.
+    /// </summary>
+    /// <param name="connection">The <see cref="NpgsqlConnection"/> used to interact with the database.</param>
+    /// <param name="transaction">The <see cref="NpgsqlTransaction"/> associated with the database operation.</param>
+    /// <param name="notificationAlternateId">The alternate ID of the notification that reached a final result.</param>
+    private async Task ProcessFinalNotificationResult(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid notificationAlternateId)
+    {
+        await LogFinalNotificationResult(connection, transaction, notificationAlternateId);
+
+        if (await TryCompleteOrderBasedOnNotificationsState(notificationAlternateId, connection, transaction))
+        {
+            await InsertOrderStatusCompletedOrder(connection, transaction, notificationAlternateId);
+        }
+    }
+
+    /// <summary>
+    /// Logs the final results of the shipment of a just-updated notification as soon as they are persisted, independently of the state of sibling notifications.
+    /// Pending and already logged notifications are not written, so only new final results add rows.
+    /// </summary>
+    /// <param name="connection">The <see cref="NpgsqlConnection"/> used to interact with the database.</param>
+    /// <param name="transaction">The <see cref="NpgsqlTransaction"/> associated with the database operation.</param>
+    /// <param name="notificationAlternateId">The alternate ID of the notification that was just updated.</param>
+    protected async Task LogFinalNotificationResult(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid notificationAlternateId)
+    {
+        await using NpgsqlCommand pgcom = new(_getShipmentIdSql, connection, transaction);
+        pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, notificationAlternateId);
+
+        var shipmentId = await pgcom.ExecuteScalarAsync() as Guid?
+            ?? throw new InvalidOperationException("Shipment could not be found for the specified notification alternate ID.");
+
+        var skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(shipmentId, connection, transaction);
+        if (skippedNotificationIds.Count > 0)
+        {
+            _logger.LogDebug("{Count} notification log entries for shipment {ShipmentId} already existed and were skipped.", skippedNotificationIds.Count, shipmentId);
+        }
+    }
+
+    /// <summary>
     /// Inserts the status feed for a completed order based on the specified alternate ID.
+    /// The notification log is not written here, as each notification is logged when its final result is persisted.
     /// </summary>
     /// <param name="connection">The <see cref="NpgsqlConnection"/> used to interact with the database.</param>
     /// <param name="transaction">The <see cref="NpgsqlTransaction"/> associated with the database operation.</param>
@@ -174,12 +216,6 @@ public abstract class NotificationRepositoryBase
             if (!inserted)
             {
                 _logger.LogError("Status feed entry for completed order {AlternateId} already existed; this order was processed more than once.", alternateId);
-            }
-
-            var skippedNotificationIds = await NotificationLogRepository.InsertNotificationLogEntry(orderStatus.ShipmentId, connection, transaction);
-            foreach (var skippedNotificationId in skippedNotificationIds)
-            {
-                _logger.LogError("Notification log entry for notification {NotificationId} (shipment {AlternateId}) already existed; this notification was processed more than once.", skippedNotificationId, alternateId);
             }
         }
         else
@@ -301,16 +337,6 @@ public abstract class NotificationRepositoryBase
             return;
         }
 
-        var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(
-            alternateId,
-            connection,
-            transaction);
-
-        if (!orderIsSetAsCompleted)
-        {
-            return;
-        }
-
-        await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
+        await ProcessFinalNotificationResult(connection, transaction, alternateId);
     }
 }

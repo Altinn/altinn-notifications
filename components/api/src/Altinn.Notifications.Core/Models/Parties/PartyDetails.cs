@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+using Altinn.Notifications.Core.Enums;
+
 namespace Altinn.Notifications.Core.Models.Parties;
 
 /// <summary>
@@ -24,4 +26,11 @@ public class PartyDetails
     /// </summary>
     [JsonPropertyName("ssn")]
     public string? NationalIdentityNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the registry the organization originates from.
+    /// Only populated when explicitly requested from Register.
+    /// </summary>
+    [JsonPropertyName("source")]
+    public OrganizationRegistrySource? RegistrySource { get; set; }
 }
