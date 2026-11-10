@@ -70,9 +70,9 @@ public class NotificationDeliveryManifestService : INotificationDeliveryManifest
     {
         string cacheKey = CreateCacheKey(alternateId, creatorName);
 
-        if (_memoryCache.TryGetValue(cacheKey, out object? cachedValue))
+        if (_memoryCache.TryGetValue(cacheKey, out NotificationDeliveryManifest? cachedManifest) && cachedManifest is not null)
         {
-            return cachedValue is NotificationDeliveryManifest cachedManifest ? cachedManifest : Problems.ShipmentNotFound;
+            return cachedManifest;
         }
 
         var deliveryManifest = await _notificationDeliveryManifestRepository.GetDeliveryManifestAsync(alternateId, creatorName, cancellationToken);
@@ -96,17 +96,33 @@ public class NotificationDeliveryManifestService : INotificationDeliveryManifest
         return Problems.ShipmentNotFound;
     }
 
+    /// <summary>
+    /// Creates a cache key for a shipment manifest lookup.
+    /// </summary>
+    /// <param name="alternateId">The shipment alternate identifier.</param>
+    /// <param name="creatorName">The shipment creator name.</param>
+    /// <returns>A unique cache key for the given shipment context.</returns>
     private static string CreateCacheKey(Guid alternateId, string creatorName)
     {
         return $"{alternateId}:{creatorName}";
     }
 
+    /// <summary>
+    /// Determines whether a manifest can be cached.
+    /// </summary>
+    /// <param name="manifest">The manifest to evaluate.</param>
+    /// <returns><see langword="true"/> when order and recipients are terminal; otherwise <see langword="false"/>.</returns>
     private static bool CanCacheManifest(NotificationDeliveryManifest manifest)
     {
         return IsTerminalStatus(manifest.Status) &&
                manifest.Recipients.All(recipient => IsTerminalStatus(recipient.Status));
     }
 
+    /// <summary>
+    /// Determines whether a processing status is terminal.
+    /// </summary>
+    /// <param name="status">The status to evaluate.</param>
+    /// <returns><see langword="true"/> when the status is terminal; otherwise <see langword="false"/>.</returns>
     private static bool IsTerminalStatus(ProcessingLifecycle status)
     {
         return _terminalStatuses.Contains(status);

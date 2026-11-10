@@ -254,6 +254,7 @@ public class NotificationDeliveryManifestServiceTests
         // Assert
         Assert.True(firstCall.IsSuccess);
         Assert.True(secondCall.IsSuccess);
+        Assert.Equal(expectedManifest, secondCall.Value);
         _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken), Times.Once);
     }
 
@@ -279,6 +280,44 @@ public class NotificationDeliveryManifestServiceTests
             LastUpdate = DateTime.UtcNow.AddDays(-5),
             Status = ProcessingLifecycle.Order_Processing,
             SendersReference = "PROCESSING-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
+            Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest)
+        };
+
+        _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken))
+            .ReturnsAsync(expectedManifest);
+
+        // Act
+        var firstCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+        var secondCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+
+        // Assert
+        Assert.True(firstCall.IsSuccess);
+        Assert.True(secondCall.IsSuccess);
+        _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task GetDeliveryManifestAsync_WhenOrderIsTerminalAndRecipientIsNotTerminal_DoesNotUseCache()
+    {
+        // Arrange
+        string orderCreatorName = "TEST-ORG";
+        Guid orderAlternateId = Guid.NewGuid();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        var smsDeliveryManifest = new SmsDeliveryManifest
+        {
+            Destination = "+4799999999",
+            LastUpdate = DateTime.UtcNow.AddDays(-10),
+            Status = ProcessingLifecycle.SMS_Sending
+        };
+
+        var expectedManifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = orderAlternateId,
+            LastUpdate = DateTime.UtcNow.AddDays(-5),
+            Status = ProcessingLifecycle.Order_Completed,
+            SendersReference = "PROCESSING-RECIPIENT-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
             Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest)
         };
 
