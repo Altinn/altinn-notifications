@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics;
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Services;
@@ -18,12 +18,12 @@ namespace Altinn.Notifications.Core.Services;
 /// </remarks>
 public class OrderProcessingService(
     IOrderRepository orderRepository,
-    IEmailOrderProcessingService emailProcessingService,
-    ISmsOrderProcessingService smsProcessingService,
-    IPreferredChannelProcessingService preferredChannelProcessingService,
-    IEmailAndSmsOrderProcessingService emailAndSmsProcessingService,
     ILogger<OrderProcessingService> logger,
-    IUnitOfWorkRepository unitOfWorkRepository) : IOrderProcessingService
+    ISmsOrderProcessingService smsProcessor,
+    IEmailOrderProcessingService emailProcessor,
+    IPreferredChannelProcessingService preferredProcessor,
+    IEmailAndSmsOrderProcessingService emailAndSmsProcessor,
+    IUnitOfWorkRepository uowRepo) : IOrderProcessingService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
 
@@ -35,7 +35,7 @@ public class OrderProcessingService(
         UnitOfWork unitOfWork;
         try
         {
-            unitOfWork = await unitOfWorkRepository.StartUnitOfWork();
+            unitOfWork = await uowRepo.StartUnitOfWork();
         }
         catch (Exception e)
         {
@@ -54,13 +54,41 @@ public class OrderProcessingService(
             activity?.SetTag("Count", pastDueOrder == null ? 0 : 1);
             if (pastDueOrder == null)
             {
-                await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                await uowRepo.RollbackUnitOfWork(unitOfWork);
                 return false;
             }
 
-            await unitOfWorkRepository.SaveUnitOfWork(unitOfWork, savepoint);
-            await ProcessOrder(pastDueOrder, unitOfWork);
-            await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+            await uowRepo.SaveUnitOfWork(unitOfWork, savepoint);
+
+            SmsOrderProcessingResult smsOrderProcessingResult = new([], null);
+            EmailOrderProcessingResult emailOrderProcessingResult = new([], null);
+
+            switch (pastDueOrder.NotificationChannel)
+            {
+                case NotificationChannel.Sms:
+                    smsOrderProcessingResult = await smsProcessor.ProcessOrder(pastDueOrder);
+                    break;
+
+                case NotificationChannel.Email:
+                    emailOrderProcessingResult = await emailProcessor.ProcessOrder(pastDueOrder);
+                    break;
+
+                case NotificationChannel.EmailAndSms:
+                    var emailAndSmsResult = await emailAndSmsProcessor.ProcessOrderAsync(pastDueOrder);
+                    emailOrderProcessingResult = emailAndSmsResult.EmailOrderProcessingResult;
+                    smsOrderProcessingResult = emailAndSmsResult.SmsOrderProcessingResult;
+                    break;
+
+                case NotificationChannel.SmsPreferred:
+                case NotificationChannel.EmailPreferred:
+                    var preferredResult = await preferredProcessor.ProcessOrder(pastDueOrder);
+                    emailOrderProcessingResult = preferredResult.EmailOrderProcessingResult;
+                    smsOrderProcessingResult = preferredResult.SmsOrderProcessingResult;
+                    break;
+            }
+
+            await orderRepository.PersistProcessingResultAsync(unitOfWork, pastDueOrder, emailOrderProcessingResult, smsOrderProcessingResult);
+            await uowRepo.CommitUnitOfWork(unitOfWork);
 
             return true;
         }
@@ -81,54 +109,21 @@ public class OrderProcessingService(
                 activity?.SetTag("OrderId", pastDueOrder.Id);
                 try
                 {
-                    await unitOfWorkRepository.RollbackUnitOfWorkToSavepoint(unitOfWork, savepoint);
+                    await uowRepo.RollbackUnitOfWorkToSavepoint(unitOfWork, savepoint);
                     await orderRepository.SetRetryStatus(unitOfWork, pastDueOrder.Id, $"{e} {e.Message}");
-                    await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+                    await uowRepo.CommitUnitOfWork(unitOfWork);
                 }
                 catch (Exception)
                 {
-                    await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                    await uowRepo.RollbackUnitOfWork(unitOfWork);
                 }
             }
             else
             {
-                await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+                await uowRepo.RollbackUnitOfWork(unitOfWork);
             }
 
             return false;
         }
-    }
-
-    /// <inheritdoc/>
-    public async Task ProcessOrder(NotificationOrder order, UnitOfWork unitOfWork)
-    {
-        SmsOrderProcessingResult smsOrderProcessingResult = new([], null);
-        EmailOrderProcessingResult emailOrderProcessingResult = new([], null);
-
-        switch (order.NotificationChannel)
-        {
-            case NotificationChannel.Sms:
-                smsOrderProcessingResult = await smsProcessingService.ProcessOrder(order);
-                break;
-
-            case NotificationChannel.Email:
-                emailOrderProcessingResult = await emailProcessingService.ProcessOrder(order);
-                break;
-
-            case NotificationChannel.EmailAndSms:
-                var emailAndSmsResult = await emailAndSmsProcessingService.ProcessOrderAsync(order);
-                emailOrderProcessingResult = emailAndSmsResult.EmailOrderProcessingResult;
-                smsOrderProcessingResult = emailAndSmsResult.SmsOrderProcessingResult;
-                break;
-
-            case NotificationChannel.SmsPreferred:
-            case NotificationChannel.EmailPreferred:
-                var preferredResult = await preferredChannelProcessingService.ProcessOrder(order);
-                emailOrderProcessingResult = preferredResult.EmailOrderProcessingResult;
-                smsOrderProcessingResult = preferredResult.SmsOrderProcessingResult;
-                break;
-        }
-
-        await orderRepository.PersistProcessingResultAsync(unitOfWork, order, emailOrderProcessingResult, smsOrderProcessingResult);
     }
 }
