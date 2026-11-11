@@ -4585,37 +4585,31 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         };
     }
 
-    private static async Task<bool> PersistProcessingResultAsyncWithUnitOfWork(
+    private static Task<bool> PersistProcessingResultAsyncWithUnitOfWork(
         OrderRepository repo,
         NotificationOrder order,
         EmailOrderProcessingResult emailResult,
         SmsOrderProcessingResult smsResult,
         CancellationToken cancellationToken)
     {
-        IUnitOfWorkRepository unitOfWorkRepository = (IUnitOfWorkRepository)ServiceUtil
-            .GetServices([typeof(IUnitOfWorkRepository)])
-            .First(i => i.GetType() == typeof(UnitOfWorkRepository));
-
-        UnitOfWork unitOfWork = await unitOfWorkRepository.StartUnitOfWork();
-
-        try
-        {
-            bool isCompleted = await repo.PersistProcessingResultAsync(unitOfWork, order, emailResult, smsResult, cancellationToken);
-            await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-            return isCompleted;
-        }
-        catch
-        {
-            await unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-            throw;
-        }
+        return RunInUnitOfWorkAsync(unitOfWork => repo.PersistProcessingResultAsync(unitOfWork, order, emailResult, smsResult, cancellationToken));
     }
 
-    private static async Task SetRetryStatusWithUnitOfWork(
+    private static Task<bool> SetRetryStatusWithUnitOfWork(
         OrderRepository repo,
         Guid orderId,
         string reason,
         CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return RunInUnitOfWorkAsync(async unitOfWork =>
+        {
+            await repo.SetRetryStatus(unitOfWork, orderId, reason);
+            return true;
+        });
+    }
+
+    private static async Task<T> RunInUnitOfWorkAsync<T>(Func<UnitOfWork, Task<T>> action)
     {
         IUnitOfWorkRepository unitOfWorkRepository = (IUnitOfWorkRepository)ServiceUtil
             .GetServices([typeof(IUnitOfWorkRepository)])
@@ -4625,8 +4619,9 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
 
         try
         {
-            await repo.SetRetryStatus(unitOfWork, orderId, reason);
+            T result = await action(unitOfWork);
             await unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+            return result;
         }
         catch
         {
