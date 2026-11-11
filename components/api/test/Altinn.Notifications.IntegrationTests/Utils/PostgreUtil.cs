@@ -683,18 +683,16 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v3(
+        SELECT notifications.insertorder_v4(
             @alternateid,
             @creatorname,
             @sendersreference,
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @smssendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid,
-            @emailsendingtimepolicy
+            @orderchainid
         )
         """;
 
@@ -761,11 +759,9 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
-                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 
@@ -851,18 +847,16 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v3(
+        SELECT notifications.insertorder_v4(
             @alternateid,
             @creatorname,
             @sendersreference,
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @smssendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid,
-            @emailsendingtimepolicy
+            @orderchainid
         )
         """;
 
@@ -926,11 +920,9 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
-                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 
