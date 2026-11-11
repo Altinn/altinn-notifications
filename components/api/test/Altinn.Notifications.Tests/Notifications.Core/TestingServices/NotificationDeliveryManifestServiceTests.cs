@@ -9,6 +9,8 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Shared;
 
+using Microsoft.Extensions.Caching.Memory;
+
 using Moq;
 
 using Xunit;
@@ -19,11 +21,13 @@ public class NotificationDeliveryManifestServiceTests
 {
     private readonly NotificationDeliveryManifestService _service;
     private readonly Mock<INotificationDeliveryManifestRepository> _repositoryMock;
+    private readonly IMemoryCache _memoryCache;
 
     public NotificationDeliveryManifestServiceTests()
     {
         _repositoryMock = new Mock<INotificationDeliveryManifestRepository>();
-        _service = new NotificationDeliveryManifestService(_repositoryMock.Object);
+        _memoryCache = new MemoryCache(new MemoryCacheOptions());
+        _service = new NotificationDeliveryManifestService(_repositoryMock.Object, _memoryCache);
     }
 
     [Fact]
@@ -213,6 +217,121 @@ public class NotificationDeliveryManifestServiceTests
             _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken));
 
         Assert.Equal(expectedException.Message, exception.Message);
+    }
+
+    [Fact]
+    public async Task GetDeliveryManifestAsync_WhenManifestIsTerminal_UsesCacheOnSecondCall()
+    {
+        // Arrange
+        string orderCreatorName = "TEST-ORG";
+        Guid orderAlternateId = Guid.NewGuid();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        var smsDeliveryManifest = new SmsDeliveryManifest
+        {
+            Destination = "+4799999999",
+            LastUpdate = DateTime.UtcNow.AddDays(-10),
+            Status = ProcessingLifecycle.SMS_Delivered
+        };
+
+        var expectedManifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = orderAlternateId,
+            LastUpdate = DateTime.UtcNow.AddDays(-5),
+            Status = ProcessingLifecycle.Order_Completed,
+            SendersReference = "COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
+            Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest)
+        };
+
+        _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken))
+            .ReturnsAsync(expectedManifest);
+
+        // Act
+        var firstCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+        var secondCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+
+        // Assert
+        Assert.True(firstCall.IsSuccess);
+        Assert.True(secondCall.IsSuccess);
+        Assert.Equal(expectedManifest, secondCall.Value);
+        _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetDeliveryManifestAsync_WhenManifestIsNotTerminal_DoesNotUseCache()
+    {
+        // Arrange
+        string orderCreatorName = "TEST-ORG";
+        Guid orderAlternateId = Guid.NewGuid();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        var smsDeliveryManifest = new SmsDeliveryManifest
+        {
+            Destination = "+4799999999",
+            LastUpdate = DateTime.UtcNow.AddDays(-10),
+            Status = ProcessingLifecycle.SMS_Sending
+        };
+
+        var expectedManifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = orderAlternateId,
+            LastUpdate = DateTime.UtcNow.AddDays(-5),
+            Status = ProcessingLifecycle.Order_Processing,
+            SendersReference = "PROCESSING-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
+            Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest)
+        };
+
+        _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken))
+            .ReturnsAsync(expectedManifest);
+
+        // Act
+        var firstCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+        var secondCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+
+        // Assert
+        Assert.True(firstCall.IsSuccess);
+        Assert.True(secondCall.IsSuccess);
+        _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task GetDeliveryManifestAsync_WhenOrderIsTerminalAndRecipientIsNotTerminal_DoesNotUseCache()
+    {
+        // Arrange
+        string orderCreatorName = "TEST-ORG";
+        Guid orderAlternateId = Guid.NewGuid();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        var smsDeliveryManifest = new SmsDeliveryManifest
+        {
+            Destination = "+4799999999",
+            LastUpdate = DateTime.UtcNow.AddDays(-10),
+            Status = ProcessingLifecycle.SMS_Sending
+        };
+
+        var expectedManifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = orderAlternateId,
+            LastUpdate = DateTime.UtcNow.AddDays(-5),
+            Status = ProcessingLifecycle.Order_Completed,
+            SendersReference = "PROCESSING-RECIPIENT-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
+            Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest)
+        };
+
+        _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken))
+            .ReturnsAsync(expectedManifest);
+
+        // Act
+        var firstCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+        var secondCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+
+        // Assert
+        Assert.True(firstCall.IsSuccess);
+        Assert.True(secondCall.IsSuccess);
+        _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken), Times.Exactly(2));
     }
 
     [Theory]
