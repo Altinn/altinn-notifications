@@ -16,6 +16,7 @@ using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
+using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Swagger;
@@ -25,6 +26,7 @@ using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Npgsql;
@@ -146,6 +148,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddHttpContextAccessor();
 
+    services.Configure<PostgreSqlSettings>(config.GetSection("PostgreSQLSettings"));
+
     services.AddSingleton(new ActivitySource(BackgroundActivitySource.Name));
 
     services.AddOpenTelemetry()
@@ -174,6 +178,13 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddProcessor<RequestFilterProcessor>();
 
             tracing.AddProcessor<WolverineActivityNameProcessor>();
+
+            tracing.AddProcessor(sp =>
+            {
+                var postgreSqlOptions = sp.GetRequiredService<IOptions<PostgreSqlSettings>>();
+                var telemetryMinDurationMs = postgreSqlOptions.Value.TelemetryMinDurationMs;
+                return new NpgsqlProcessor(TimeSpan.FromMilliseconds(telemetryMinDurationMs));
+            });
 
             tracing.AddNpgsql();
 
