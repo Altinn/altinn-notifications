@@ -128,7 +128,7 @@ void ConfigureWebHostCreationLogging()
     logger = logFactory.CreateLogger<Program>();
 }
 
-void ConfigureApplicationLogging(ILoggingBuilder logging)
+static void ConfigureApplicationLogging(ILoggingBuilder logging)
 {
     logging.AddOpenTelemetry(builder =>
     {
@@ -182,8 +182,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddProcessor(sp =>
             {
                 var postgreSqlOptions = sp.GetRequiredService<IOptions<PostgreSqlSettings>>();
-                var telemetryMinDurationMs = postgreSqlOptions.Value.TelemetryMinDurationMs;
-                return new NpgsqlProcessor(TimeSpan.FromMilliseconds(telemetryMinDurationMs));
+                return new NpgsqlProcessor(postgreSqlOptions.Value);
             });
 
             tracing.AddNpgsql();
@@ -273,7 +272,7 @@ void AddSecretsFromKeyVault(ConfigurationManager config)
     }
 }
 
-void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
+static void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
 {
     var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
     if (!string.IsNullOrEmpty(otelEndpoint))
@@ -315,7 +314,7 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
     }));
 }
 
-void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguration config)
+static void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguration config)
 {
     services.AddAuthorizationBuilder()
         .AddPolicy(AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS, policy =>
@@ -347,7 +346,7 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
     services.AddSingleton<IAuthenticationContext, AuthenticationContext>();
 }
 
-void AddInputModelValidators(IServiceCollection services)
+static void AddInputModelValidators(IServiceCollection services)
 {
     ValidatorOptions.Global.LanguageManager.Enabled = false;
     services.AddValidatorsFromAssemblyWithDuplicateCheck(typeof(Program).Assembly);

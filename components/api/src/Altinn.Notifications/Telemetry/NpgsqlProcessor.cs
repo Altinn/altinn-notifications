@@ -1,8 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
-using Altinn.AccessManagement.Core.Models;
-using AltinnCore.Authentication.Constants;
+using Altinn.Notifications.Persistence.Configuration;
 using OpenTelemetry;
 
 namespace Altinn.Notifications.Telemetry
@@ -14,9 +12,11 @@ namespace Altinn.Notifications.Telemetry
     /// <remarks>Short PostgreSQL activities can be marked as not recorded, command parameters are removed for
     /// short operations, and temporary baggage entries are cleared after use to prevent propagation across process
     /// boundaries.</remarks>
-    /// <param name="minimumTotalDuration">Minimum activity duration required to keep full PostgreSQL telemetry details and include command parameter data.</param>
-    public class NpgsqlProcessor(TimeSpan minimumTotalDuration) : BaseProcessor<Activity>
+    /// <param name="postgreSqlSettings">Postgres config</param>
+    public class NpgsqlProcessor(PostgreSqlSettings postgreSqlSettings) : BaseProcessor<Activity>
     {
+        private const string DbStatsBaggagePrefix = "npgsql.processor.hash.";
+
         /// <summary>
         /// Processes completed activities by suppressing low-duration Npgsql spans, sanitizing propagated data, and
         /// aggregating database execution statistics on the root server activity.
@@ -31,19 +31,21 @@ namespace Altinn.Notifications.Telemetry
             // Suppress Npgsql activities with short duration if it's not the first time we see this trace
             if (IsNpgsqlActivity(activity))
             {
-                if (activity.Duration < minimumTotalDuration && activity.GetBaggageItem("firsthash") == null)
+                var minimumTotalDuration = TimeSpan.FromMilliseconds(postgreSqlSettings.TelemetryMinDurationMs);
+                bool isFirstHash = activity.GetCustomProperty("firsthash") is bool firstHash && firstHash;
+                if (activity.Duration < minimumTotalDuration && !isFirstHash)
                 {
                     // Suppress export
                     activity.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
                 }
 
-                // Clear baggage to avoid propagating out of process
-                activity.SetBaggage("firsthash", null);
+                activity.SetCustomProperty("firsthash", null);
 
-                if (activity.Duration < minimumTotalDuration)
+                if (activity.Duration < minimumTotalDuration && !postgreSqlSettings.TelemetryAlwaysLogSqlText)
                 {
                     // Remove logged parameters
                     activity.SetTag("db.command.parameters", null);
+                    activity.SetTag("Parameters", null);
                 }
 
                 Activity? parent = activity.Parent;
@@ -55,8 +57,12 @@ namespace Altinn.Notifications.Telemetry
                 // Transfer state to the root request activity
                 if (parent != null)
                 {
-                    Guid id = Guid.CreateVersion7();
-                    parent.SetBaggage($"hash{id}", $"{activity.GetTagItem("db.hash")}:{activity.Duration.TotalMilliseconds:F0}");
+                    string? dbHash = activity.GetTagItem("db.hash")?.ToString();
+                    if (!string.IsNullOrEmpty(dbHash))
+                    {
+                        Guid id = Guid.CreateVersion7();
+                        parent.SetBaggage($"{DbStatsBaggagePrefix}{id}", $"{dbHash}:{activity.Duration.TotalMilliseconds:F0}");
+                    }
                 }
             }
 
@@ -67,7 +73,7 @@ namespace Altinn.Notifications.Telemetry
                 long totalDbDuration = 0;
                 int dbActivityCount = 0;
                 List<string> baggageKeys = [];
-                activity.Baggage.Where(b => b.Key.StartsWith("hash", StringComparison.OrdinalIgnoreCase)).OrderBy(b => b.Key).ToList().ForEach(b =>
+                activity.Baggage.Where(b => b.Key.StartsWith(DbStatsBaggagePrefix, StringComparison.OrdinalIgnoreCase)).OrderBy(b => b.Key).ToList().ForEach(b =>
                 {
                     baggageKeys.Add(b.Key);
                     sb.Append($";{b.Value}");

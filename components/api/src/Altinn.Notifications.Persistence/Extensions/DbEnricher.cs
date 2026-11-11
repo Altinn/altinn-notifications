@@ -20,7 +20,7 @@ public class DbEnricher
     };
 
     private readonly ILogger<DbEnricher> _logger;
-    private readonly IMemoryCache _sqlHashCache = new MemoryCache(new MemoryCacheOptions());
+    private readonly MemoryCache _sqlHashCache = new MemoryCache(new MemoryCacheOptions());
     private readonly PostgreSqlSettings _options;
 
     /// <summary>
@@ -59,7 +59,7 @@ public class DbEnricher
             _logger.LogDebug("Enriching first observed SQL hash {DbHash}.", hash);
             if (firstHash)
             {
-                activity.AddBaggage("firsthash", "true");
+                activity.SetCustomProperty("firsthash", true);
             }
 
             var commandSpan = command.CommandText.AsSpan();

@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Tests.Notifications.Persistence.TestingExtensions
 public class DbEnricherTests
 {
     [Fact]
-    public void Enrich_FirstObservedHash_AddsFirstHashBaggageAndStatementTag()
+    public void Enrich_FirstObservedHash_AddsFirstHashLocalMarkerAndStatementTag()
     {
         var enricher = CreateEnricher(telemetryAlwaysLogSqlText: false);
         using var activity = new Activity("db").Start();
@@ -20,7 +20,7 @@ public class DbEnricherTests
 
         enricher.Enrich(activity, command);
 
-        Assert.Equal("true", activity.GetBaggageItem("firsthash"));
+        Assert.True(activity.GetCustomProperty("firsthash") is true);
         Assert.NotNull(activity.GetTagItem("db.statement0"));
         Assert.NotNull(activity.GetTagItem("db.hash"));
         Assert.Contains("ParameterName", activity.GetTagItem("Parameters")?.ToString());
@@ -39,7 +39,7 @@ public class DbEnricherTests
         using var secondActivity = new Activity("db").Start();
         enricher.Enrich(secondActivity, command);
 
-        Assert.Null(secondActivity.GetBaggageItem("firsthash"));
+        Assert.Null(secondActivity.GetCustomProperty("firsthash"));
         Assert.Null(secondActivity.GetTagItem("db.statement0"));
         Assert.NotNull(secondActivity.GetTagItem("db.hash"));
     }
