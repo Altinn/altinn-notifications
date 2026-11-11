@@ -1,0 +1,6 @@
+# Only what the Dockerfile copies. Instructions, skills and the home overlay come from the manifests, so they change
+# without a rebuild.
+*
+!Dockerfile
+!common/
+!common/**

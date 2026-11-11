@@ -1,0 +1,2 @@
+# Cloned into /home/agent/code at boot, unless a checkout is already there, such as the one the worktree variant mounts.
+Altinn/altinn-notifications

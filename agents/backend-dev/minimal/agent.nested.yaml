@@ -1,0 +1,19 @@
+# The published image inside another agent, such as to try a change to this definition. Smaller, to fit beside the
+# other agent's own work, but with room for SQL Server and the Service Bus emulator.
+apiVersion: agents.platform/v1alpha1
+kind: AgentVariant
+extends: agent.yaml
+
+metadata:
+  name: notifications-backend-dev-nested
+
+spec:
+  sandbox:
+    resources:
+      cpu: "3"
+      memory: "6Gi"
+      rootFilesystem:
+        capacity: "32Gi"
+        mode: direct
+      # A nested agent runs no agents of its own.
+      nestedSandboxes: null

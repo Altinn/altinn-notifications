@@ -1,0 +1,52 @@
+#!/bin/bash
+# Starts the PostgreSQL the integration tests and the running API use, as CI's service container and
+# tools/dev-setup/dbsetup.sh set it up: notificationsdb on localhost:5432, with the platform_notifications_admin and
+# platform_notifications roles, password "Password". The container is named notifications-db, which tools/aspire
+# starts. `notifications-db reset` deletes it and its data first.
+set -euo pipefail
+
+repo="${NOTIFICATIONS_REPO:-/home/agent/code/altinn-notifications}"
+name=notifications-db
+
+if [ "${1:-}" = reset ]; then
+    podman rm --force --volumes "${name}" >/dev/null 2>&1 || true
+fi
+
+if podman container exists "${name}"; then
+    podman start "${name}" >/dev/null
+else
+    # The image the repository's tests pin, which Renovate keeps current.
+    image="$(jq -r '.images.postgres' \
+        "${repo}/components/shared/test/Altinn.Notifications.Shared.TestInfrastructure/container-images.json" 2>/dev/null \
+        || true)"
+    case "${image}" in
+        ""|null) image=docker.io/library/postgres:18 ;;
+        */*) ;;
+        *) image="docker.io/library/${image}" ;;
+    esac
+    podman run --detach --name "${name}" --publish 127.0.0.1:5432:5432 \
+        --env POSTGRES_USER=platform_notifications_admin \
+        --env POSTGRES_PASSWORD=Password \
+        --env POSTGRES_DB=notificationsdb \
+        "${image}" >/dev/null
+fi
+
+for _ in $(seq 60); do
+    if podman exec "${name}" pg_isready -U platform_notifications_admin -d notificationsdb >/dev/null 2>&1 \
+        && PGPASSWORD=Password psql -h localhost -U platform_notifications_admin -d notificationsdb -qtAc 'select 1' \
+            >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+bash "${repo}/tools/dev-setup/dbsetup.sh" >/dev/null
+# dbsetup.sh changes max_connections, which takes a restart, as CI does after it.
+podman restart "${name}" >/dev/null
+for _ in $(seq 60); do
+    PGPASSWORD=Password psql -h localhost -U platform_notifications_admin -d notificationsdb -qtAc 'select 1' \
+        >/dev/null 2>&1 && { echo "notifications-db is ready on localhost:5432"; exit 0; }
+    sleep 1
+done
+echo "notifications-db did not become ready; see: podman logs ${name}" >&2
+exit 1
