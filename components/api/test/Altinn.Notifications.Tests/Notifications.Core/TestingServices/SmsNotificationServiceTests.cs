@@ -10,6 +10,7 @@ using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -199,37 +200,6 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotification_ConditionNotMet_SetsSendConditionNotMetAndCommitsWithoutPublishing()
-    {
-        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), true, false);
-
-        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.True(result);
-        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
-        repo.Verify(
-            r => r.UpdateSendStatusAsync(unitOfWork, It.IsAny<Guid?>(), SmsNotificationResultType.SendConditionNotMet, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
-        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task SendNotification_ConditionMet_PublishesAndCommits()
-    {
-        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), true, true);
-
-        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.True(result);
-        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Once);
-        repo.Verify(
-            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
-    }
-
-    [Fact]
     public async Task SendNotification_ConditionInconclusive_RollsBackWithoutPublishingOrSettingStatus()
     {
         var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), false, false);
@@ -296,6 +266,56 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotification_ShutdownDuringConditionCheck_RollsBackWithoutTreatingItAsInconclusive()
+    {
+        using var cts = new CancellationTokenSource();
+        var endpoint = new Uri("https://condition.example/check");
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint };
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+
+        var publisher = new Mock<ISmsCommandPublisher>();
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = CreateUnitOfWork();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+
+        // Mimics the real client, which turns a cancelled request into an error result.
+        var conditionClient = new Mock<IConditionClient>();
+        conditionClient
+            .Setup(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                cts.Cancel();
+                return Task.FromResult<Result<bool, ConditionClientError>>(new ConditionClientError { Message = "Request timed out" });
+            });
+
+        var logger = new Mock<ILogger<SmsNotificationService>>();
+
+        var service = GetService(
+            repository: repo.Object,
+            commandPublisher: publisher.Object,
+            unitOfWorkRepository: unitOfWorkRepository.Object,
+            conditionClient: conditionClient.Object,
+            logger: logger.Object);
+
+        var result = await service.SendNotification(cancellationToken: cts.Token);
+
+        Assert.False(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+        logger.Verify(
+            l => l.Log(LogLevel.Warning, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception?>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task SendNotification_DaytimeSmsWhereConditionFlipsBetweenEvaluations_IsSentThenStopped()
     {
         var endpoint = new Uri("https://condition.example/check");
@@ -321,10 +341,14 @@ public class SmsNotificationServiceTests
 
         var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, conditionClient: conditionClient.Object);
 
-        await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
-        await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
+        var firstResult = await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
+        var secondResult = await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
 
+        Assert.True(firstResult);
+        Assert.True(secondResult);
         conditionClient.Verify(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Exactly(2));
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         publisher.Verify(p => p.PublishAsync(first, It.IsAny<CancellationToken>()), Times.Once);
         publisher.Verify(p => p.PublishAsync(second, It.IsAny<CancellationToken>()), Times.Never);
         repo.Verify(
