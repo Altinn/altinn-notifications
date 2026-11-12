@@ -1,0 +1,6 @@
+{
+  "name": "500 Internal server error",
+  "status": 500,
+  "headers": { "Content-Type": "application/problem+json" },
+  "body": { "type": "https://tools.ietf.org/html/rfc9110#section-15.6.1", "title": "An error occurred while processing your request.", "status": 500 }
+}

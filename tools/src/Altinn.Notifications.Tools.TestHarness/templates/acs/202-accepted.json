@@ -1,0 +1,10 @@
+{
+  "name": "202 Accepted (operation running)",
+  "status": 202,
+  "headers": {
+    "Content-Type": "application/json",
+    "Operation-Location": "http://localhost:5095/emails/operations/{{guid}}?api-version=2025-09-01",
+    "operation-id": "{{guid}}"
+  },
+  "body": { "id": "{{guid}}", "status": "Running", "error": null }
+}
