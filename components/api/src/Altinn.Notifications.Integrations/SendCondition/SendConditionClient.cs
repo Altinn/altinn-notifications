@@ -26,7 +26,7 @@ namespace Altinn.Notifications.Integrations.SendCondition
         {
             try
             {
-                using var response = await _client.GetAsync(url, cancellationToken);
+                using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 return await ProcessHttpResponse(response, cancellationToken);
             }
             catch (HttpRequestException ex)
