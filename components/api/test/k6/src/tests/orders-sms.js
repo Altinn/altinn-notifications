@@ -4,7 +4,7 @@
     Command:
     podman compose run k6 run /src/tests/orders-sms.js \
         --secret-source=file=/.secrets \
-        -e altinn_env={environment: at22, at23, at24, tt02, prod} \
+        -e altinn_env={environment: at22, at23, tt02, prod} \
         -e smsRecipient={a mobile number to include as a notification recipient} \
         -e runFullTestSet=true
 
