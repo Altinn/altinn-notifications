@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<NoWarn>
+			$(NoWarn);
+			1591;
+			SA1600;
+			SA1649
+		</NoWarn>
+		<UserSecretsId>mock-auth-tool-9d2f6a3c</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The same self-signed certificate the API's tests sign their tokens with. It is test-only. -->
+		<None Include="..\..\..\components\api\test\Altinn.Notifications.Tests\jwtselfsignedcert.pfx" Link="jwtselfsignedcert.pfx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>
