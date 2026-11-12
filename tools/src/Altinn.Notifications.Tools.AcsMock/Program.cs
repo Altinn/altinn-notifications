@@ -15,6 +15,8 @@ builder.Services.Configure<AcsMockSettings>(builder.Configuration.GetSection(nam
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<EmailOperationStore>();
 builder.Services.AddSingleton<IDeliveryReportSender, ServiceBusDeliveryReportSender>();
+builder.Services.AddSingleton<EmailMirror>();
+builder.Services.AddHostedService(services => services.GetRequiredService<EmailMirror>());
 builder.Services.AddSingleton<DeliveryReportService>();
 builder.Services.AddHostedService(services => services.GetRequiredService<DeliveryReportService>());
 builder.Services.AddHttpClient(AcsEndpoints.FallbackClientName, client => client.Timeout = Timeout.InfiniteTimeSpan);

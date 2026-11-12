@@ -31,7 +31,7 @@ public class TestHarnessSettings
     public int HistorySize { get; set; } = 200;
 
     /// <summary>
-    /// How many messages the Phone tab keeps. The oldest are dropped.
+    /// How many messages the Phone and Inbox tabs keep each. The oldest are dropped.
     /// </summary>
     public int MirrorSize { get; set; } = 200;
 
