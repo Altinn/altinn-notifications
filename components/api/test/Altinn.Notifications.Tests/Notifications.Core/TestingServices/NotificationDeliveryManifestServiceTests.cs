@@ -1,15 +1,10 @@
-using System;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Mappers;
 
 using Microsoft.Extensions.Caching.Memory;
