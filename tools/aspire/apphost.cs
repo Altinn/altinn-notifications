@@ -1,10 +1,14 @@
 #:sdk Aspire.AppHost.Sdk@13.6.5
 #:property AspireUseCliBundle=true
+#:package Azure.Messaging.ServiceBus
 
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text.Json;
+using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -68,6 +72,7 @@ StartContainer("../asb-emulator", ["compose", "up", "-d"], new() { ["EMULATOR_HO
 var serviceBus = builder.AddExecutable("servicebus", containerRuntime, ".", "logs", "-f", "servicebus-emulator")
     .WithHttpEndpoint(port: serviceBusHealthPort, targetPort: serviceBusHealthPort, name: "management", isProxied: false)
     .WithHttpHealthCheck("/health", endpointName: "management");
+AddQueueStatusCommand(serviceBus, serviceBusHealthPort);
 
 api.WaitFor(serviceBus);
 email.WaitFor(serviceBus);
@@ -246,6 +251,49 @@ static Process StartPortForward(string clusterService, int port, ILogger logger)
     process.BeginOutputReadLine();
     process.BeginErrorReadLine();
     return process;
+}
+
+// Suspends a queue like https://learn.microsoft.com/azure/service-bus-messaging/entity-suspend.
+// The emulator takes admin client calls on its HTTP port, and resets every queue to Active when it restarts.
+void AddQueueStatusCommand(IResourceBuilder<ExecutableResource> serviceBus, int managementPort)
+{
+    using var config = JsonDocument.Parse(File.ReadAllText(Path.Combine(builder.AppHostDirectory, "../asb-emulator/config.json")));
+    var queues = config.RootElement.GetProperty("UserConfig").GetProperty("Namespaces")[0].GetProperty("Queues")
+        .EnumerateArray()
+        .Select(queue => queue.GetProperty("Name").GetString()!)
+        .Select(queue => KeyValuePair.Create(queue, queue))
+        .ToList();
+
+    var statuses = new[] { EntityStatus.Active, EntityStatus.ReceiveDisabled, EntityStatus.SendDisabled, EntityStatus.Disabled }
+        .Select(status => KeyValuePair.Create(status.ToString(), status.ToString()))
+        .ToList();
+
+    var admin = new ServiceBusAdministrationClient(
+        $"Endpoint=sb://localhost:{managementPort};SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
+
+    serviceBus.WithCommand(
+        "set-queue-status",
+        "Set queue status",
+        async context =>
+        {
+            string queue = context.Arguments["queue"].Value!;
+            var properties = (await admin.GetQueueAsync(queue, context.CancellationToken)).Value;
+            var previous = properties.Status;
+            properties.Status = new EntityStatus(context.Arguments["status"].Value!);
+            await admin.UpdateQueueAsync(properties, context.CancellationToken);
+            return CommandResults.Success($"{queue}: {previous} → {properties.Status}");
+        },
+        new CommandOptions
+        {
+            Description = "Disable send, receive or both on a queue, to see how the services handle a suspended queue",
+            IconName = "Pause",
+            Arguments =
+            [
+                new InteractionInput { Name = "queue", Label = "Queue", InputType = InputType.Choice, Required = true, Options = queues },
+                new InteractionInput { Name = "status", Label = "Status", InputType = InputType.Choice, Required = true, Options = statuses, Value = statuses[1].Key },
+            ],
+            UpdateState = context => context.ResourceSnapshot.HealthStatus == HealthStatus.Healthy ? ResourceCommandState.Enabled : ResourceCommandState.Disabled,
+        });
 }
 
 void AddTests(string name, IResourceBuilder<ProjectResource> service, string solution)
