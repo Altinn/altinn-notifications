@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
@@ -119,20 +119,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             await reader.GetFieldValueAsync<string>("body", cancellationToken),
             await reader.GetFieldValueAsync<string>("creatorname", cancellationToken))
         {
-            ConditionEndpoint = await ReadConditionEndpointAsync(reader, cancellationToken)
+            ConditionEndpoint = await reader.ReadConditionEndpointAsync(cancellationToken)
         };
-    }
-
-    private static async Task<Uri?> ReadConditionEndpointAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
-    {
-        int ordinal = reader.GetOrdinal("conditionendpoint");
-        if (await reader.IsDBNullAsync(ordinal, cancellationToken))
-        {
-            return null;
-        }
-
-        string conditionEndpoint = await reader.GetFieldValueAsync<string>(ordinal, cancellationToken);
-        return string.IsNullOrEmpty(conditionEndpoint) ? null : new Uri(conditionEndpoint);
     }
 
     /// <inheritdoc/>

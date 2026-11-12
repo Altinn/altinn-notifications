@@ -269,37 +269,8 @@ public class SmsNotificationServiceTests
     public async Task SendNotification_ShutdownDuringConditionCheck_RollsBackWithoutTreatingItAsInconclusive()
     {
         using var cts = new CancellationTokenSource();
-        var endpoint = new Uri("https://condition.example/check");
-        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint };
-
-        var repo = new Mock<ISmsNotificationRepository>();
-        repo
-            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
-            .ReturnsAsync(sms);
-
-        var publisher = new Mock<ISmsCommandPublisher>();
-        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
-        UnitOfWork unitOfWork = CreateUnitOfWork();
-        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(unitOfWork);
-
-        // Mimics the real client, which turns a cancelled request into an error result.
-        var conditionClient = new Mock<IConditionClient>();
-        conditionClient
-            .Setup(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()))
-            .Returns(() =>
-            {
-                cts.Cancel();
-                return Task.FromResult<Result<bool, ConditionClientError>>(new ConditionClientError { Message = "Request timed out" });
-            });
-
         var logger = new Mock<ILogger<SmsNotificationService>>();
-
-        var service = GetService(
-            repository: repo.Object,
-            commandPublisher: publisher.Object,
-            unitOfWorkRepository: unitOfWorkRepository.Object,
-            conditionClient: conditionClient.Object,
-            logger: logger.Object);
+        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), false, false, cts, logger.Object);
 
         var result = await service.SendNotification(cancellationToken: cts.Token);
 
@@ -823,7 +794,7 @@ public class SmsNotificationServiceTests
         return new UnitOfWork();
     }
 
-    private static (SmsNotificationService Service, Mock<ISmsNotificationRepository> Repo, Mock<ISmsCommandPublisher> Publisher, Mock<IUnitOfWorkRepository> UnitOfWorkRepository, UnitOfWork UnitOfWork) CreateConditionScenario(Uri endpoint, bool checkSucceeds, bool conditionMet)
+    private static (SmsNotificationService Service, Mock<ISmsNotificationRepository> Repo, Mock<ISmsCommandPublisher> Publisher, Mock<IUnitOfWorkRepository> UnitOfWorkRepository, UnitOfWork UnitOfWork) CreateConditionScenario(Uri endpoint, bool checkSucceeds, bool conditionMet, CancellationTokenSource? cancelDuringCheck = null, ILogger<SmsNotificationService>? logger = null)
     {
         var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint };
 
@@ -837,12 +808,18 @@ public class SmsNotificationServiceTests
         UnitOfWork unitOfWork = CreateUnitOfWork();
         unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(unitOfWork);
 
+        // When cancelDuringCheck is set the client cancels it mid-check, like the real client turning a cancelled request into an error result.
         var conditionClient = new Mock<IConditionClient>();
         conditionClient
             .Setup(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(checkSucceeds ? conditionMet : new ConditionClientError { StatusCode = 503, Message = "unavailable" });
+            .Returns(() =>
+            {
+                cancelDuringCheck?.Cancel();
+                Result<bool, ConditionClientError> result = checkSucceeds ? conditionMet : new ConditionClientError { StatusCode = 503, Message = "unavailable" };
+                return Task.FromResult(result);
+            });
 
-        var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, conditionClient: conditionClient.Object);
+        var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, conditionClient: conditionClient.Object, logger: logger);
 
         return (service, repo, publisher, unitOfWorkRepository, unitOfWork);
     }

@@ -1,6 +1,8 @@
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 
+using Npgsql;
+
 namespace Altinn.Notifications.Persistence.Extensions;
 
 /// <summary>
@@ -37,6 +39,24 @@ public static class DataReaderExtensions
         object dbValue = reader[colNumber];
 
         return GetValue<T>(dbValue, default!);
+    }
+
+    /// <summary>
+    /// Reads the optional <c>conditionendpoint</c> column of the current record.
+    /// </summary>
+    /// <param name="reader">Data reader positioned at a row.</param>
+    /// <param name="cancellationToken">The cancellation token to observe.</param>
+    /// <returns>The condition endpoint, or <c>null</c> if the column is null or empty.</returns>
+    public static async Task<Uri?> ReadConditionEndpointAsync(this NpgsqlDataReader reader, CancellationToken cancellationToken)
+    {
+        int ordinal = reader.GetOrdinal("conditionendpoint");
+        if (await reader.IsDBNullAsync(ordinal, cancellationToken))
+        {
+            return null;
+        }
+
+        string conditionEndpoint = await reader.GetFieldValueAsync<string>(ordinal, cancellationToken);
+        return string.IsNullOrEmpty(conditionEndpoint) ? null : new Uri(conditionEndpoint);
     }
 
     /// <summary>
