@@ -4,20 +4,24 @@ meta {
 }
 
 auth {
-  mode: inherit
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{enduser_jwt}}
 }
 
 script:pre-request {
   // Auto-fetch a valid bearer token for an end user
   if(   
     //no token
-    bru.getEnvVar("jwt") === "" || bru.getEnvVar("jwt") === "null" ||
+    !bru.getEnvVar("enduser_jwt") || bru.getEnvVar("enduser_jwt") === "null" ||
     
     //new env
-    bru.getEnvVar("jwt_env") !== bru.getEnvVar("Environment") ||
+    bru.getEnvVar("enduser_jwt_env") !== bru.getEnvVar("Environment") ||
     
     //old token (expired)
-    (bru.getEnvVar("jwt_from") + 15*60*1000) < Date.now() 
+    (bru.getEnvVar("enduser_jwt_from") + 15*60*1000) < Date.now() 
     ){
     const requestResponse = await bru.runRequest("test-util/end user dialog token");
   

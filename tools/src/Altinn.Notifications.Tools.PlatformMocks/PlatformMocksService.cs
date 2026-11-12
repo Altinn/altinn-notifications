@@ -50,6 +50,7 @@ internal sealed class PlatformMocksService(IOptions<PlatformMocksSettings> optio
         Start(_settings.Authorization, new AuthorizationMock(_settings.Authorization));
         Start(_settings.Conditions, new ConditionsMock());
         Start(_settings.Maskinporten, new MaskinportenMock());
+        Start(_settings.Dialogporten, new DialogportenMock(_settings.Dialogporten));
 
         if (_servers.Count == 0)
         {
