@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.Channels;
 
 using Altinn.Notifications.Tools.TestHarness.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Triggers;
 
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
@@ -148,9 +149,9 @@ internal static class InterceptEndpoints
     }
 
     /// <summary>
-    /// Server-sent events that tell the GUI to fetch <c>/api/state</c> again.
+    /// Server-sent events that tell the GUI to fetch <c>/api/state</c> and <c>/api/triggers</c> again.
     /// </summary>
-    private static async Task EventsAsync(HttpContext context, RequestStore store)
+    private static async Task EventsAsync(HttpContext context, RequestStore store, TriggerScheduler scheduler)
     {
         var cancellationToken = context.RequestAborted;
         context.Response.Headers.ContentType = "text/event-stream";
@@ -159,6 +160,7 @@ internal static class InterceptEndpoints
         var changes = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
         void OnChanged() => changes.Writer.TryWrite(true);
         store.Changed += OnChanged;
+        scheduler.Changed += OnChanged;
         try
         {
             await WriteEventAsync("data: changed\n\n");
@@ -184,6 +186,7 @@ internal static class InterceptEndpoints
         finally
         {
             store.Changed -= OnChanged;
+            scheduler.Changed -= OnChanged;
         }
 
         async Task WriteEventAsync(string text)
