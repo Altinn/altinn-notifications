@@ -2758,7 +2758,7 @@ DECLARE
 BEGIN
     SELECT
         _id,
-        CASE WHEN (notificationorder ->> 'sendingTimePolicy')::int = 1 THEN 1 ELSE 2 END
+        CASE WHEN COALESCE(notificationorder ->> 'sendingTimePolicy', notificationorder ->> 'SendingTimePolicy')::int = 1 THEN 1 ELSE 2 END
         INTO __orderid, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
