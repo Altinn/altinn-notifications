@@ -7,10 +7,13 @@ using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators.Extensions;
+
 using FluentValidation;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
 
@@ -30,16 +33,23 @@ public class OrdersController : ControllerBase
     private readonly IGetOrderService _getOrderService;
     private readonly IOrderRequestService _orderRequestService;
     private readonly ICancelOrderService _cancelOrderService;
+    private readonly IServiceOwnerService _serviceOwnerService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrdersController"/> class.
     /// </summary>
-    public OrdersController(IValidator<NotificationOrderRequestExt> validator, IGetOrderService getOrderService, IOrderRequestService orderRequestService, ICancelOrderService cancelOrderService)
+    public OrdersController(
+        IValidator<NotificationOrderRequestExt> validator,
+        IGetOrderService getOrderService,
+        IOrderRequestService orderRequestService,
+        ICancelOrderService cancelOrderService,
+        IServiceOwnerService serviceOwnerService)
     {
         _validator = validator;
         _getOrderService = getOrderService;
         _orderRequestService = orderRequestService;
         _cancelOrderService = cancelOrderService;
+        _serviceOwnerService = serviceOwnerService;
     }
 
     /// <summary>
@@ -164,18 +174,17 @@ public class OrdersController : ControllerBase
     [SwaggerResponseHeader(202, "Location", Microsoft.OpenApi.JsonSchemaType.String, "Link to access the newly created notification order.")]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(NotificationOrderRequestExt notificationOrderRequest)
     {
-        var validationResult = _validator.Validate(notificationOrderRequest);
+        string? creator = HttpContext.GetOrg();
+        if (string.IsNullOrWhiteSpace(creator))
+        {
+            return Forbid();
+        }
+
+        var validationResult = _validator.Validate(notificationOrderRequest, creator, _serviceOwnerService);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(this.ModelState);
             return ValidationProblem(ModelState);
-        }
-
-        string? creator = HttpContext.GetOrg();
-
-        if (creator == null)
-        {
-            return Forbid();
         }
 
         var orderRequest = notificationOrderRequest.MapToOrderRequest(creator);

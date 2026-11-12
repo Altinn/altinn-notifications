@@ -4,8 +4,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Orders;
@@ -75,7 +78,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
 
         var validatorMock = new Mock<IValidator<InstantEmailNotificationOrderRequestExt>>();
-        validatorMock.Setup(v => v.Validate(request)).Returns(new ValidationResult());
+        validatorMock.Setup(v => v.Validate(It.IsAny<IValidationContext>())).Returns(new ValidationResult());
 
         var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
 
@@ -109,7 +112,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         Assert.Equal((int)response.StatusCode, problem.Status);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
-        validatorMock.Verify(e => e.Validate(request), Times.Once);
+        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.PersistInstantEmailNotificationAsync(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -128,22 +131,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             }
         };
 
-        var request = new InstantEmailNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            InstantEmailDetails = new InstantEmailDetailsExt
-            {
-                EmailAddress = ValidEmailAddress,
-                EmailSettings = new InstantEmailContentExt
-                {
-                    Subject = ValidSubject,
-                    Body = ValidBody,
-                    ContentType = EmailContentTypeExt.Plain,
-                    SenderEmailAddress = ValidSenderEmailAddress
-                }
-            }
-        };
+        var request = CreateRequest(ValidSenderEmailAddress);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
@@ -158,7 +146,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             .ReturnsAsync(trackingInfo);
 
         var validatorMock = new Mock<IValidator<InstantEmailNotificationOrderRequestExt>>();
-        validatorMock.Setup(e => e.Validate(request)).Returns(new ValidationResult());
+        validatorMock.Setup(e => e.Validate(It.IsAny<IValidationContext>())).Returns(new ValidationResult());
 
         var client = GetTestClient(
             validator: validatorMock.Object,
@@ -185,7 +173,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         Assert.Equal(trackingInfo.Notification.SendersReference, result.Notification.SendersReference);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
-        validatorMock.Verify(e => e.Validate(request), Times.Once);
+        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.PersistInstantEmailNotificationAsync(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -194,28 +182,13 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
     public async Task Post_WhenCreatorShortNameIsMissing_ReturnsForbiddenAndDoesNotPersistOrder()
     {
         // Arrange
-        var request = new InstantEmailNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            InstantEmailDetails = new InstantEmailDetailsExt
-            {
-                EmailAddress = ValidEmailAddress,
-                EmailSettings = new InstantEmailContentExt
-                {
-                    Subject = ValidSubject,
-                    Body = ValidBody,
-                    ContentType = EmailContentTypeExt.Plain,
-                    SenderEmailAddress = ValidSenderEmailAddress
-                }
-            }
-        };
+        var request = CreateRequest(ValidSenderEmailAddress);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
 
         var validatorMock = new Mock<IValidator<InstantEmailNotificationOrderRequestExt>>();
-        validatorMock.Setup(e => e.Validate(request)).Returns(new ValidationResult());
+        validatorMock.Setup(e => e.Validate(It.IsAny<IValidationContext>())).Returns(new ValidationResult());
 
         var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
 
@@ -235,7 +208,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
-        validatorMock.Verify(e => e.Validate(request), Times.Once);
+        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Never);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Never);
         orderRequestServiceMock.Verify(e => e.PersistInstantEmailNotificationAsync(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -255,22 +228,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             }
         };
 
-        var request = new InstantEmailNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            InstantEmailDetails = new InstantEmailDetailsExt
-            {
-                EmailAddress = ValidEmailAddress,
-                EmailSettings = new InstantEmailContentExt
-                {
-                    Subject = ValidSubject,
-                    Body = ValidBody,
-                    ContentType = EmailContentTypeExt.Plain,
-                    SenderEmailAddress = ValidSenderEmailAddress
-                }
-            }
-        };
+        var request = CreateRequest(ValidSenderEmailAddress);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
@@ -281,7 +239,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             .ReturnsAsync(trackingInfo);
 
         var validatorMock = new Mock<IValidator<InstantEmailNotificationOrderRequestExt>>();
-        validatorMock.Setup(e => e.Validate(request)).Returns(new ValidationResult());
+        validatorMock.Setup(e => e.Validate(It.IsAny<IValidationContext>())).Returns(new ValidationResult());
 
         var client = GetTestClient(
             validator: validatorMock.Object,
@@ -307,7 +265,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         Assert.Equal(trackingInfo.Notification.ShipmentId, result.Notification.ShipmentId);
         Assert.Equal(trackingInfo.Notification.SendersReference, result.Notification.SendersReference);
 
-        validatorMock.Verify(e => e.Validate(request), Times.Once);
+        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()), Times.Once);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Never);
@@ -340,12 +298,13 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
 
         var validatorMock = new Mock<IValidator<InstantEmailNotificationOrderRequestExt>>();
         validatorMock
-        .Setup(v => v.Validate(request))
-        .Returns<InstantEmailNotificationOrderRequestExt>(request =>
+        .Setup(v => v.Validate(It.IsAny<IValidationContext>()))
+        .Returns<IValidationContext>(context =>
         {
+            var instantRequest = ((ValidationContext<InstantEmailNotificationOrderRequestExt>)context).InstanceToValidate;
             var failures = new List<ValidationFailure>();
 
-            if (request.InstantEmailDetails.EmailAddress == InvalidEmailAddress)
+            if (instantRequest.InstantEmailDetails.EmailAddress == InvalidEmailAddress)
             {
                 failures.Add(new ValidationFailure(nameof(InstantEmailDetailsExt.EmailAddress), "Email address is not valid."));
             }
@@ -372,7 +331,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         Assert.NotNull(problem);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-        validatorMock.Verify(e => e.Validate(request), Times.Once);
+        validatorMock.Verify(e => e.Validate(It.IsAny<IValidationContext>()), Times.Once);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Never);
         orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()), Times.Never);
@@ -431,22 +390,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             }
         };
 
-        var request = new InstantEmailNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            InstantEmailDetails = new InstantEmailDetailsExt
-            {
-                EmailAddress = ValidEmailAddress,
-                EmailSettings = new InstantEmailContentExt
-                {
-                    Subject = ValidSubject,
-                    Body = ValidBody,
-                    ContentType = EmailContentTypeExt.Plain,
-                    SenderEmailAddress = null // Null sender should trigger default
-                }
-            }
-        };
+        var request = CreateRequest(null);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
@@ -461,7 +405,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             .ReturnsAsync(trackingInfo);
 
         var validatorMock = new Mock<IValidator<InstantEmailNotificationOrderRequestExt>>();
-        validatorMock.Setup(e => e.Validate(request)).Returns(new ValidationResult());
+        validatorMock.Setup(e => e.Validate(It.IsAny<IValidationContext>())).Returns(new ValidationResult());
 
         var client = GetTestClient(
             validator: validatorMock.Object,
@@ -533,7 +477,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             .ReturnsAsync(trackingInfo);
 
         var validatorMock = new Mock<IValidator<InstantEmailNotificationOrderRequestExt>>();
-        validatorMock.Setup(e => e.Validate(request)).Returns(new ValidationResult());
+        validatorMock.Setup(e => e.Validate(It.IsAny<IValidationContext>())).Returns(new ValidationResult());
 
         var client = GetTestClient(
             validator: validatorMock.Object,
@@ -559,16 +503,109 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
             Times.Once);
     }
 
-    private HttpClient GetTestClient(IDateTimeService? dateTimeService = null, IInstantOrderRequestService? instantOrderRequestService = null, IValidator<InstantEmailNotificationOrderRequestExt>? validator = null)
+    [Fact]
+    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsValidationProblemAndDoesNotPersist()
+    {
+        // Arrange
+        string unregisteredSender = $"{Guid.NewGuid():N}@test.no";
+        var serviceMock = new Mock<IInstantOrderRequestService>();
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(SenderOwnershipTestUtil.CreateConfig(enforceEmail: true));
+
+        var client = GetTestClient(instantOrderRequestService: serviceMock.Object, serviceOwnerService: serviceOwnerService, useRealValidator: true);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(CreatorShortName, scope: NotificationCreationScope));
+
+        using var content = new StringContent(JsonSerializer.Serialize(CreateRequest(unregisteredSender)), Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);
+        var responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(responseContent, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(problem);
+        Assert.Contains("InstantEmailDetails.EmailSettings.SenderEmailAddress", problem.Errors.Keys);
+        Assert.DoesNotContain(unregisteredSender, responseContent);
+
+        serviceMock.Verify(s => s.PersistInstantEmailNotificationAsync(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Post_SenderRegisteredForServiceOwner_ReturnsCreated()
+    {
+        // Arrange
+        string registeredSender = $"{Guid.NewGuid():N}@test.no";
+
+        var serviceMock = new Mock<IInstantOrderRequestService>();
+        serviceMock
+            .Setup(s => s.PersistInstantEmailNotificationAsync(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InstantNotificationOrderTracking
+            {
+                OrderChainId = Guid.NewGuid(),
+                Notification = new NotificationOrderChainShipment { ShipmentId = Guid.NewGuid(), SendersReference = ValidSendersReference }
+            });
+
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(
+            SenderOwnershipTestUtil.CreateConfig(enforceEmail: true),
+            new RegisteredSender(CreatorShortName, AddressType.Email, registeredSender));
+
+        var client = GetTestClient(instantOrderRequestService: serviceMock.Object, serviceOwnerService: serviceOwnerService, useRealValidator: true);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(CreatorShortName, scope: NotificationCreationScope));
+
+        using var content = new StringContent(JsonSerializer.Serialize(CreateRequest(registeredSender)), Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await client.PostAsync(BasePath, content, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        serviceMock.Verify(s => s.PersistInstantEmailNotificationAsync(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static InstantEmailNotificationOrderRequestExt CreateRequest(string? senderEmailAddress)
+    {
+        return new InstantEmailNotificationOrderRequestExt
+        {
+            IdempotencyId = ValidIdempotencyId,
+            SendersReference = ValidSendersReference,
+            InstantEmailDetails = new InstantEmailDetailsExt
+            {
+                EmailAddress = ValidEmailAddress,
+                EmailSettings = new InstantEmailContentExt
+                {
+                    Body = ValidBody,
+                    Subject = ValidSubject,
+                    ContentType = EmailContentTypeExt.Plain,
+                    SenderEmailAddress = senderEmailAddress
+                }
+            }
+        };
+    }
+
+    private HttpClient GetTestClient(IDateTimeService? dateTimeService = null, IInstantOrderRequestService? instantOrderRequestService = null, IValidator<InstantEmailNotificationOrderRequestExt>? validator = null, IServiceOwnerService? serviceOwnerService = null, bool useRealValidator = false)
     {
         dateTimeService ??= Mock.Of<IDateTimeService>();
         instantOrderRequestService ??= Mock.Of<IInstantOrderRequestService>();
-        validator ??= Mock.Of<IValidator<InstantEmailNotificationOrderRequestExt>>();
+
+        if (!useRealValidator)
+        {
+            validator ??= Mock.Of<IValidator<InstantEmailNotificationOrderRequestExt>>();
+        }
 
         _factory.ResetInstalledMocks();
-        _factory.InstallService(validator);
         _factory.InstallService(dateTimeService);
         _factory.InstallService(instantOrderRequestService);
+
+        if (validator != null)
+        {
+            _factory.InstallService(validator);
+        }
+
+        if (serviceOwnerService != null)
+        {
+            _factory.InstallService(serviceOwnerService);
+        }
+
         return _factory.SharedClient;
     }
 }

@@ -131,6 +131,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             RegisterDelegatedService<IValidator<InstantNotificationOrderRequestExt>>(services);
             RegisterDelegatedService<IValidator<InstantSmsNotificationOrderRequestExt>>(services);
             RegisterDelegatedService<IValidator<InstantEmailNotificationOrderRequestExt>>(services);
+            RegisterDelegatedService<IServiceOwnerService>(services);
             RegisterDelegatedService<IDialogportenClient>(services);
             RegisterDelegatedService<IConditionClient>(services);
 
