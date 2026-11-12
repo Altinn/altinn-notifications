@@ -87,7 +87,7 @@ public class OrderProcessingService(
                     break;
             }
 
-            await orderRepository.PersistProcessingResultAsync(unitOfWork, pastDueOrder, emailOrderProcessingResult, smsOrderProcessingResult);
+            await orderRepository.PersistProcessingResultAsync(unitOfWork, pastDueOrder, emailOrderProcessingResult, smsOrderProcessingResult, cancellationToken);
             await uowRepo.CommitUnitOfWork(unitOfWork);
 
             return true;
