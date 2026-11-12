@@ -232,10 +232,12 @@ public class SmsNotificationServiceTests
         unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
     }
 
-    [Fact]
-    public async Task SendNotification_ConditionNotMetOnRetry_SetsSendConditionNotMet()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SendNotification_ConditionNotMet_SetsSendConditionNotMet(bool isRetry)
     {
-        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), true, false, isRetry: true);
+        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), true, false, isRetry: isRetry);
 
         var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
