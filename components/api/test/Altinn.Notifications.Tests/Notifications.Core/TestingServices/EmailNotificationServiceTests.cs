@@ -469,6 +469,53 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotification_WhenConditionCheckExceedsTimeout_CancelsTokenAndRollsBack()
+    {
+        var endpoint = new Uri("https://condition.example/check");
+        var email = new Email(Guid.NewGuid(), "subject", "body", "from@domain.com", "to@domain.com", EmailContentType.Plain) { ConditionEndpoint = endpoint };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime)).ReturnsAsync(email);
+
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(new UnitOfWork());
+
+        bool tokenCancelledByTimeout = false;
+        var conditionClient = new Mock<IConditionClient>();
+        conditionClient
+            .Setup(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()))
+            .Returns(async (Uri _, CancellationToken token) =>
+            {
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    tokenCancelledByTimeout = true;
+                }
+
+                return new ConditionClientError { Message = "Request timed out" };
+            });
+
+        var service = GetTestService(
+            repo: repoMock.Object,
+            emailCommandPublisher: publisherMock.Object,
+            unitOfWorkRepository: unitOfWorkRepositoryMock.Object,
+            conditionClient: conditionClient.Object,
+            config: new NotificationConfig { SendConditionTimeoutSeconds = 1 });
+
+        bool result = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+
+        Assert.False(result);
+        Assert.True(tokenCancelledByTimeout);
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+        unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
+        unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendNotification_WhenShutdownDuringConditionCheck_RollsBackWithoutTreatingItAsInconclusive()
     {
         using var cts = new CancellationTokenSource();
@@ -1400,7 +1447,7 @@ public class EmailNotificationServiceTests
             Times.Never);
     }
 
-    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null, IComposedEmailCommandPublisher? composedEmailCommandPublisher = null, IUnitOfWorkRepository? unitOfWorkRepository = null, ILogger<EmailNotificationService>? logger = null, IConditionClient? conditionClient = null)
+    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null, IComposedEmailCommandPublisher? composedEmailCommandPublisher = null, IUnitOfWorkRepository? unitOfWorkRepository = null, ILogger<EmailNotificationService>? logger = null,     IConditionClient? conditionClient = null, NotificationConfig? config = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService
@@ -1439,6 +1486,6 @@ public class EmailNotificationServiceTests
             unitOfWorkRepository,
             logger ?? new Mock<ILogger<EmailNotificationService>>().Object,
             conditionClient ?? new Mock<IConditionClient>().Object,
-            Options.Create(new NotificationConfig()));
+            Options.Create(config ?? new NotificationConfig()));
     }
 }

@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Persistence.Mappers;
 
 using Microsoft.Extensions.Caching.Memory;
 
@@ -206,6 +209,26 @@ public class NotificationDeliveryManifestServiceTests
         var (orderAlternateId, orderCreatorName) = await GetManifestTwiceAsync(ProcessingLifecycle.Order_Completed, recipientStatus);
 
         _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, TestContext.Current.CancellationToken), Times.Once);
+    }
+
+    // Guards the terminal status list in the service against drifting from the result types' IsFinal rules.
+    [Fact]
+    public async Task GetDeliveryManifestAsync_CachesRecipientOnlyWhenItsResultTypeIsFinal()
+    {
+        var smsStatuses = Enum.GetValues<SmsNotificationResultType>()
+            .Select(result => (Name: $"SMS {result}", Final: result.IsFinal(), Status: ProcessingLifecycleMapper.GetSmsLifecycleStage(result.ToString())));
+        var emailStatuses = Enum.GetValues<EmailNotificationResultType>()
+            .Select(result => (Name: $"Email {result}", Final: result.IsFinal(), Status: ProcessingLifecycleMapper.GetEmailLifecycleStage(result.ToString())));
+
+        foreach (var (name, final, status) in smsStatuses.Concat(emailStatuses))
+        {
+            var (orderAlternateId, orderCreatorName) = await GetManifestTwiceAsync(ProcessingLifecycle.Order_Completed, status);
+
+            _repositoryMock.Verify(
+                r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, TestContext.Current.CancellationToken),
+                Times.Exactly(final ? 1 : 2),
+                $"{name} should {(final ? string.Empty : "not ")}be cached.");
+        }
     }
 
     [Theory]

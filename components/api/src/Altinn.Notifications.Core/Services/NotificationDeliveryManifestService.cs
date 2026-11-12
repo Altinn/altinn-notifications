@@ -42,7 +42,6 @@ public class NotificationDeliveryManifestService : INotificationDeliveryManifest
         ProcessingLifecycle.Email_Failed_RecipientNotIdentified,
         ProcessingLifecycle.Email_Failed_InvalidFormat,
         ProcessingLifecycle.Email_Failed_SuppressedRecipient,
-        ProcessingLifecycle.Email_Failed_TransientError,
         ProcessingLifecycle.Email_Failed_Bounced,
         ProcessingLifecycle.Email_Failed_FilteredSpam,
         ProcessingLifecycle.Email_Failed_Quarantined,
