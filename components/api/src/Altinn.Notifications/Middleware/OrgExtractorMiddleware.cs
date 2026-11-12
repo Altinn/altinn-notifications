@@ -1,35 +1,68 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+﻿using System.Security.Claims;
+
+using Altinn.Common.AccessToken.Configuration;
 
 using AltinnCore.Authentication.Constants;
+
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Middleware;
 
 /// <summary>
 /// Middleware for extracting org information in an HTTP request
-/// from either the issuer of PlatformAccessToken header or as
+/// from either the issuer of a validated platform access token or as
 /// an org claim in the bearer token.
 /// </summary>
+/// <remarks>
+/// Must run after authorization. The issuer of a platform access token is only used when
+/// the <see cref="Altinn.Common.AccessToken.AccessTokenHandler"/> has validated the token
+/// while authorizing the request. The raw header is never read.
+/// A request where both the validated access token and the bearer token identify an org,
+/// and the two differ, is rejected with 403 Forbidden.
+/// </remarks>
 public class OrgExtractorMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<OrgExtractorMiddleware> _logger;
+    private readonly string _accessTokenHttpContextId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrgExtractorMiddleware"/> class.
     /// </summary>
-    public OrgExtractorMiddleware(RequestDelegate next)
+    public OrgExtractorMiddleware(RequestDelegate next, ILogger<OrgExtractorMiddleware> logger, IOptions<AccessTokenSettings> accessTokenSettings)
     {
         _next = next;
+        _logger = logger;
+        _accessTokenHttpContextId = accessTokenSettings.Value.AccessTokenHttpContextId;
     }
 
     /// <summary>
-    /// Retrieve org claim and save in httpContext as Creator item. 
+    /// Retrieve org claim and save in httpContext as Creator item.
     /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
         if (ShouldApplyMiddleware(context.Request.Path))
         {
-            string? org = GetOrgFromHttpContext(context);
+            string? accessTokenOrg = GetIssuerOfValidatedAccessToken(context);
+            string? bearerTokenOrg = GetOrgFromClaim(context.User);
+
+            if (accessTokenOrg != null && bearerTokenOrg != null && accessTokenOrg != bearerTokenOrg)
+            {
+                _logger.LogWarning(
+                    "Rejected request to {Path}: platform access token issuer {AccessTokenOrg} does not match bearer token org {BearerTokenOrg}.",
+                    context.Request.Path,
+                    accessTokenOrg,
+                    bearerTokenOrg);
+
+                await Results.Problem(
+                    statusCode: StatusCodes.Status403Forbidden,
+                    title: "Conflicting service owner",
+                    detail: "The platform access token and the bearer token identify different service owners.")
+                    .ExecuteAsync(context);
+                return;
+            }
+
+            string? org = accessTokenOrg ?? bearerTokenOrg;
 
             if (org != null)
             {
@@ -40,22 +73,19 @@ public class OrgExtractorMiddleware
         await _next(context);
     }
 
-    private static string? GetOrgFromHttpContext(HttpContext context)
+    /// <summary>
+    /// Returns the issuer of the platform access token if, and only if, the token was validated by the
+    /// AccessTokenHandler, which stores "{issuer}/{app}" in the HttpContext items after successful validation.
+    /// </summary>
+    private string? GetIssuerOfValidatedAccessToken(HttpContext context)
     {
-        string? accessToken = context.Request.Headers["PlatformAccessToken"];
-        if (!string.IsNullOrEmpty(accessToken))
+        if (context.Items[_accessTokenHttpContextId] is not string accessTokenCredential)
         {
-            return GetIssuerOfAccessToken(accessToken);
+            return null;
         }
 
-        return GetOrgFromClaim(context.User);
-    }
-
-    private static string GetIssuerOfAccessToken(string accessToken)
-    {
-        JwtSecurityTokenHandler validator = new();
-        JwtSecurityToken jwt = validator.ReadJwtToken(accessToken);
-        return jwt.Issuer;
+        string issuer = accessTokenCredential.Split('/', 2)[0];
+        return string.IsNullOrEmpty(issuer) ? null : issuer;
     }
 
     private static string? GetOrgFromClaim(ClaimsPrincipal user)

@@ -37,9 +37,12 @@ public class ConfigurationManagerStub : IConfigurationManager<OpenIdConnectConfi
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The signing keys are static, so there is nothing to refresh. The authentication handler calls this
+    /// when a token is signed with an unknown key, and then rejects the token.
+    /// </remarks>
     public void RequestRefresh()
     {
-        throw new NotImplementedException();
     }
 
     private static async Task<ICollection<SecurityKey>> GetSigningKeys()
