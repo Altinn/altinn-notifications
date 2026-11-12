@@ -258,6 +258,42 @@ public class NotificationDeliveryManifestServiceTests
         _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken), Times.Once);
     }
 
+    [Theory]
+    [InlineData(ProcessingLifecycle.SMS_SendConditionNotMet)]
+    [InlineData(ProcessingLifecycle.Email_SendConditionNotMet)]
+    public async Task GetDeliveryManifestAsync_WhenRecipientSendConditionNotMet_UsesCacheOnSecondCall(ProcessingLifecycle recipientStatus)
+    {
+        // Arrange
+        string orderCreatorName = "TEST-ORG";
+        Guid orderAlternateId = Guid.NewGuid();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        var expectedManifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = orderAlternateId,
+            LastUpdate = DateTime.UtcNow.AddDays(-5),
+            Status = ProcessingLifecycle.Order_Completed,
+            SendersReference = "SEND-CONDITION-NOT-MET-ORDER-REF",
+            Recipients = ImmutableList.Create<IDeliveryManifest>(new SmsDeliveryManifest
+            {
+                Destination = "+4799999999",
+                LastUpdate = DateTime.UtcNow.AddDays(-10),
+                Status = recipientStatus
+            })
+        };
+
+        _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken))
+            .ReturnsAsync(expectedManifest);
+
+        // Act
+        await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+        await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+
+        // Assert
+        _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken), Times.Once);
+    }
+
     [Fact]
     public async Task GetDeliveryManifestAsync_WhenManifestIsNotTerminal_DoesNotUseCache()
     {
