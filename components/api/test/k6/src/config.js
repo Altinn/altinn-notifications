@@ -1,4 +1,4 @@
-import { environment } from "./shared/variables.js";
+import { environment, localEnvironment } from "./shared/variables.js";
 
 // Base URLs for the Altinn platform across different environments.
 const baseUrls = {
@@ -20,62 +20,81 @@ if (!environment) {
     throw new Error("Environment variable 'altinn_env' is not set");
 }
 
+const isLocal = environment === localEnvironment;
+
 const baseUrl = baseUrls[environment];
-if (!baseUrl) {
+if (!baseUrl && !isLocal) {
     throw new Error(
         `Invalid value for environment variable 'altinn_env': '${environment}'.`
     );
 }
 
+// The local Aspire stack (tools/aspire) serves the API on 5090 and the mock
+// token issuer on 5094. Override them with 'base_url' and 'token_generator_url',
+// e.g. with host.docker.internal when k6 runs in a container.
+const platformUrl = isLocal
+    ? (__ENV.base_url || "http://localhost:5090").replace(/\/+$/, "")
+    : `https://platform.${baseUrl}`;
+
+const tokenGeneratorUrl = isLocal
+    ? (__ENV.token_generator_url || "http://localhost:5094").replace(/\/+$/, "")
+    : "https://altinn-testtools-token-generator.azurewebsites.net";
+
+// The API calls the condition endpoint itself, so this is the condition mock
+// on the API's machine. The API only accepts condition URLs with a top-level
+// domain, and local.altinn.cloud resolves to 127.0.0.1.
+const localConditionUrl = "http://local.altinn.cloud:5199/condition";
+
 const maskinportenBaseUrl = maskinportenBaseUrls[environment];
 
-// Altinn TestTools token generator URL.
+// Altinn TestTools token generator URL, or the mock token issuer locally.
 export const tokenGenerator = {
-    getEnterpriseToken:
-        "https://altinn-testtools-token-generator.azurewebsites.net/api/GetEnterpriseToken",
+    getEnterpriseToken: `${tokenGeneratorUrl}/api/GetEnterpriseToken`,
 };
 
 // Endpoints for interacting with the Altinn Notifications API in different environments.
 export const notifications = {
-    orders_sms: `https://platform.${baseUrl}/notifications/api/v1/orders/sms/`,
+    orders_sms: `${platformUrl}/notifications/api/v1/orders/sms/`,
 
-    orders_email: `https://platform.${baseUrl}/notifications/api/v1/orders/email/`,
+    orders_email: `${platformUrl}/notifications/api/v1/orders/email/`,
 
-    orders_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/`,
+    orders_v2: `${platformUrl}/notifications/api/v1/future/orders/`,
 
-    orders_sms_instant_old_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant`,
-    orders_sms_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant/sms`,
-    orders_email_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant/email`,
-    orders_composed_email_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/composed-email`,
+    orders_sms_instant_old_v2: `${platformUrl}/notifications/api/v1/future/orders/instant`,
+    orders_sms_instant_v2: `${platformUrl}/notifications/api/v1/future/orders/instant/sms`,
+    orders_email_instant_v2: `${platformUrl}/notifications/api/v1/future/orders/instant/email`,
+    orders_composed_email_v2: `${platformUrl}/notifications/api/v1/future/orders/composed-email`,
 
     shipment_v2: (orderId) =>
-        `https://platform.${baseUrl}/notifications/api/v1/future/shipment/${orderId}`,
+        `${platformUrl}/notifications/api/v1/future/shipment/${orderId}`,
 
     statusfeed_v2: (sequenceNumber) =>
-        `https://platform.${baseUrl}/notifications/api/v1/future/shipment/feed?seq=${sequenceNumber}`,
+        `${platformUrl}/notifications/api/v1/future/shipment/feed?seq=${sequenceNumber}`,
 
     orders_fromId: (orderId) =>
-        `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}`,
+        `${platformUrl}/notifications/api/v1/orders/${orderId}`,
 
     orders_status: (orderId) =>
-        `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/status`,
+        `${platformUrl}/notifications/api/v1/orders/${orderId}/status`,
 
     notifications_sms: (orderId) =>
-        `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/sms/`,
+        `${platformUrl}/notifications/api/v1/orders/${orderId}/notifications/sms/`,
 
     notifications_email: (orderId) =>
-        `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/email/`,
+        `${platformUrl}/notifications/api/v1/orders/${orderId}/notifications/email/`,
 
     orders_fromSendersRef: (sendersReference) =>
-        `https://platform.${baseUrl}/notifications/api/v1/orders?sendersReference=${sendersReference}`,
+        `${platformUrl}/notifications/api/v1/orders?sendersReference=${sendersReference}`,
 
     conditionCheck: (conditionMet, subscriptionKey) =>
-        `https://platform.${baseUrl}/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}&subscription-key=${subscriptionKey}`,
+        isLocal
+            ? `${localConditionUrl}/${conditionMet}`
+            : `${platformUrl}/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}&subscription-key=${subscriptionKey}`,
 };
 
 // Provides endpoints for handling authentication work-flows on the Altinn platform.
 export const platformAuthentication = {
-    exchange: `https://platform.${baseUrl}/authentication/api/v1/exchange/maskinporten`,
+    exchange: `${platformUrl}/authentication/api/v1/exchange/maskinporten`,
 };
 
 /**
