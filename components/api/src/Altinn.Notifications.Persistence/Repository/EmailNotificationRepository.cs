@@ -159,21 +159,9 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
             emailContentType)
         {
-            ConditionEndpoint = await ReadConditionEndpointAsync(reader, cancellationToken),
+            ConditionEndpoint = await reader.ReadConditionEndpointAsync(cancellationToken),
             IsConditionRetry = await reader.GetFieldValueAsync<bool>("isconditionretry", cancellationToken)
         };
-    }
-
-    private static async Task<Uri?> ReadConditionEndpointAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
-    {
-        int ordinal = reader.GetOrdinal("conditionendpoint");
-        if (await reader.IsDBNullAsync(ordinal, cancellationToken))
-        {
-            return null;
-        }
-
-        string conditionEndpoint = await reader.GetFieldValueAsync<string>(ordinal, cancellationToken);
-        return string.IsNullOrEmpty(conditionEndpoint) ? null : new Uri(conditionEndpoint);
     }
 
     /// <inheritdoc/>
@@ -206,7 +194,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             contentType,
             attachments)
         {
-            ConditionEndpoint = await ReadConditionEndpointAsync(reader, cancellationToken),
+            ConditionEndpoint = await reader.ReadConditionEndpointAsync(cancellationToken),
             IsConditionRetry = await reader.GetFieldValueAsync<bool>("isconditionretry", cancellationToken)
         };
     }
