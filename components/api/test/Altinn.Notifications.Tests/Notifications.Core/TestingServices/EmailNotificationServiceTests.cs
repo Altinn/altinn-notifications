@@ -17,8 +17,6 @@ using Microsoft.Extensions.Options;
 
 using Moq;
 
-using Npgsql;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
