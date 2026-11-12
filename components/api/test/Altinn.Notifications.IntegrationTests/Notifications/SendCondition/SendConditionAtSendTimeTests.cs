@@ -173,7 +173,7 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
     private static Task MakeRetryDue(Guid orderId)
     {
         return PostgreUtil.RunSql(
-            $"UPDATE notifications.emailnotifications SET nextattempt = now() - interval '1 second' WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')");
+            $"UPDATE notifications.emailnotifications SET nextattempt = clock_timestamp() - interval '1 second' WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')");
     }
 
     private async Task SendNotification(Guid orderId)

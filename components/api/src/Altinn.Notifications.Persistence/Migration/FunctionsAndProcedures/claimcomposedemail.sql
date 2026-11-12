@@ -45,7 +45,7 @@ BEGIN
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
             AND email.iscomposed = true
-            AND (email.nextattempt IS NULL OR email.nextattempt <= now())
+            AND (email.nextattempt IS NULL OR email.nextattempt <= clock_timestamp())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1

@@ -140,6 +140,11 @@ public class SmsNotificationService : ISmsNotificationService
                 {
                     await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, _conditionRetryDelay, cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+
+                    _logger.LogInformation(
+                        "// SmsNotificationService // SendNotification // Condition check was inconclusive for notification '{NotificationId}'. Retry scheduled in {RetryDelaySeconds} seconds.",
+                        newSmsNotification.NotificationId,
+                        _conditionRetryDelay.TotalSeconds);
                     return true;
                 }
 

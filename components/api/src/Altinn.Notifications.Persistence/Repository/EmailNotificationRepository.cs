@@ -33,7 +33,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _claimDaytimeEmailSql = "SELECT * FROM notifications.claim_daytime_email_v3()";
     private const string _getComposedEmailNotificationSql = "SELECT * FROM notifications.claim_composed_email_v3()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-    private const string _scheduleConditionRetrySql = "update notifications.emailnotifications set result = 'New'::emailnotificationresulttype, resulttime = now(), nextattempt = now() + make_interval(secs => $2) where alternateid = $1"; // $1=alternateid, $2=delayseconds
+    private const string _scheduleConditionRetrySql = "update notifications.emailnotifications set result = 'New'::emailnotificationresulttype, resulttime = clock_timestamp(), nextattempt = clock_timestamp() + make_interval(secs => $2) where alternateid = $1"; // $1=alternateid, $2=delayseconds
     private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=total_attachment_size_bytes
 
     /// <inheritdoc/>

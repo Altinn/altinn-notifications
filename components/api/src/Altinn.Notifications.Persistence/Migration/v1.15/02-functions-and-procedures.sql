@@ -327,7 +327,7 @@ BEGIN
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
             AND email.iscomposed = true
-            AND (email.nextattempt IS NULL OR email.nextattempt <= now())
+            AND (email.nextattempt IS NULL OR email.nextattempt <= clock_timestamp())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
@@ -507,7 +507,7 @@ BEGIN
             AND email.expirytime >= now()
             AND email.iscomposed = false
             AND email.sendingtimepolicy = 2
-            AND (email.nextattempt IS NULL OR email.nextattempt <= now())
+            AND (email.nextattempt IS NULL OR email.nextattempt <= clock_timestamp())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
@@ -572,7 +572,7 @@ BEGIN
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
       AND sms.sendingtimepolicy = 2
-      AND (sms.nextattempt IS NULL OR sms.nextattempt <= now())
+      AND (sms.nextattempt IS NULL OR sms.nextattempt <= clock_timestamp())
     ORDER BY sms.expirytime
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT 1

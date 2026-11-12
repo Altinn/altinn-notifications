@@ -195,6 +195,12 @@ public class EmailNotificationService(
                 {
                     await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, _conditionRetryDelay, cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+
+                    _logger.LogInformation(
+                        "// EmailNotificationService // {OperationName} // Condition check was inconclusive for notification '{NotificationId}'. Retry scheduled in {RetryDelaySeconds} seconds.",
+                        operationName,
+                        claimedNotification.NotificationId,
+                        _conditionRetryDelay.TotalSeconds);
                     return true;
                 }
 
