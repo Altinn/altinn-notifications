@@ -69,8 +69,8 @@ $$;
 
 
 -- claimanytimeemail.sql:
-CREATE OR REPLACE FUNCTION notifications.claim_anytime_email_v2()
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text, conditionendpoint text)
+CREATE OR REPLACE FUNCTION notifications.claim_anytime_email()
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -90,8 +90,7 @@ BEGIN
                NULL::text AS body,
                NULL::text AS fromaddress,
                NULL::text AS toaddress,
-               NULL::text AS contenttype,
-               NULL::text AS conditionendpoint
+               NULL::text AS contenttype
         WHERE FALSE;
         RETURN;
     END IF;
@@ -140,33 +139,30 @@ BEGIN
         COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
-        txt.contenttype,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint
+        txt.contenttype
     FROM updated_rows updated
-    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
-    JOIN notifications.orders o ON o._id = updated._orderid;
+    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_anytime_email_v2()
+ALTER FUNCTION notifications.claim_anytime_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_anytime_email_v2()
+COMMENT ON FUNCTION notifications.claim_anytime_email()
     IS 'Claims and returns a single email notification with sending time policy Anytime (sendingtimepolicy = 1), excluding Composed orders (iscomposed = true).
 Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
-Daytime notifications (sendingtimepolicy = 2) are claimed by claim_daytime_email_v2.';
+Daytime notifications (sendingtimepolicy = 2) are claimed by claim_daytime_email.';
 
 
 -- claimanytimesms.sql:
--- FUNCTION: notifications.claim_anytime_sms_v3()
-CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_v3 ()
+-- FUNCTION: notifications.claim_anytime_sms_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_v2 ()
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
   mobilenumber text,
   body text,
-  creatorname text,
-  conditionendpoint text
+  creatorname text
 )
 LANGUAGE plpgsql
 AS $$
@@ -199,18 +195,16 @@ BEGIN
     txt.sendernumber,
     upd.mobilenumber,
     COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    ord.creatorname,
-    ord.notificationorder->>'ConditionEndpoint' AS conditionendpoint
+    ord.creatorname
   FROM updated_rows upd
   JOIN notifications.smstexts txt ON txt._orderid = upd._orderid
   JOIN notifications.orders ord ON ord._id = upd._orderid;
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_anytime_sms_v3() IS
+COMMENT ON FUNCTION notifications.claim_anytime_sms_v2() IS
 'Claims and returns an SMS notification (sendingtimepolicy = 1).
-Includes the order creatorname to support per-service-owner SMS sender substitution,
-and the order condition endpoint so the send condition can be evaluated at send time.';
+Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
 -- claimanytimesmsbatch.sql:
 -- FUNCTION: notifications.claim_anytime_sms_batch_v2(integer)
@@ -272,7 +266,7 @@ _batchsize: requested batch size (defaults to 500 if NULL or <1).
 Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
 -- claimcomposedemail.sql:
-CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_composed_email()
     RETURNS TABLE(
         alternateid  uuid,
         subject      text,
@@ -280,8 +274,7 @@ CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v2()
         fromaddress  text,
         toaddress    text,
         contenttype  text,
-        attachments  jsonb,
-        conditionendpoint text
+        attachments  jsonb
     )
     LANGUAGE 'plpgsql'
 AS $BODY$
@@ -342,18 +335,17 @@ BEGIN
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype,
-        COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint
+        COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments
     FROM updated_rows updated
     JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
     JOIN notifications.orders o       ON o._id = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_composed_email_v2()
+ALTER FUNCTION notifications.claim_composed_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_composed_email_v2()
+COMMENT ON FUNCTION notifications.claim_composed_email()
     IS 'Claims and returns a single email notification for Composed orders (iscomposed = true).
 Returns an empty JSON array when no attachments are present.';
 
@@ -447,8 +439,8 @@ _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 
 
 -- claimdaytimeemail.sql:
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_email_v2()
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text, conditionendpoint text)
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_email()
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -468,8 +460,7 @@ BEGIN
                NULL::text AS body,
                NULL::text AS fromaddress,
                NULL::text AS toaddress,
-               NULL::text AS contenttype,
-               NULL::text AS conditionendpoint
+               NULL::text AS contenttype
         WHERE FALSE;
         RETURN;
     END IF;
@@ -518,32 +509,29 @@ BEGIN
         COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
-        txt.contenttype,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint
+        txt.contenttype
     FROM updated_rows updated
-    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
-    JOIN notifications.orders o ON o._id = updated._orderid;
+    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_daytime_email_v2()
+ALTER FUNCTION notifications.claim_daytime_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_daytime_email_v2()
+COMMENT ON FUNCTION notifications.claim_daytime_email()
     IS 'Claims and returns a single email notification with sending time policy Daytime (sendingtimepolicy = 2), excluding Composed orders (iscomposed = true).
-Anytime notifications (sendingtimepolicy = 1) are claimed by claim_anytime_email_v2.';
+Anytime notifications (sendingtimepolicy = 1) are claimed by claim_anytime_email.';
 
 
 -- claimdaytimesms.sql:
--- FUNCTION: notifications.claim_daytime_sms_v3()
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_v3 ()
+-- FUNCTION: notifications.claim_daytime_sms_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_v2 ()
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
   mobilenumber text,
   body text,
-  creatorname text,
-  conditionendpoint text
+  creatorname text
 )
 LANGUAGE plpgsql
 AS $$
@@ -576,18 +564,16 @@ BEGIN
     txt.sendernumber,
     upd.mobilenumber,
     COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    ord.creatorname,
-    ord.notificationorder->>'ConditionEndpoint' AS conditionendpoint
+    ord.creatorname
   FROM updated_rows upd
   JOIN notifications.smstexts txt ON txt._orderid = upd._orderid
   JOIN notifications.orders ord ON ord._id = upd._orderid;
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_daytime_sms_v3() IS
+COMMENT ON FUNCTION notifications.claim_daytime_sms_v2() IS
 'Claims and returns an SMS notification (sendingtimepolicy = 2).
-Includes the order creatorname to support per-service-owner SMS sender substitution,
-and the order condition endpoint so the send condition can be evaluated at send time.';
+Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
 -- claimdaytimesmsbatch.sql:
 -- FUNCTION: notifications.claim_daytime_sms_batch_v2(integer)
@@ -964,13 +950,12 @@ Returns a table with the following columns:
 
 
 -- getemailmetrics.sql:
--- New version v2 introduced in https://github.com/Altinn/altinn-notifications/issues/1880
--- FUNCTION: notifications.get_email_metrics_v2(integer, integer, integer)
-CREATE OR REPLACE FUNCTION notifications.get_email_metrics_v2(
+-- FUNCTION: notifications.get_email_metrics(integer, integer, integer)
+CREATE OR REPLACE FUNCTION notifications.get_email_metrics(
     day_input integer,
 	month_input integer,
 	year_input integer)
-    RETURNS TABLE(email_id bigint, email_shipmentid text, order_shipmentid text, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, operationid text) 
+    RETURNS TABLE(email_id bigint, shipmentid uuid, senders_reference text, requestedsendtime timestamptz, creatorname text, resourceid text, result text, operationid text) 
     LANGUAGE 'plpgsql'
     COST 100
     STABLE PARALLEL SAFE
@@ -983,15 +968,15 @@ BEGIN
   start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
 
   RETURN QUERY
- SELECT e.email_id, e.email_shipmentid, e.order_shipmentid, e.senders_reference, e.requestedsendtime, e.resulttime, e.creatorname, e.resourceid, e.result, e.operationid
-    FROM notifications.email_metrics_recent_v2 e
+ SELECT e.email_id, e.shipmentid, e.senders_reference, e.requestedsendtime, e.creatorname, e.resourceid, e.result, e.operationid
+    FROM notifications.email_metrics_recent e
     WHERE e.resulttime >= start_date
       AND e.resulttime < start_date + INTERVAL '1 day';
 
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.get_email_metrics_v2(integer, integer, integer)
+ALTER FUNCTION notifications.get_email_metrics(integer, integer, integer)
     OWNER TO platform_notifications_admin;
 
 
@@ -2155,13 +2140,12 @@ If no matching order exists, an empty result set is returned.';
 
 
 -- getsmsmetrics.sql:
--- New version v2 introduced in https://github.com/Altinn/altinn-notifications/issues/1880
--- FUNCTION: notifications.get_sms_metrics_v2(integer, integer, integer)
-CREATE OR REPLACE FUNCTION notifications.get_sms_metrics_v2(
+-- FUNCTION: notifications.get_sms_metrics(integer, integer, integer)
+CREATE OR REPLACE FUNCTION notifications.get_sms_metrics(
     day_input integer,
 	month_input integer,
 	year_input integer)
-    RETURNS TABLE(sms_id bigint, sms_shipmentid text, order_shipmentid text, senders_reference text, requestedsendtime timestamptz, resulttime timestamptz, creatorname text, resourceid text, result text, gatewayreference text, rate text, mobilenumber_prefix text) 
+    RETURNS TABLE(sms_id bigint, shipmentid uuid, senders_reference text, requestedsendtime timestamptz, creatorname text, resourceid text, result text, gatewayreference text, rate text, mobilenumber_prefix text, altinn_sms_count integer, altinn_sms_custom_body_length integer, altinn_sms_body_length integer) 
     LANGUAGE 'plpgsql'
     COST 100
     STABLE PARALLEL SAFE
@@ -2174,15 +2158,15 @@ BEGIN
   start_date = MAKE_TIMESTAMPTZ(year_input, month_input, day_input, 0, 0, 0, 'UTC');
 
   RETURN QUERY
-   SELECT s.sms_id, s.sms_shipmentid, s.order_shipmentid, s.senders_reference, s.requestedsendtime, s.resulttime, s.creatorname, s.resourceid, s.result, s.gatewayreference, s.rate, s.mobilenumber_prefix
-     FROM notifications.sms_metrics_recent_v2 s
+   SELECT s.sms_id, s.shipmentid, s.senders_reference, s.requestedsendtime, s.creatorname, s.resourceid, s.result, s.gatewayreference, s.rate, s.mobilenumber_prefix, s.altinn_sms_count, s.altinn_sms_custom_body_length, s.altinn_sms_body_length
+     FROM notifications.sms_metrics_recent s
      WHERE s.resulttime >= start_date
        AND s.resulttime < start_date + INTERVAL '1 day';
    
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.get_sms_metrics_v2(integer, integer, integer)
+ALTER FUNCTION notifications.get_sms_metrics(integer, integer, integer)
     OWNER TO platform_notifications_admin;
 
 

@@ -162,12 +162,12 @@ public class OrderRequestService : IOrderRequestService
     /// </summary>
     private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)
     {
-        foreach (var template in templates.OfType<EmailTemplate>().Where(e => string.IsNullOrEmpty(e.FromAddress)))
+        foreach (var template in templates.OfType<EmailTemplate>().Where(e => string.IsNullOrWhiteSpace(e.FromAddress)))
         {
             template.FromAddress = _defaultEmailFromAddress;
         }
 
-        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrEmpty(e.SenderNumber)))
+        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrWhiteSpace(e.SenderNumber)))
         {
             template.SenderNumber = _defaultSmsSender;
         }

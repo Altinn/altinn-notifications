@@ -3,6 +3,7 @@
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -229,13 +230,7 @@ public class SmsNotificationService : ISmsNotificationService
             return true;
         }
 
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(_conditionTimeout);
-
-        var result = await _conditionClient.CheckSendCondition(sms.ConditionEndpoint, timeoutCts.Token);
-
-        // A cancellation caused by shutdown must not be mistaken for a timed out condition check.
-        cancellationToken.ThrowIfCancellationRequested();
+        var result = await _conditionClient.CheckSendConditionWithTimeout(sms.ConditionEndpoint, _conditionTimeout, cancellationToken);
 
         if (result.IsSuccess)
         {

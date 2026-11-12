@@ -1,13 +1,13 @@
-using System;
 using System.Collections.Immutable;
-using System.Threading;
-using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
-using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Persistence.Mappers;
+
+using Microsoft.Extensions.Caching.Memory;
 
 using Moq;
 
@@ -19,11 +19,13 @@ public class NotificationDeliveryManifestServiceTests
 {
     private readonly NotificationDeliveryManifestService _service;
     private readonly Mock<INotificationDeliveryManifestRepository> _repositoryMock;
+    private readonly IMemoryCache _memoryCache;
 
     public NotificationDeliveryManifestServiceTests()
     {
         _repositoryMock = new Mock<INotificationDeliveryManifestRepository>();
-        _service = new NotificationDeliveryManifestService(_repositoryMock.Object);
+        _memoryCache = new MemoryCache(new MemoryCacheOptions());
+        _service = new NotificationDeliveryManifestService(_repositoryMock.Object, _memoryCache);
     }
 
     [Fact]
@@ -123,29 +125,7 @@ public class NotificationDeliveryManifestServiceTests
         Guid orderAlternateId = Guid.NewGuid();
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        var smsDeliveryManifest = new SmsDeliveryManifest
-        {
-            Destination = "+4799999999",
-            LastUpdate = DateTime.UtcNow.AddDays(-10),
-            Status = ProcessingLifecycle.SMS_Delivered
-        };
-
-        var emailDeliveryManifest = new EmailDeliveryManifest
-        {
-            Destination = "recipient@example.com",
-            LastUpdate = DateTime.UtcNow.AddDays(-5),
-            Status = ProcessingLifecycle.Email_Delivered
-        };
-
-        var expectedManifest = new NotificationDeliveryManifest
-        {
-            Type = "Notification",
-            ShipmentId = orderAlternateId,
-            LastUpdate = DateTime.UtcNow.AddDays(-5),
-            Status = ProcessingLifecycle.Order_Completed,
-            SendersReference = "COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
-            Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest, emailDeliveryManifest)
-        };
+        var expectedManifest = CreateManifest(orderAlternateId, ProcessingLifecycle.Order_Completed, ProcessingLifecycle.SMS_Delivered);
 
         _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(
                 orderAlternateId,
@@ -216,6 +196,47 @@ public class NotificationDeliveryManifestServiceTests
     }
 
     [Theory]
+    [InlineData(ProcessingLifecycle.SMS_Delivered)]
+    [InlineData(ProcessingLifecycle.SMS_SendConditionNotMet)]
+    [InlineData(ProcessingLifecycle.Email_SendConditionNotMet)]
+    public async Task GetDeliveryManifestAsync_WhenManifestIsTerminal_UsesCacheOnSecondCall(ProcessingLifecycle recipientStatus)
+    {
+        var (orderAlternateId, orderCreatorName) = await GetManifestTwiceAsync(ProcessingLifecycle.Order_Completed, recipientStatus);
+
+        _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, TestContext.Current.CancellationToken), Times.Once);
+    }
+
+    // Guards the terminal status list in the service against drifting from the result types' IsFinal rules.
+    [Fact]
+    public async Task GetDeliveryManifestAsync_CachesRecipientOnlyWhenItsResultTypeIsFinal()
+    {
+        var smsStatuses = Enum.GetValues<SmsNotificationResultType>()
+            .Select(result => (Name: $"SMS {result}", Final: result.IsFinal(), Status: ProcessingLifecycleMapper.GetSmsLifecycleStage(result.ToString())));
+        var emailStatuses = Enum.GetValues<EmailNotificationResultType>()
+            .Select(result => (Name: $"Email {result}", Final: result.IsFinal(), Status: ProcessingLifecycleMapper.GetEmailLifecycleStage(result.ToString())));
+
+        foreach (var (name, final, status) in smsStatuses.Concat(emailStatuses))
+        {
+            var (orderAlternateId, orderCreatorName) = await GetManifestTwiceAsync(ProcessingLifecycle.Order_Completed, status);
+
+            _repositoryMock.Verify(
+                r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, TestContext.Current.CancellationToken),
+                Times.Exactly(final ? 1 : 2),
+                $"{name} should {(final ? string.Empty : "not ")}be cached.");
+        }
+    }
+
+    [Theory]
+    [InlineData(ProcessingLifecycle.Order_Processing, ProcessingLifecycle.SMS_Sending)]
+    [InlineData(ProcessingLifecycle.Order_Completed, ProcessingLifecycle.SMS_Sending)]
+    public async Task GetDeliveryManifestAsync_WhenOrderOrRecipientIsNotTerminal_DoesNotUseCache(ProcessingLifecycle orderStatus, ProcessingLifecycle recipientStatus)
+    {
+        var (orderAlternateId, orderCreatorName) = await GetManifestTwiceAsync(orderStatus, recipientStatus);
+
+        _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, TestContext.Current.CancellationToken), Times.Exactly(2));
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("INVALID-ORG")]
     public async Task GetDeliveryManifestAsync_WithInvalidCreatorName_ReturnsErrorResult(string creatorName)
@@ -240,5 +261,43 @@ public class NotificationDeliveryManifestServiceTests
         Assert.Equal("NOT-00003", result.Problem.ErrorCode.ToString()); // Problems.ShipmentNotFound
         Assert.Equal(404, (int)result.Problem.StatusCode);
         Assert.Equal("Shipment not found", result.Problem.Title);
+    }
+
+    private static NotificationDeliveryManifest CreateManifest(Guid shipmentId, ProcessingLifecycle orderStatus, ProcessingLifecycle recipientStatus)
+    {
+        return new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = shipmentId,
+            Status = orderStatus,
+            LastUpdate = DateTime.UtcNow.AddDays(-5),
+            SendersReference = "NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
+            Recipients = ImmutableList.Create<IDeliveryManifest>(new SmsDeliveryManifest
+            {
+                Destination = "+4799999999",
+                LastUpdate = DateTime.UtcNow.AddDays(-10),
+                Status = recipientStatus
+            })
+        };
+    }
+
+    private async Task<(Guid OrderAlternateId, string OrderCreatorName)> GetManifestTwiceAsync(ProcessingLifecycle orderStatus, ProcessingLifecycle recipientStatus)
+    {
+        const string OrderCreatorName = "TEST-ORG";
+        Guid orderAlternateId = Guid.NewGuid();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        var manifest = CreateManifest(orderAlternateId, orderStatus, recipientStatus);
+        _repositoryMock.Setup(r => r.GetDeliveryManifestAsync(orderAlternateId, OrderCreatorName, cancellationToken))
+            .ReturnsAsync(manifest);
+
+        var firstCall = await _service.GetDeliveryManifestAsync(orderAlternateId, OrderCreatorName, cancellationToken);
+        var secondCall = await _service.GetDeliveryManifestAsync(orderAlternateId, OrderCreatorName, cancellationToken);
+
+        Assert.True(firstCall.IsSuccess);
+        Assert.True(secondCall.IsSuccess);
+        Assert.Equal(manifest, secondCall.Value);
+
+        return (orderAlternateId, OrderCreatorName);
     }
 }

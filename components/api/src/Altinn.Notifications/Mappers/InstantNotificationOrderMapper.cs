@@ -81,7 +81,7 @@ public static class InstantNotificationOrderMapper
         return new ShortMessageContent
         {
             Message = source.Body,
-            Sender = source.Sender
+            Sender = source.Sender?.Trim()
         };
     }
 
@@ -194,7 +194,7 @@ public static class InstantNotificationOrderMapper
             Subject = source.Subject,
             Body = source.Body,
             ContentType = (Core.Enums.EmailContentType)source.ContentType,
-            FromAddress = source.SenderEmailAddress
+            FromAddress = source.SenderEmailAddress?.Trim()
         };
     }
 
