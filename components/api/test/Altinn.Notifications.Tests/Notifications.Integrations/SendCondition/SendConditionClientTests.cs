@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Web;
 
 using Altinn.Notifications.Core.Models.SendCondition;
@@ -296,6 +295,37 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         }
 
         [Fact]
+        public async Task CheckSendCondition_BodyStallsAfterHeaders_IsCancelledByToken()
+        {
+            // Arrange
+            var handler = new DelegatingHandlerStub((request, token) =>
+                Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StalledContent() }));
+            var client = new SendConditionClient(new HttpClient(handler));
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+            // Act
+            var task = client.CheckSendCondition(new Uri("http://test.com"), cts.Token);
+            var completed = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
+
+            // Assert
+            Assert.Same(task, completed);
+            var result = await task;
+            result.Match(
+                success =>
+                {
+                    Assert.Fail("A stalled body should not produce a result");
+
+                    return false;
+                },
+                error =>
+                {
+                    Assert.Contains("Request timed out", error.Message);
+
+                    return true;
+                });
+        }
+
+        [Fact]
         public async Task CheckSendCondition_GenericException_ReturnsClientError()
         {
             // Arrange
@@ -359,6 +389,26 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
 
                     return true;
                 });
+        }
+
+        private sealed class StalledContent : HttpContent
+        {
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+            {
+                return Task.Delay(Timeout.Infinite);
+            }
+
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context, CancellationToken cancellationToken)
+            {
+                return Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+
+            protected override bool TryComputeLength(out long length)
+            {
+                length = -1;
+
+                return false;
+            }
         }
     }
 }

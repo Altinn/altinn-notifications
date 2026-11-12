@@ -33,6 +33,7 @@ public class EmailNotificationService(
     IOptions<NotificationConfig> config) : IEmailNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
+    private readonly TimeSpan _conditionRetryDelay = TimeSpan.FromSeconds(config.Value.SendConditionRetryDelaySeconds);
     private readonly IConditionClient _conditionClient = conditionClient;
     private readonly TimeSpan _conditionTimeout = TimeSpan.FromSeconds(Math.Max(1, config.Value.SendConditionTimeoutSeconds));
     private readonly IGuidService _guidService = guidService;
@@ -190,9 +191,23 @@ public class EmailNotificationService(
             bool? isSendConditionMet = await EvaluateSendCondition(claimedNotification, operationName, cancellationToken);
             if (isSendConditionMet is null)
             {
-                // Releasing the claim makes the notification eligible for a new attempt on a later poll.
-                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-                return false;
+                if (!claimedNotification.IsConditionRetry)
+                {
+                    await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, _conditionRetryDelay, cancellationToken);
+                    await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+
+                    _logger.LogInformation(
+                        "// EmailNotificationService // {OperationName} // Condition check was inconclusive for notification '{NotificationId}'. Retry scheduled in {RetryDelaySeconds} seconds.",
+                        operationName,
+                        claimedNotification.NotificationId,
+                        _conditionRetryDelay.TotalSeconds);
+                    return true;
+                }
+
+                _logger.LogWarning(
+                    "// EmailNotificationService // {OperationName} // Condition check was inconclusive again for notification '{NotificationId}'. Sending as if no condition endpoint was configured.",
+                    operationName,
+                    claimedNotification.NotificationId);
             }
 
             if (isSendConditionMet == false)
@@ -256,7 +271,7 @@ public class EmailNotificationService(
         }
 
         _logger.LogWarning(
-            "// EmailNotificationService // {OperationName} // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. The claim is released.",
+            "// EmailNotificationService // {OperationName} // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'.",
             operationName,
             email.NotificationId,
             email.ConditionEndpoint,

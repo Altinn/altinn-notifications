@@ -26,6 +26,7 @@ public class SmsNotificationService : ISmsNotificationService
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
     private readonly IConditionClient _conditionClient;
     private readonly TimeSpan _conditionTimeout;
+    private readonly TimeSpan _conditionRetryDelay;
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
@@ -49,6 +50,7 @@ public class SmsNotificationService : ISmsNotificationService
         IOptions<NotificationConfig> config)
     {
         _conditionClient = conditionClient;
+        _conditionRetryDelay = TimeSpan.FromSeconds(config.Value.SendConditionRetryDelaySeconds);
         _conditionTimeout = TimeSpan.FromSeconds(Math.Max(1, config.Value.SendConditionTimeoutSeconds));
         _guidService = guidService;
         _dateTimeService = dateTimeService;
@@ -134,9 +136,21 @@ public class SmsNotificationService : ISmsNotificationService
             bool? isSendConditionMet = await EvaluateSendCondition(newSmsNotification, cancellationToken);
             if (isSendConditionMet is null)
             {
-                // Releasing the claim makes the notification eligible for a new attempt on a later poll.
-                await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-                return false;
+                if (!newSmsNotification.IsConditionRetry)
+                {
+                    await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, _conditionRetryDelay, cancellationToken);
+                    await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+
+                    _logger.LogInformation(
+                        "// SmsNotificationService // SendNotification // Condition check was inconclusive for notification '{NotificationId}'. Retry scheduled in {RetryDelaySeconds} seconds.",
+                        newSmsNotification.NotificationId,
+                        _conditionRetryDelay.TotalSeconds);
+                    return true;
+                }
+
+                _logger.LogWarning(
+                    "// SmsNotificationService // SendNotification // Condition check was inconclusive again for notification '{NotificationId}'. Sending as if no condition endpoint was configured.",
+                    newSmsNotification.NotificationId);
             }
 
             if (isSendConditionMet == false)
@@ -237,7 +251,7 @@ public class SmsNotificationService : ISmsNotificationService
         }
 
         _logger.LogWarning(
-            "// SmsNotificationService // EvaluateSendCondition // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. The claim is released.",
+            "// SmsNotificationService // EvaluateSendCondition // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'.",
             sms.NotificationId,
             sms.ConditionEndpoint,
             result.Error!.StatusCode,

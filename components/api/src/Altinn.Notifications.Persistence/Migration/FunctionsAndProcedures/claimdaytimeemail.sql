@@ -1,5 +1,5 @@
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_email_v2()
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text, conditionendpoint text)
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_email_v3()
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text, conditionendpoint text, isconditionretry boolean)
     LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -20,7 +20,8 @@ BEGIN
                NULL::text AS fromaddress,
                NULL::text AS toaddress,
                NULL::text AS contenttype,
-               NULL::text AS conditionendpoint
+               NULL::text AS conditionendpoint,
+               NULL::boolean AS isconditionretry
         WHERE FALSE;
         RETURN;
     END IF;
@@ -45,6 +46,7 @@ BEGIN
             AND email.expirytime >= now()
             AND email.iscomposed = false
             AND email.sendingtimepolicy = 2
+            AND (email.nextattempt IS NULL OR email.nextattempt <= clock_timestamp())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
@@ -60,7 +62,8 @@ BEGIN
             claimed.customizedsubject,
             claimed.customizedbody,
             claimed.toaddress,
-            claimed._orderid
+            claimed._orderid,
+            email.nextattempt
     )
     -- Join with large text data AFTER releasing locks
     SELECT
@@ -70,16 +73,17 @@ BEGIN
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint
+        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint,
+        updated.nextattempt IS NOT NULL AS isconditionretry
     FROM updated_rows updated
     JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
     JOIN notifications.orders o ON o._id = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_daytime_email_v2()
+ALTER FUNCTION notifications.claim_daytime_email_v3()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_daytime_email_v2()
+COMMENT ON FUNCTION notifications.claim_daytime_email_v3()
     IS 'Claims and returns a single email notification with sending time policy Daytime (sendingtimepolicy = 2), excluding Composed orders (iscomposed = true).
-Anytime notifications (sendingtimepolicy = 1) are claimed by claim_anytime_email_v2.';
+Anytime notifications (sendingtimepolicy = 1) are claimed by claim_anytime_email_v3.';

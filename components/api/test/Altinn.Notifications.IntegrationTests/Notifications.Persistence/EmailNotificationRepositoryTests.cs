@@ -277,6 +277,84 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ScheduleConditionRetryAsync_AfterSlowWorkInTransaction_MeasuresDelayFromCurrentTime()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = GetRepository();
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+
+        // Act
+        DateTime beforeScheduling;
+        try
+        {
+            await using (NpgsqlCommand sleep = new("SELECT pg_sleep(1.5)", unitOfWork.Connection, unitOfWork.Transaction))
+            {
+                await sleep.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+            }
+
+            beforeScheduling = await PostgreUtil.GetDatabaseUtcNow();
+            await repo.ScheduleConditionRetryAsync(unitOfWork, emailNotification.Id, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken);
+            await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+        }
+        catch
+        {
+            await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            throw;
+        }
+
+        // Assert
+        DateTime nextAttempt = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT nextattempt FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
+        DateTime resultTime = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT resulttime FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
+        string result = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT result::text FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
+
+        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+        Assert.True(resultTime >= beforeScheduling);
+        Assert.True(nextAttempt >= beforeScheduling.AddSeconds(60));
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public async Task GetNewNotificationAsync_WithScheduledRetry_IsClaimedAsRetryOnlyOnceDue(SendingTimePolicy sendingTimePolicy)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: sendingTimePolicy);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = GetRepository();
+
+        async Task<Email?> Claim()
+        {
+            return await ExecuteClaimUntilMatchInUnitOfWork(
+                (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, sendingTimePolicy),
+                email => email.NotificationId == emailNotification.Id,
+                TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        Email? firstAttempt = await Claim();
+
+        UnitOfWork scheduleUnitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await repo.ScheduleConditionRetryAsync(scheduleUnitOfWork, emailNotification.Id, TimeSpan.FromHours(1), TestContext.Current.CancellationToken);
+        await _unitOfWorkRepository.CommitUnitOfWork(scheduleUnitOfWork);
+
+        Email? whileWaiting = await Claim();
+
+        await PostgreUtil.RunSql($"UPDATE notifications.emailnotifications SET nextattempt = clock_timestamp() - interval '1 second' WHERE alternateid = '{emailNotification.Id}'");
+        Email? whenDue = await Claim();
+
+        // Assert
+        Assert.NotNull(firstAttempt);
+        Assert.False(firstAttempt.IsConditionRetry);
+        Assert.Null(whileWaiting);
+        Assert.NotNull(whenDue);
+        Assert.True(whenDue.IsConditionRetry);
+    }
+
+    [Fact]
     public async Task GetRecipients_ValidOrderId_ReturnsEmailRecipient()
     {
         // Arrange
@@ -1669,6 +1747,50 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Equal("The provided Email identifier is invalid.", exception.Message);
+    }
+
+    [Fact]
+    public async Task ScheduleConditionRetryAsync_GivenEmptyNotificationId_ThrowsInvalidNotificationIdentifierException()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(
+            () => repo.ScheduleConditionRetryAsync(new UnitOfWork(), Guid.Empty, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal("The provided Email identifier is invalid.", exception.Message);
+    }
+
+    [Fact]
+    public async Task ScheduleConditionRetryAsync_GivenNonExistentNotificationId_ThrowsNotificationNotFoundException()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        Guid nonExistentNotificationId = Guid.NewGuid();
+
+        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        var unitOfWork = new UnitOfWork
+        {
+            Connection = connection,
+            Transaction = transaction
+        };
+
+        // Act
+        var ex = await Assert.ThrowsAsync<NotificationNotFoundException>(
+            () => repo.ScheduleConditionRetryAsync(unitOfWork, nonExistentNotificationId, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(NotificationChannel.Email, ex.Channel);
+        Assert.Equal(SendStatusIdentifierType.NotificationId, ex.IdentifierType);
+        Assert.Equal(nonExistentNotificationId.ToString(), ex.Identifier);
     }
 
     [Fact]

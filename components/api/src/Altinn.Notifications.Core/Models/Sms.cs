@@ -50,6 +50,12 @@ public class Sms
     public Uri? ConditionEndpoint { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether an earlier send condition check was inconclusive for this SMS.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsConditionRetry { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Sms"/> class with the specified parameters.
     /// </summary>
     /// <param name="notificationId">The unique identifier of the SMS.</param>
