@@ -977,80 +977,6 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             await LogFinalNotificationResultsAsync(order.Id, connection, transaction);
         }
 
-        bool isCompleted = await AdvanceOrderStatusAsync(order.Id, emailNotifications, smsNotifications, connection, transaction, cancellationToken);
-
-        if (isCompleted)
-        {
-            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.Completed, emailNotifications, smsNotifications, connection, transaction);
-        }
-
-        return isCompleted;
-    }
-
-    /// <inheritdoc/>
-    public async Task SetOrderSendConditionNotMetAsync(UnitOfWork unitOfWork, NotificationOrder order, CancellationToken cancellationToken = default)
-    {
-        var connection = unitOfWork.Connection;
-        var transaction = unitOfWork.Transaction;
-
-        await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, OrderProcessingStatus.SendConditionNotMet.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
-        int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
-
-        if (rowsAffected > 0)
-        {
-            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.SendConditionNotMet, [], [], connection, transaction);
-        }
-        else
-        {
-            throw new InvalidOperationException(
-                $"Order {order.Id} not found when attempting to persist processing result");
-        }
-    }
-
-    /// <summary>
-    /// Advances the order to <see cref="OrderProcessingStatus.Completed"/> when all notifications are immediately terminal,
-    /// otherwise to <see cref="OrderProcessingStatus.Processed"/>.
-    /// </summary>
-    /// <param name="orderId">The order id.</param>
-    /// <param name="emailNotifications">The email notifications persisted for the order.</param>
-    /// <param name="smsNotifications">The SMS notifications persisted for the order.</param>
-    /// <param name="connection">The database connection.</param>
-    /// <param name="transaction">The transaction the update is part of.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns><c>true</c> if the order was completed; otherwise <c>false</c>.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the order does not exist.</exception>
-    private static async Task<bool> AdvanceOrderStatusAsync(
-        Guid orderId,
-        IReadOnlyList<EmailNotification> emailNotifications,
-        IReadOnlyList<SmsNotification> smsNotifications,
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        CancellationToken cancellationToken)
-    {
-        bool isCompleted = IsImmediatelyCompleted(emailNotifications, smsNotifications);
-        var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
-
-        await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
-
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
-        int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
-
-        if (rowsAffected == 0)
-        {
-            throw new InvalidOperationException(
-                $"Order {orderId} not found when attempting to persist processing result");
-        }
-
-        return isCompleted;
-    }
-
-    private static bool IsImmediatelyCompleted(
-        IReadOnlyList<EmailNotification> emailNotifications,
-        IReadOnlyList<SmsNotification> smsNotifications)
-    {
         static bool IsEmailTerminal(EmailNotification n) =>
             n.SendResult.Result is EmailNotificationResultType.Failed_RecipientNotIdentified
                 or EmailNotificationResultType.Failed_RecipientReserved;
@@ -1059,7 +985,26 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
             n.SendResult.Result is SmsNotificationResultType.Failed_RecipientNotIdentified
                 or SmsNotificationResultType.Failed_RecipientReserved;
 
-        return emailNotifications.All(IsEmailTerminal) && smsNotifications.All(IsSmsTerminal);
+        // The order completes immediately when all notifications are terminal, otherwise it is processed
+        bool isCompleted = emailNotifications.All(IsEmailTerminal) && smsNotifications.All(IsSmsTerminal);
+        var status = isCompleted ? OrderProcessingStatus.Completed : OrderProcessingStatus.Processed;
+
+        await using NpgsqlCommand pgcom = new(_advanceStatusSql, connection, transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
+        int rowsAffected = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+
+        if (rowsAffected == 0)
+        {
+            throw new InvalidOperationException($"Order {order.Id} not found when attempting to persist processing result");
+        }
+
+        if (isCompleted)
+        {
+            await InsertStatusFeedForOrderAsync(order, OrderProcessingStatus.Completed, emailNotifications, smsNotifications, connection, transaction);
+        }
+
+        return isCompleted;
     }
 
     private async Task InsertStatusFeedForOrderAsync(

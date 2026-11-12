@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Core.Models;
 
@@ -38,6 +39,15 @@ public class Sms
     /// to an empty string for backward compatibility with call sites that do not supply it.
     /// </remarks>
     public string Creator { get; set; }
+
+    /// <summary>
+    /// Gets or sets the send condition endpoint of the order the SMS belongs to, if any.
+    /// </summary>
+    /// <remarks>
+    /// Used to evaluate the send condition at send time. Not part of the published SMS payload.
+    /// </remarks>
+    [JsonIgnore]
+    public Uri? ConditionEndpoint { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sms"/> class with the specified parameters.
