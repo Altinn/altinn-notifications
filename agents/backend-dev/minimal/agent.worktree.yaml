@@ -1,0 +1,22 @@
+# Your own checkout of altinn-notifications, the one this file is in, in place of a fresh clone. The agent works on it as
+# it is, on its branch. Apply it from a clone rather than a linked worktree, whose Git metadata is outside the mount.
+apiVersion: agents.platform/v1alpha1
+kind: AgentVariant
+extends: agent.yaml
+
+metadata:
+  name: notifications-backend-dev-worktree
+
+spec:
+  sandbox:
+    mounts:
+      - type: bind
+        source: ../../..
+        target: /home/agent/code/altinn-notifications
+        readOnly: false
+  # A variant's instructions replace the list it extends.
+  instructions:
+    - source: ../instructions.md
+    - source: environment.md
+    - source: ../improving.md
+    - source: ../worktree.md
