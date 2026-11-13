@@ -27,27 +27,32 @@ public static class ServiceCollectionExtensions
         string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
 
         return services
-        .AddSingleton<IOrderRepository, OrderRepository>()
-        .AddSingleton<IMetricsRepository, MetricsRepository>()
-        .AddSingleton<IStatusFeedRepository, StatusFeedRepository>()
-        .AddSingleton<IServiceOwnerRepository, ServiceOwnerRepository>()
-        .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
-        .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
-        .AddSingleton<INotificationLogRepository, NotificationLogRepository>()
-        .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
-        .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
-        .AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>()
-        .AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>()
-        .AddSingleton<IDashboardRepository, DashboardRepository>()
-        .AddSingleton<IUnitOfWorkRepository, UnitOfWorkRepository>()
-        .AddNpgsqlDataSource(connectionString, builder =>
-            builder.EnableParameterLogging(settings.LogParameters)
-                   .EnableDynamicJson()
-                   .ConfigureTracing(o => o
-                       .ConfigureCommandSpanNameProvider(cmd => cmd.CommandText)
-                       .ConfigureCommandFilter(cmd => true)
-                       .ConfigureCommandEnrichmentCallback(DbEnricher.Enrich)
-                       .EnableFirstResponseEvent(false)));
+            .AddSingleton<IOrderRepository, OrderRepository>()
+            .AddSingleton<IMetricsRepository, MetricsRepository>()
+            .AddSingleton<IStatusFeedRepository, StatusFeedRepository>()
+            .AddSingleton<IServiceOwnerRepository, ServiceOwnerRepository>()
+            .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
+            .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
+            .AddSingleton<INotificationLogRepository, NotificationLogRepository>()
+            .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
+            .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
+            .AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>()
+            .AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>()
+            .AddSingleton<IDashboardRepository, DashboardRepository>()
+            .AddSingleton<IUnitOfWorkRepository, UnitOfWorkRepository>()
+            .AddSingleton<DbEnricher>()
+            .AddNpgsqlDataSource(
+                connectionString,
+                (serviceProvider, builder) =>
+                {
+                    DbEnricher dbEnricher = serviceProvider.GetRequiredService<DbEnricher>();
+                    builder.EnableParameterLogging(settings.LogParameters)
+                        .EnableDynamicJson()
+                        .ConfigureTracing(o => o
+                            .ConfigureCommandFilter(cmd => true)
+                            .ConfigureCommandEnrichmentCallback(dbEnricher.Enrich)
+                            .EnableFirstResponseEvent(false));
+                });
     }
 
     /// <summary>
