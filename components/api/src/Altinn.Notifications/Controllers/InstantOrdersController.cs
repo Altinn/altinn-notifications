@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Orders;
+using Altinn.Notifications.Telemetry;
 using Altinn.Notifications.Validators.Extensions;
 
 using FluentValidation;
@@ -49,6 +50,7 @@ public class InstantOrdersController(
     [Obsolete("This endpoint is deprecated. Use the /instant/sms endpoint for SMS notifications instead.")]
 #pragma warning restore S1133
     [HttpPost]
+    [DeprecatedEndpoint]
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerResponse(201, "The instant notification was created.", typeof(InstantNotificationOrderResponseExt))]
