@@ -1,4 +1,5 @@
 using System.Diagnostics.Metrics;
+using System.Reflection;
 
 using Altinn.Notifications.Telemetry;
 
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,6 +20,35 @@ namespace Altinn.Notifications.Tests.Notifications.TestingTelemetry;
 
 public class DeprecatedEndpointAttributeTests
 {
+    [Fact]
+    public void ObsoleteControllerActions_AreAllMarkedWithDeprecatedEndpoint()
+    {
+        // Arrange
+        var actions = typeof(Program).Assembly
+            .GetTypes()
+            .Where(t => typeof(ControllerBase).IsAssignableFrom(t))
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .Where(m => m.GetCustomAttributes<HttpMethodAttribute>().Any())
+            .ToList();
+
+        // Act
+        var obsoleteActions = actions.Where(m => m.GetCustomAttribute<ObsoleteAttribute>() != null).ToList();
+        var missingAttribute = obsoleteActions
+            .Where(m => m.GetCustomAttribute<DeprecatedEndpointAttribute>() == null)
+            .Select(m => $"{m.DeclaringType?.Name}.{m.Name}")
+            .ToList();
+
+        var markedButNotObsolete = actions
+            .Where(m => m.GetCustomAttribute<DeprecatedEndpointAttribute>() != null && m.GetCustomAttribute<ObsoleteAttribute>() == null)
+            .Select(m => $"{m.DeclaringType?.Name}.{m.Name}")
+            .ToList();
+
+        // Assert
+        Assert.Empty(missingAttribute);
+        Assert.NotEmpty(obsoleteActions);
+        Assert.Empty(markedButNotObsolete);
+    }
+
     [Theory]
     [InlineData("POST", "notifications/api/v1/orders", "OrdersController.Post")]
     [InlineData("GET", "notifications/api/v1/orders/{id}", "OrdersController.GetById")]
@@ -33,16 +64,10 @@ public class DeprecatedEndpointAttributeTests
     public void OnActionExecuting_LogsWarningAndIncrementsCounterWithCreator(string httpMethod, string route, string endpoint)
     {
         // Arrange
-        var loggerMock = new Mock<ILogger>();
+        var loggerMock = new Mock<ILogger<DeprecatedEndpointFilter>>();
         loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
-        var loggerFactoryMock = new Mock<ILoggerFactory>();
-        loggerFactoryMock.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(loggerMock.Object);
-
-        var services = new ServiceCollection();
-        services.AddSingleton(loggerFactoryMock.Object);
-
-        var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
         httpContext.Request.Method = httpMethod;
 
@@ -72,7 +97,7 @@ public class DeprecatedEndpointAttributeTests
         listener.Start();
 
         // Act
-        new DeprecatedEndpointAttribute().OnActionExecuting(context);
+        new DeprecatedEndpointFilter(loggerMock.Object).OnActionExecuting(context);
 
         // Assert
         var (value, tags) = Assert.Single(measurements);
