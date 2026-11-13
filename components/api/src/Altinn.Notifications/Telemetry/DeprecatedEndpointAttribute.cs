@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 
 using Altinn.Notifications.Extensions;
@@ -15,7 +14,6 @@ namespace Altinn.Notifications.Telemetry;
 /// The counter is not subject to trace sampling and is the authoritative signal for usage.
 /// Example query: <c>customMetrics | where name == "altinn.notifications.deprecated.endpoint.calls" | summarize calls = sum(valueSum) by tostring(customDimensions.endpoint), tostring(customDimensions.creator)</c>.
 /// </remarks>
-[ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
 public sealed class DeprecatedEndpointAttribute : ActionFilterAttribute
 {
