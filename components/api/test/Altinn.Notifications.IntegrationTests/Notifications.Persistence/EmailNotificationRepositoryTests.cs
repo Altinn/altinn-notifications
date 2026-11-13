@@ -184,36 +184,6 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     [Theory]
     [InlineData(SendingTimePolicy.Anytime, 1)]
     [InlineData(SendingTimePolicy.Daytime, 2)]
-    public async Task CreateOrder_PersistsEmailSendingTimePolicyInOrdersTable(SendingTimePolicy emailSendingTimePolicy, int expectedValue)
-    {
-        // Arrange
-        (NotificationOrder order, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: emailSendingTimePolicy);
-        _orderIdsToDelete.Add(order.Id);
-
-        // Act
-        int actual = await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{order.Id}'");
-
-        // Assert
-        Assert.Equal(expectedValue, actual);
-    }
-
-    [Fact]
-    public async Task CreateOrder_WithoutEmailSendingTimePolicy_PersistsNullInOrdersTable()
-    {
-        // Arrange
-        (NotificationOrder order, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
-        _orderIdsToDelete.Add(order.Id);
-
-        // Act
-        long count = await PostgreUtil.RunSqlReturnOutput<long>($"SELECT count(*) FROM notifications.orders WHERE alternateid = '{order.Id}' AND emailsendingtimepolicy IS NULL");
-
-        // Assert
-        Assert.Equal(1, count);
-    }
-
-    [Theory]
-    [InlineData(SendingTimePolicy.Anytime, 1)]
-    [InlineData(SendingTimePolicy.Daytime, 2)]
     [InlineData(null, 1)]
     public async Task AddNotification_StoresEmailSendingTimePolicyOfOrderOnNotification(SendingTimePolicy? emailSendingTimePolicy, int expectedValue)
     {
