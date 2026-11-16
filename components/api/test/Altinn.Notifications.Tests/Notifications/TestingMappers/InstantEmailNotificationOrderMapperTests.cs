@@ -67,6 +67,32 @@ public class InstantEmailNotificationOrderMapperTests
     }
 
     [Fact]
+    public void MapToInstantEmailNotificationOrder_WithPaddedSenderEmailAddress_TrimsSenderEmailAddress()
+    {
+        // Arrange
+        var request = new InstantEmailNotificationOrderRequestExt
+        {
+            IdempotencyId = "test-idempotency-id",
+            InstantEmailDetails = new InstantEmailDetailsExt
+            {
+                EmailAddress = "test@example.com",
+                EmailSettings = new InstantEmailContentExt
+                {
+                    Subject = "Test Email Subject",
+                    Body = "Test email body content",
+                    SenderEmailAddress = " sender@altinn.no "
+                }
+            }
+        };
+
+        // Act
+        var result = request.MapToInstantEmailNotificationOrder("ttd", DateTime.UtcNow);
+
+        // Assert
+        Assert.Equal("sender@altinn.no", result.InstantEmailDetails.EmailContent.FromAddress);
+    }
+
+    [Fact]
     public void MapToInstantEmailNotificationOrder_WithHtmlContent_MapsCorrectly()
     {
         // Arrange

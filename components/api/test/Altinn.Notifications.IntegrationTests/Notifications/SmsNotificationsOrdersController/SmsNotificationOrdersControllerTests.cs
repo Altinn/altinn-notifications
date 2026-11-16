@@ -4,9 +4,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Tests.Notifications.Utils;
@@ -116,7 +119,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
     public async Task Post_ValidationReturnsError_BadRequest()
     {
         var validator = new Mock<IValidator<SmsNotificationOrderRequestExt>>();
-        validator.Setup(v => v.Validate(It.IsAny<SmsNotificationOrderRequestExt>()))
+        validator.Setup(v => v.Validate(It.IsAny<IValidationContext>()))
             .Returns(new ValidationResult(new List<ValidationFailure> { new ValidationFailure("SomeProperty", "SomeError") }));
 
         HttpClient client = GetTestClient(validator.Object);
@@ -311,60 +314,75 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
     }
 
     [Fact]
-    public async Task Post_OrderWithoutFromAddress_StringEmptyUsedAsServiceInput_Accepted()
+    public async Task Post_SenderNotRegisteredForServiceOwner_ReturnsValidationProblemAndDoesNotRegisterOrder()
     {
         // Arrange
-        Mock<IOrderRequestService> serviceMock = new();
+        string unregisteredSender = $"U{Guid.NewGuid():N}"[..11];
+        var serviceMock = new Mock<IOrderRequestService>();
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(SenderOwnershipTestUtil.CreateConfig(enforceSms: true));
 
-        serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
-            .Callback<NotificationOrderRequest>(orderRequest =>
-            {
-                var smsTemplate = orderRequest.Templates
-                    .OfType<SmsTemplate>()
-                    .FirstOrDefault();
-
-                Assert.NotNull(smsTemplate);
-                Assert.Empty(smsTemplate.SenderNumber);
-            })
-            .ReturnsAsync(new NotificationOrderRequestResponse() { OrderId = _orderId });
-
-        HttpClient client = GetTestClient(orderService: serviceMock.Object);
+        HttpClient client = GetTestClient(orderService: serviceMock.Object, serviceOwnerService: serviceOwnerService, useRealValidator: true);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
-        SmsNotificationOrderRequestExt request = new()
-        {
-            Body = "sms-body",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000001" }, new RecipientExt() { MobileNumber = "+4790000001" } },
-            SendersReference = "senders-reference",
-            RequestedSendTime = DateTime.UtcNow
-        };
+        // Act
+        HttpResponseMessage response = await client.PostAsync(_basePath, CreateSmsOrderContent(unregisteredSender), TestContext.Current.CancellationToken);
+        string content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        ValidationProblemDetails? problem = JsonSerializer.Deserialize<ValidationProblemDetails>(content, _options);
 
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
-        {
-            Content = new StringContent(request.Serialize(), Encoding.UTF8, "application/json")
-        };
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(problem);
+        Assert.Contains("SenderNumber", problem.Errors.Keys);
+        Assert.DoesNotContain(unregisteredSender, content);
+
+        serviceMock.Verify(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Post_SenderRegisteredForServiceOwner_ReturnsAccepted()
+    {
+        // Arrange
+        string registeredSender = $"R{Guid.NewGuid():N}"[..11];
+
+        var serviceMock = new Mock<IOrderRequestService>();
+        serviceMock
+            .Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+            .ReturnsAsync(_successRequestResponse);
+
+        var serviceOwnerService = await SenderOwnershipTestUtil.CreateLoadedServiceOwnerService(
+            SenderOwnershipTestUtil.CreateConfig(enforceSms: true),
+            new RegisteredSender("ttd", AddressType.Sms, registeredSender));
+
+        HttpClient client = GetTestClient(orderService: serviceMock.Object, serviceOwnerService: serviceOwnerService, useRealValidator: true);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
-        string respoonseString = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
+        HttpResponseMessage response = await client.PostAsync(_basePath, CreateSmsOrderContent(registeredSender), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.NotNull(responseObject);
-        Assert.Equal(_orderId, responseObject.OrderId);
-
-        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
-
-        serviceMock.VerifyAll();
+        serviceMock.Verify(s => s.RegisterNotificationOrder(It.Is<NotificationOrderRequest>(o => o.Templates.OfType<SmsTemplate>().Any(t => t.SenderNumber == registeredSender))), Times.Once);
     }
 
-    private HttpClient GetTestClient(IValidator<SmsNotificationOrderRequestExt>? validator = null, IOrderRequestService? orderService = null)
+    private static StringContent CreateSmsOrderContent(string senderNumber)
     {
-        if (validator == null)
+        SmsNotificationOrderRequestExt request = new()
+        {
+            Body = "sms-body",
+            SenderNumber = senderNumber,
+            Recipients = [new RecipientExt { MobileNumber = "+4740000001" }],
+            RequestedSendTime = DateTime.UtcNow.AddDays(1)
+        };
+
+        return new StringContent(request.Serialize(), Encoding.UTF8, "application/json");
+    }
+
+    private HttpClient GetTestClient(IValidator<SmsNotificationOrderRequestExt>? validator = null, IOrderRequestService? orderService = null, IServiceOwnerService? serviceOwnerService = null, bool useRealValidator = false)
+    {
+        if (validator == null && !useRealValidator)
         {
             var validatorMock = new Mock<IValidator<SmsNotificationOrderRequestExt>>();
-            validatorMock.Setup(v => v.Validate(It.IsAny<SmsNotificationOrderRequestExt>()))
+            validatorMock.Setup(v => v.Validate(It.IsAny<IValidationContext>()))
                 .Returns(new ValidationResult());
             validator = validatorMock.Object;
         }
@@ -376,8 +394,17 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         }
 
         _factory.ResetInstalledMocks();
-        _factory.InstallService(validator);
         _factory.InstallService(orderService);
+
+        if (validator != null)
+        {
+            _factory.InstallService(validator);
+        }
+
+        if (serviceOwnerService != null)
+        {
+            _factory.InstallService(serviceOwnerService);
+        }
 
         return _factory.SharedClient;
     }

@@ -4,11 +4,15 @@ using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Sms;
+using Altinn.Notifications.Telemetry;
 using Altinn.Notifications.Validators.Extensions;
+
 using FluentValidation;
 using FluentValidation.Results;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
 
@@ -17,26 +21,20 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// Controller for all operations related to SMS notification orders
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="SmsNotificationOrdersController"/> class.
+/// </remarks>
 [Route("notifications/api/v1/orders/sms")]
 [ApiController]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 
-public class SmsNotificationOrdersController : ControllerBase
+public class SmsNotificationOrdersController(
+    IValidator<SmsNotificationOrderRequestExt> validator,
+    IOrderRequestService orderRequestService,
+    IServiceOwnerService serviceOwnerService) : ControllerBase
 {
-    private readonly IValidator<SmsNotificationOrderRequestExt> _validator;
-    private readonly IOrderRequestService _orderRequestService;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SmsNotificationOrdersController"/> class.
-    /// </summary>
-    public SmsNotificationOrdersController(IValidator<SmsNotificationOrderRequestExt> validator, IOrderRequestService orderRequestService)
-    {
-        _validator = validator;
-        _orderRequestService = orderRequestService;
-    }
-
     /// <summary>
     /// Send SMS notifications
     /// </summary>
@@ -44,10 +42,11 @@ public class SmsNotificationOrdersController : ControllerBase
     /// Endpoint for sending SMS notifications to one or more recipients.
     /// </remarks>
     /// <returns>The notification order request response</returns>
-    #pragma warning disable S1133
+#pragma warning disable S1133
     [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
-    #pragma warning restore S1133
+#pragma warning restore S1133
     [HttpPost]
+    [DeprecatedEndpoint]
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerResponse(202, "The request was accepted and a notification order has been successfully generated.", typeof(NotificationOrderRequestResponseExt))]
@@ -57,22 +56,21 @@ public class SmsNotificationOrdersController : ControllerBase
     [SwaggerResponseHeader(202, "Location", Microsoft.OpenApi.JsonSchemaType.String, "Link to access the newly created notification order.")]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(SmsNotificationOrderRequestExt smsNotificationOrderRequest)
     {
-        ValidationResult validationResult = _validator.Validate(smsNotificationOrderRequest);
+        string? creator = HttpContext.GetOrg();
+        if (string.IsNullOrWhiteSpace(creator))
+        {
+            return Forbid();
+        }
+
+        ValidationResult validationResult = validator.Validate(smsNotificationOrderRequest, creator, serviceOwnerService);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(this.ModelState);
             return ValidationProblem(ModelState);
         }
 
-        string? creator = HttpContext.GetOrg();
-
-        if (creator == null)
-        {
-            return Forbid();
-        }
-
         var orderRequest = smsNotificationOrderRequest.MapToOrderRequest(creator);
-        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        NotificationOrderRequestResponse result = await orderRequestService.RegisterNotificationOrder(orderRequest);
 
         return Accepted(result.OrderId.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
