@@ -2374,7 +2374,7 @@ BEGIN
     SELECT
         _id,
         CASE WHEN type = 'Composed'::notificationordertype THEN TRUE ELSE FALSE END,
-        CASE WHEN emailsendingtimepolicy = 1 OR emailsendingtimepolicy IS NULL THEN 1 ELSE 2 END
+        CASE WHEN (notificationorder ->> 'EmailSendingTimePolicy')::int = 2 THEN 2 ELSE 1 END
         INTO __orderid, __iscomposed, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
@@ -2418,7 +2418,7 @@ ALTER PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text,
 COMMENT ON PROCEDURE notifications.insertemailnotification_v2(uuid, uuid, text, text, text, text, text, text, timestamptz, timestamptz, bigint)
     IS 'Inserts a new email notification linked to the given order.
 Raises an exception if no order with the specified alternateid exists.
-The notification inherits iscomposed and the email sending time policy (emailsendingtimepolicy, NULL = Anytime) from the order.
+The notification inherits iscomposed and the email sending time policy (read from the order document, missing = Anytime).
 _total_attachment_size_bytes: total raw attachment size in bytes (0 for standard emails with no attachments).';
 
 
@@ -2590,18 +2590,16 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE FUNCTION notifications.insertorder_v3(
+CREATE OR REPLACE FUNCTION notifications.insertorder_v4(
     _alternateid uuid,
     _creatorname text,
     _sendersreference text,
     _created timestamp with time zone,
     _requestedsendtime timestamp with time zone,
     _notificationorder jsonb,
-    _smssendingtimepolicy integer,
     _type text,
     _processingstatus text,
-    _orderchainid bigint,
-    _emailsendingtimepolicy integer
+    _orderchainid bigint
 )
 RETURNS bigint
 LANGUAGE 'plpgsql'
@@ -2610,17 +2608,16 @@ DECLARE
     _orderid BIGINT;
 BEGIN
     INSERT INTO notifications.orders(
-        alternateid, creatorname, sendersreference, created, requestedsendtime, processed, notificationorder, smssendingtimepolicy, type, processedstatus, _orderchainid, emailsendingtimepolicy
+        alternateid, creatorname, sendersreference, created, requestedsendtime, processed, notificationorder, type, processedstatus, _orderchainid
     )
     VALUES (
-        _alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _created, _notificationorder, _smssendingtimepolicy, _type::public.notificationordertype, _processingstatus::public.orderprocessingstate, _orderchainid, _emailsendingtimepolicy
+        _alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _created, _notificationorder, _type::public.notificationordertype, _processingstatus::public.orderprocessingstate, _orderchainid
     )
     RETURNING _id INTO _orderid;
 
     RETURN _orderid;
 END;
 $BODY$;
-
 
 -- insertorderchain.sql:
 CREATE OR REPLACE FUNCTION notifications.insertorderchain_v2(
@@ -2775,7 +2772,7 @@ DECLARE
 BEGIN
     SELECT
         _id,
-        CASE WHEN smssendingtimepolicy = 2 OR smssendingtimepolicy IS NULL THEN 2 ELSE 1 END
+        CASE WHEN COALESCE(notificationorder ->> 'sendingTimePolicy', notificationorder ->> 'SendingTimePolicy')::int = 1 THEN 1 ELSE 2 END
         INTO __orderid, __sendingtimepolicy
     FROM notifications.orders
     WHERE alternateid = _orderid;
