@@ -31,10 +31,10 @@ public sealed class DeprecatedEndpointFilter(ILogger<DeprecatedEndpointFilter> l
     {
         HttpContext httpContext = context.HttpContext;
 
-        string method = httpContext.Request.Method;
-        string creator = httpContext.GetOrg() ?? "unknown";
-        string endpoint = context.ActionDescriptor.DisplayName ?? httpContext.Request.Path.Value ?? "unknown";
-        string route = context.ActionDescriptor.AttributeRouteInfo?.Template ?? httpContext.Request.Path.Value ?? "unknown";
+        string creator = SanitizeForLog(httpContext.GetOrg());
+        string method = SanitizeForLog(httpContext.Request.Method);
+        string endpoint = SanitizeForLog(context.ActionDescriptor.DisplayName ?? httpContext.Request.Path.Value);
+        string route = SanitizeForLog(context.ActionDescriptor.AttributeRouteInfo?.Template ?? httpContext.Request.Path.Value);
 
         logger.LogWarning(
             "DeprecatedEndpointCalled: {Endpoint} {Method} {Route} by {Creator}",
@@ -54,5 +54,18 @@ public sealed class DeprecatedEndpointFilter(ILogger<DeprecatedEndpointFilter> l
     /// <inheritdoc/>
     public void OnActionExecuted(ActionExecutedContext context)
     {
+    }
+
+    /// <summary>
+    /// Removes control characters to prevent log-forging via line breaks or terminal control sequences.
+    /// </summary>
+    private static string SanitizeForLog(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "unknown";
+        }
+
+        return string.Concat(value.Where(c => !char.IsControl(c)));
     }
 }
