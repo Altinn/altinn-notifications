@@ -356,20 +356,45 @@ public class PlatformMocksServiceTests
 
     private static async Task<RunningMocks> StartAsync(Action<PlatformMocksSettings>? configure = null)
     {
-        var settings = new PlatformMocksSettings();
-        settings.Profile.Port = FreePort();
-        settings.Register.Port = FreePort();
-        settings.Authorization.Port = FreePort();
-        settings.Conditions.Port = FreePort();
-        settings.Maskinporten.Port = FreePort();
-        settings.Profile.ReservedPersons = ["99999999901"];
-        settings.Profile.PersonsWithoutContactPoints = ["88888888801"];
-        settings.Profile.OrganizationsWithoutContactPoints = ["999999999"];
-        configure?.Invoke(settings);
+        // FreePort releases the port before the mocks bind it, so a test running in parallel can take it in between.
+        // Then pick new ports and try again.
+        for (int attempt = 1; ; attempt++)
+        {
+            var settings = new PlatformMocksSettings();
+            settings.Profile.Port = FreePort();
+            settings.Register.Port = FreePort();
+            settings.Authorization.Port = FreePort();
+            settings.Conditions.Port = FreePort();
+            settings.Maskinporten.Port = FreePort();
+            settings.Profile.ReservedPersons = ["99999999901"];
+            settings.Profile.PersonsWithoutContactPoints = ["88888888801"];
+            settings.Profile.OrganizationsWithoutContactPoints = ["999999999"];
+            configure?.Invoke(settings);
 
-        var service = new PlatformMocksService(Options.Create(settings), NullLogger<PlatformMocksService>.Instance);
-        await service.StartAsync(TestContext.Current.CancellationToken);
-        return new RunningMocks(service);
+            var service = new PlatformMocksService(Options.Create(settings), NullLogger<PlatformMocksService>.Instance);
+            try
+            {
+                await service.StartAsync(TestContext.Current.CancellationToken);
+                return new RunningMocks(service);
+            }
+            catch (Exception ex) when (attempt < 5 && IsAddressInUse(ex))
+            {
+                await service.StopAsync(TestContext.Current.CancellationToken);
+            }
+        }
+    }
+
+    private static bool IsAddressInUse(Exception? ex)
+    {
+        for (; ex != null; ex = ex.InnerException)
+        {
+            if (ex is SocketException { SocketErrorCode: SocketError.AddressAlreadyInUse })
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static int FreePort()
