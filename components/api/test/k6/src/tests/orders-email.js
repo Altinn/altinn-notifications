@@ -198,19 +198,32 @@ function postEmailNotificationOrderWithNegativeConditionCheck(data) {
         success
     );
 
-    sleep(60); // Waiting 1 minute for the notifications to be generated
+    sleep(120); // Waiting for the order to be processed and the notification to be picked up for sending
 
     const order = JSON.parse(response.body);
 
-    response = ordersApi.getWithStatus(order.orderId, data.token);
+    response = notificationsApi.getEmailNotifications(
+        order.orderId,
+        data.token,
+        get_mail_notifications
+    );
     check(response, {
-        "GET notification order with condition check status after one minute. Status is 200 OK":
+        "GET email notifications with condition check after waiting. Status is 200 OK":
             (r) => r.status === 200,
     });
 
     check(JSON.parse(response.body), {
-        "GET notification order with condition check status. Status is condition not met":
-            (order) => order.processingStatus.status == "SendConditionNotMet",
+        "GET email notifications with condition check. Notification status is condition not met":
+            (summary) =>
+                summary.notifications.length > 0 &&
+                summary.notifications[0].sendStatus.status ==
+                    "SendConditionNotMet",
+    });
+
+    response = ordersApi.getWithStatus(order.orderId, data.token);
+    check(JSON.parse(response.body), {
+        "GET notification order with condition check status. Order is completed":
+            (order) => order.processingStatus.status == "Completed",
     });
 }
 
