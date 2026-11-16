@@ -81,7 +81,8 @@ internal sealed class RegisterMock : IPlatformMock
         };
     }
 
-    private static Guid StableUuid(string value) => new(MD5.HashData(Encoding.UTF8.GetBytes(value)));
+    // The first 16 bytes of a SHA-256 hash, so the same number always gets the same party UUID. Not used for anything secret.
+    private static Guid StableUuid(string value) => new(SHA256.HashData(Encoding.UTF8.GetBytes(value)).AsSpan(0, 16));
 
     private sealed class PartyQuery
     {
