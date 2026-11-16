@@ -9,6 +9,7 @@
 		<PackageReference Include="Altinn.Authorization.ProblemDetails.Abstractions" />
 		<PackageReference Include="Parquet.Net" />
 		<PackageReference Include="libphonenumber-csharp" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
