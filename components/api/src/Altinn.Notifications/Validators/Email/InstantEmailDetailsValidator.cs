@@ -25,24 +25,29 @@ internal sealed class InstantEmailDetailsValidator : AbstractValidator<InstantEm
 
         When(details => details.EmailSettings != null, () =>
         {
-            When(details => details.EmailSettings!.SenderEmailAddress != null, () =>
+            RuleFor(details => details.EmailSettings).ChildRules(settings =>
             {
-                RuleFor(details => details.EmailSettings!.SenderEmailAddress)
-                    .Must(RecipientRules.IsValidEmail!)
-                    .WithMessage("Invalid email address format.");
+                settings.When(e => e.SenderEmailAddress != null, () =>
+                {
+                    settings.RuleFor(e => e.SenderEmailAddress)
+                        .Cascade(CascadeMode.Stop)
+                        .Must(RecipientRules.IsValidEmail)
+                        .WithMessage("Invalid email address format.")
+                        .MustBeAllowedEmailSender();
+                });
+
+                settings.RuleFor(e => e.Subject)
+                    .NotEmpty()
+                    .WithMessage("The email subject cannot be empty.");
+
+                settings.RuleFor(e => e.Body)
+                    .NotEmpty()
+                    .WithMessage("The email body cannot be empty.");
+
+                settings.RuleFor(e => e.ContentType)
+                    .IsInEnum()
+                    .WithMessage("Email content type must be either Plain or HTML.");
             });
-
-            RuleFor(details => details.EmailSettings!.Subject)
-                .NotEmpty()
-                .WithMessage("The email subject cannot be empty.");
-
-            RuleFor(details => details.EmailSettings!.Body)
-                .NotEmpty()
-                .WithMessage("The email body cannot be empty.");
-
-            RuleFor(details => details.EmailSettings!.ContentType)
-                .IsInEnum()
-                .WithMessage("Email content type must be either Plain or HTML.");
         });
     }
 }
