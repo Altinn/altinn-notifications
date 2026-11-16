@@ -9,6 +9,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.NotificationLog;
+using Altinn.Notifications.Telemetry;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,6 +41,7 @@ public class NotificationLogController(
     /// A collection of matching notification log entries, or an empty list when no entries match.
     /// </returns>
     [HttpGet("log")]
+    [DeprecatedEndpoint]
     [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
     [Produces("application/json")]
     [SwaggerResponse(200, "Notification log entries matching the provided identifiers were retrieved successfully", typeof(IImmutableList<NotificationLogSummaryExt>))]

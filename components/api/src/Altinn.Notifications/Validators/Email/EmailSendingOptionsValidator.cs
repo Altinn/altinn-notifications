@@ -29,8 +29,10 @@ namespace Altinn.Notifications.Validators.Email
                 When(options => options!.SenderEmailAddress != null, () =>
                 {
                     RuleFor(options => options!.SenderEmailAddress)
+                        .Cascade(CascadeMode.Stop)
                         .Must(RecipientRules.IsValidEmail)
-                        .WithMessage("The sender email address is not valid.");
+                        .WithMessage("The sender email address is not valid.")
+                        .MustBeAllowedEmailSender();
                 });
 
                 RuleFor(options => options!.Subject)

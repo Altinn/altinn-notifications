@@ -347,6 +347,43 @@ public class OrderMapperTests
     }
 
     [Fact]
+    public void MapToOrderRequest_PaddedSenders_AreTrimmed()
+    {
+        // Arrange
+        NotificationOrderRequestExt ext = new()
+        {
+            NotificationChannel = NotificationChannelExt.EmailPreferred,
+            EmailTemplate = new() { FromAddress = " noreply@altinn.no ", Subject = "email-subject", Body = "email-body" },
+            SmsTemplate = new() { SenderNumber = " Altinn ", Body = "sms-body" },
+            Recipients = [new RecipientExt() { EmailAddress = "recipient1@domain.com" }]
+        };
+
+        // Act
+        var actual = ext.MapToOrderRequest("ttd");
+
+        // Assert
+        Assert.Equal("noreply@altinn.no", Assert.IsType<EmailTemplate>(actual.Templates[0]).FromAddress);
+        Assert.Equal("Altinn", Assert.IsType<SmsTemplate>(actual.Templates[1]).SenderNumber);
+    }
+
+    [Fact]
+    public void ForSmsMapToOrderRequest_PaddedSenderNumber_IsTrimmed()
+    {
+        // Arrange
+        SmsNotificationOrderRequestExt orderRequestExt = new()
+        {
+            Body = "sms-body",
+            SenderNumber = " Altinn "
+        };
+
+        // Act
+        var actual = orderRequestExt.MapToOrderRequest("ttd");
+
+        // Assert
+        Assert.Equal("Altinn", Assert.IsType<SmsTemplate>(Assert.Single(actual.Templates)).SenderNumber);
+    }
+
+    [Fact]
     public void MapToNotificationOrderWithStatusExt_EmailStatusProvided_AreEquivalent()
     {
         // Arrange
