@@ -10,6 +10,7 @@
 		<PackageReference Include="Altinn.Authorization.ProblemDetails.Abstractions" />
 		<PackageReference Include="FluentAssertions" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Memory" />
 		<PackageReference Include="Moq" />
 		<PackageReference Include="OpenTelemetry.Extensions.Hosting" />
 		<PackageReference Include="RandomString4Net" />
