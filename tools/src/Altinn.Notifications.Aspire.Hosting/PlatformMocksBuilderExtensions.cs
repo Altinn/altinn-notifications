@@ -57,9 +57,10 @@ public static class PlatformMocksBuilderExtensions
         if (systems.Single(s => s.Name == "Conditions") is { Enabled: true } conditions)
         {
             // The API only accepts condition URLs with a top-level domain, so the URLs to put in orders use local.altinn.cloud, which resolves to 127.0.0.1.
+            // They stay http until the mock can serve https with a trusted certificate: remove the NOSONAR then (#2043).
             foreach (string condition in new[] { "true", "false", "corrupt", "error" })
             {
-                mocks.WithUrl("http://local.altinn.cloud:" + conditions.Port + "/condition/" + condition, "Condition " + condition);
+                mocks.WithUrl("http://local.altinn.cloud:" + conditions.Port + "/condition/" + condition, "Condition " + condition); // NOSONAR: local mock on loopback, see #2043
             }
         }
 
