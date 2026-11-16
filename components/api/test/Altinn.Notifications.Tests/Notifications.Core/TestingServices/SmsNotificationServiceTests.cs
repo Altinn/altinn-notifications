@@ -1,4 +1,4 @@
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
@@ -301,25 +301,6 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotification_ShutdownDuringConditionCheck_RollsBackWithoutSchedulingRetry()
-    {
-        using var cts = new CancellationTokenSource();
-        var logger = new Mock<ILogger<SmsNotificationService>>();
-        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), false, false, cts, logger.Object);
-
-        var result = await service.SendNotification(cancellationToken: cts.Token);
-
-        Assert.False(result);
-        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
-        repo.Verify(r => r.ScheduleConditionRetryAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Never);
-        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
-        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
-        logger.Verify(
-            l => l.Log(LogLevel.Warning, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception?>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
-    }
-
-    [Fact]
     public async Task SendNotification_DaytimeSmsWhereConditionFlipsBetweenEvaluations_IsSentThenStopped()
     {
         var endpoint = new Uri("https://condition.example/check");
@@ -345,10 +326,14 @@ public class SmsNotificationServiceTests
 
         var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, conditionClient: conditionClient.Object);
 
-        await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
-        await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
+        var firstResult = await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
+        var secondResult = await service.SendNotification(SendingTimePolicy.Daytime, TestContext.Current.CancellationToken);
 
+        Assert.True(firstResult);
+        Assert.True(secondResult);
         conditionClient.Verify(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Exactly(2));
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         publisher.Verify(p => p.PublishAsync(first, It.IsAny<CancellationToken>()), Times.Once);
         publisher.Verify(p => p.PublishAsync(second, It.IsAny<CancellationToken>()), Times.Never);
         repo.Verify(
@@ -356,6 +341,25 @@ public class SmsNotificationServiceTests
             Times.Once);
         repo.Verify(
             r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), first.NotificationId, It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotification_ShutdownDuringConditionCheck_RollsBackWithoutSchedulingRetry()
+    {
+        using var cts = new CancellationTokenSource();
+        var logger = new Mock<ILogger<SmsNotificationService>>();
+        var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), false, false, cts, logger.Object);
+
+        var result = await service.SendNotification(cancellationToken: cts.Token);
+
+        Assert.False(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(r => r.ScheduleConditionRetryAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Never);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+        logger.Verify(
+            l => l.Log(LogLevel.Warning, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception?>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Never);
     }
 

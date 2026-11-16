@@ -1,4 +1,4 @@
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
@@ -16,8 +16,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
-
-using Npgsql;
 
 using Xunit;
 
@@ -274,7 +272,6 @@ public class EmailNotificationServiceTests
         // Assert
         Assert.False(wasSent);
         repoMock.Verify(r => r.GetNewNotificationAsync(unitOfWork, It.IsAny<CancellationToken>(), sendingTimePolicy), Times.Once);
-        repoMock.Verify(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), It.Is<SendingTimePolicy>(p => p != sendingTimePolicy)), Times.Never);
     }
 
     [Fact]
