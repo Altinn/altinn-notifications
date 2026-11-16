@@ -1,0 +1,33 @@
+meta {
+  name: local email, condition endpoint failing (stays New)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "local-condition-failing",
+    "conditionEndpoint": "{{host}}/notifications/api/v1/tests/doesnotexist",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "test@example.com",
+        "emailSettings": {
+          "subject": "Condition endpoint failing",
+          "body": "Inconclusive check",
+          "contentType": "Plain"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  Expected: the check is inconclusive (404), so the claim is rolled back. The notification stays New and is retried on each poll until it expires.
+}
