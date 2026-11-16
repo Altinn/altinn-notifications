@@ -4,11 +4,14 @@ using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Telemetry;
 using Altinn.Notifications.Validators.Extensions;
 
 using FluentValidation;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
 
@@ -48,6 +51,7 @@ public class EmailNotificationOrdersController : ControllerBase
     [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
 #pragma warning restore S1133
     [HttpPost]
+    [DeprecatedEndpoint]
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerResponse(202, "The request was accepted and a notification order has been successfully generated.", typeof(NotificationOrderRequestResponseExt))]
@@ -57,18 +61,17 @@ public class EmailNotificationOrdersController : ControllerBase
     [SwaggerResponseHeader(202, "Location", Microsoft.OpenApi.JsonSchemaType.String, "Link to access the newly created notification order.")]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {
+        string? creator = HttpContext.GetOrg();
+        if (string.IsNullOrWhiteSpace(creator))
+        {
+            return Forbid();
+        }
+
         var validationResult = _validator.Validate(emailNotificationOrderRequest);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(this.ModelState);
             return ValidationProblem(ModelState);
-        }
-
-        string? creator = HttpContext.GetOrg();
-
-        if (creator == null)
-        {
-            return Forbid();
         }
 
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
