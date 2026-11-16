@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Moq;
@@ -115,5 +114,97 @@ public class DeprecatedEndpointAttributeTests
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    [Fact]
+    public void OnActionExecuting_UsesRequestPathAndUnknownForMissingValues()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<DeprecatedEndpointFilter>>();
+        loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "GET";
+        httpContext.Request.Path = "/notifications/api/v1/legacy";
+
+        var actionContext = new ActionContext(
+            httpContext,
+            new RouteData(),
+            new ActionDescriptor());
+        var context = new ActionExecutingContext(actionContext, [], new Dictionary<string, object?>(), new object());
+
+        var measurements = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Meter.Name == DeprecatedEndpointAttribute.MeterName)
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, value, tags, state) =>
+        {
+            measurements.Add((value, tags.ToArray().ToDictionary(t => t.Key, t => t.Value)));
+        });
+        listener.Start();
+
+        // Act
+        new DeprecatedEndpointFilter(loggerMock.Object).OnActionExecuting(context);
+
+        // Assert
+        var (value, tags) = Assert.Single(measurements);
+        Assert.Equal(1, value);
+        Assert.Equal("unknown", tags["creator"]);
+        Assert.Equal("GET", tags["method"]);
+        Assert.Equal("/notifications/api/v1/legacy", tags["route"]);
+        Assert.Equal("/notifications/api/v1/legacy", tags["endpoint"]);
+    }
+
+    [Fact]
+    public void OnActionExecuting_RemovesControlCharactersFromTags()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<DeprecatedEndpointFilter>>();
+        loggerMock.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items["Org"] = "ttd\r\n";
+        httpContext.Request.Method = "GE\tT";
+
+        var actionContext = new ActionContext(
+            httpContext,
+            new RouteData(),
+            new ActionDescriptor
+            {
+                DisplayName = "Orders\nController.GetById",
+                AttributeRouteInfo = new AttributeRouteInfo { Template = "notifications/api/v1/orders/\rid" }
+            });
+        var context = new ActionExecutingContext(actionContext, [], new Dictionary<string, object?>(), new object());
+
+        var measurements = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Meter.Name == DeprecatedEndpointAttribute.MeterName)
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, value, tags, state) =>
+        {
+            measurements.Add((value, tags.ToArray().ToDictionary(t => t.Key, t => t.Value)));
+        });
+        listener.Start();
+
+        // Act
+        new DeprecatedEndpointFilter(loggerMock.Object).OnActionExecuting(context);
+
+        // Assert
+        var (_, tags) = Assert.Single(measurements);
+
+        Assert.Equal("ttd", tags["creator"]);
+        Assert.Equal("GET", tags["method"]);
+        Assert.Equal("OrdersController.GetById", tags["endpoint"]);
+        Assert.Equal("notifications/api/v1/orders/id", tags["route"]);
     }
 }
