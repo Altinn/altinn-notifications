@@ -74,6 +74,8 @@
 		<PackageVersion Include="System.Memory.Data" Version="10.0.14" />
 		<PackageVersion Include="Testcontainers" Version="4.16.0" />
 		<PackageVersion Include="WireMock.Net" Version="2.19.0" />
+		<!-- Pins WireMock.Net's transitive dependency to the version with the fix for CVE-2026-118750 (GHSA-6527-9fp8-r4x6). Remove when WireMock.Net brings 2.3.14 or later itself. -->
+		<PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="2.3.14" />
 
 		<!-- Quality / Testing -->
 		<PackageVersion Include="coverlet.collector" Version="10.1.0" />
