@@ -10,8 +10,8 @@ namespace Altinn.Notifications.Telemetry
     /// on the root request activity, and enrich request telemetry with selected user claim tags.
     /// </summary>
     /// <remarks>Short PostgreSQL activities can be marked as not recorded, command parameters are removed for
-    /// short operations unless SQL text or parameter logging is enabled, and temporary baggage entries are cleared
-    /// after use to prevent propagation across process boundaries.</remarks>
+    /// short operations unless SQL text or parameter logging is enabled. Parameter text is stored in non-propagating
+    /// custom properties until root aggregation, when temporary state and baggage entries are cleared.</remarks>
     /// <param name="postgreSqlSettings">Postgres config</param>
     public class NpgsqlProcessor(PostgreSqlSettings postgreSqlSettings) : BaseProcessor<Activity>
     {
@@ -23,8 +23,8 @@ namespace Altinn.Notifications.Telemetry
         /// </summary>
         /// <remarks>For Npgsql activities, short-duration spans can be marked as not recorded and have
         /// command parameter tags removed. Hash and duration data are transferred through baggage to the root server
-        /// activity, where totals and averages are calculated and written to a database statistics tag, then temporary
-        /// baggage entries are cleared.</remarks>
+        /// activity, while parameter text is stored in its non-propagating custom properties. Totals and averages are
+        /// written to a database statistics tag, then temporary baggage and custom properties are cleared.</remarks>
         /// <param name="activity">The completed activity to inspect, update, and optionally enrich with aggregated database telemetry.</param>
         public override void OnEnd(Activity activity)
         {
@@ -61,13 +61,13 @@ namespace Altinn.Notifications.Telemetry
                     if (!string.IsNullOrEmpty(dbHash))
                     {
                         Guid id = Guid.CreateVersion7();
-                        string? @params = null;
+                        string key = $"{DbStatsBaggagePrefix}{id}";
                         if (postgreSqlSettings.TelemetryAlwaysLogSqlParameters && activity.GetTagItem("Parameters") is string parameters)
                         {
-                            @params = $"#{parameters}";
+                            parent.SetCustomProperty(key, parameters);
                         }
 
-                        parent.SetBaggage($"{DbStatsBaggagePrefix}{id}", $"{dbHash}:{activity.Duration.TotalMilliseconds:F0}{@params}");
+                        parent.SetBaggage(key, $"{dbHash}:{activity.Duration.TotalMilliseconds:F0}");
                     }
                 }
             }
@@ -83,18 +83,24 @@ namespace Altinn.Notifications.Telemetry
                 {
                     baggageKeys.Add(b.Key);
                     sb.Append($";{b.Value}");
+                    if (postgreSqlSettings.TelemetryAlwaysLogSqlParameters && activity.GetCustomProperty(b.Key) is string parameters)
+                    {
+                        sb.Append('#').Append(parameters);
+                    }
+
                     ++dbActivityCount;
-                    var parts = b.Value!.Split([':', '#'], 3);
-                    if (parts.Length >= 2 && long.TryParse(parts[1], out var duration))
+                    var parts = b.Value!.Split(':');
+                    if (parts.Length == 2 && long.TryParse(parts[1], out var duration))
                     {
                         totalDbDuration += duration;
                     }
                 });
 
-                // Clear baggage to avoid propagating out of process
+                // Clear temporary stats and parameter state after aggregation.
                 foreach (var key in baggageKeys)
                 {
                     activity.SetBaggage(key, null);
+                    activity.SetCustomProperty(key, null);
                 }
 
                 if (dbActivityCount > 0)

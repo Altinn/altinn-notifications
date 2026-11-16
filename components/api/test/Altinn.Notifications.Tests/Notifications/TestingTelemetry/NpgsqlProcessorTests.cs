@@ -118,7 +118,11 @@ public class NpgsqlProcessorTests
         processor.OnEnd(child);
 
         var hashEntry = Assert.Single(root.Baggage, entry => entry.Key.StartsWith("npgsql.processor.hash.", StringComparison.OrdinalIgnoreCase));
-        Assert.Equal($"abc:{durationMs}{(logParameters ? $"#{parameters}" : string.Empty)}", hashEntry.Value);
+        Assert.Equal($"abc:{durationMs}", hashEntry.Value);
+        Assert.Equal(logParameters ? parameters : null, root.GetCustomProperty(hashEntry.Key));
+        using var outgoing = new Activity("outgoing").Start();
+        Assert.Equal($"abc:{durationMs}", outgoing.GetBaggageItem(hashEntry.Key));
+        Assert.Null(outgoing.GetCustomProperty(hashEntry.Key));
         if (logParameters || durationMs >= 100)
         {
             Assert.Equal(parameters, child.GetTagItem("Parameters"));
@@ -143,6 +147,7 @@ public class NpgsqlProcessorTests
 
         var hashEntry = Assert.Single(root.Baggage, entry => entry.Key.StartsWith("npgsql.processor.hash.", StringComparison.OrdinalIgnoreCase));
         Assert.Equal("abc:10", hashEntry.Value);
+        Assert.Null(root.GetCustomProperty(hashEntry.Key));
     }
 
     [Theory]
@@ -165,9 +170,18 @@ public class NpgsqlProcessorTests
         secondChild.Stop();
         processor.OnEnd(secondChild);
         root.SetBaggage("unrelated", "keep");
+        root.SetCustomProperty("unrelated", "keep local");
+        var hashEntries = root.Baggage.Where(entry => entry.Key.StartsWith("npgsql.processor.hash.", StringComparison.OrdinalIgnoreCase)).ToList();
+        Assert.Equal(2, hashEntries.Count);
+        var firstEntry = Assert.Single(hashEntries, entry => entry.Value == "h1:10");
+        var secondEntry = Assert.Single(hashEntries, entry => entry.Value == "h2:20");
+        Assert.Equal(logParameters ? parameters : null, root.GetCustomProperty(firstEntry.Key));
+        Assert.Null(root.GetCustomProperty(secondEntry.Key));
 
         processor.OnEnd(root);
 
+        Assert.All(hashEntries, entry => Assert.Null(root.GetCustomProperty(entry.Key)));
+        Assert.Equal("keep local", root.GetCustomProperty("unrelated"));
         string stats = Assert.IsType<string>(root.GetTagItem("db.stats"));
         string expectedFirstEntry = $"h1:10{(logParameters ? $"#{parameters}" : string.Empty)}";
         string expectedHeader = $"Count: 2, tot dur: 30ms, avg dur: 15ms, hashes:duration:{(logParameters ? "#params" : string.Empty)} ";
@@ -175,6 +189,43 @@ public class NpgsqlProcessorTests
         var baggageEntry = Assert.Single(root.Baggage);
         Assert.Equal("unrelated", baggageEntry.Key);
         Assert.Equal("keep", baggageEntry.Value);
+    }
+
+    [Fact]
+    public void OnEnd_RepeatedHashUnderNestedActivity_KeepsParametersAssociatedWithEachCommand()
+    {
+        var processor = CreateProcessor(telemetryMinDurationMs: 100, telemetryAlwaysLogSqlParameters: true);
+        using var root = new Activity("request").Start();
+        using var nested = new Activity("nested").Start();
+        using var firstChild = new Activity("postgresql query").Start();
+        firstChild.SetTag("db.hash", "same-hash");
+        firstChild.SetTag("Parameters", "[{\"Value\":1}]");
+        firstChild.SetEndTime(firstChild.StartTimeUtc.AddMilliseconds(10));
+        firstChild.Stop();
+        processor.OnEnd(firstChild);
+        using var secondChild = new Activity("postgresql query").Start();
+        secondChild.SetTag("db.hash", "same-hash");
+        secondChild.SetTag("Parameters", "[{\"Value\":2}]");
+        secondChild.SetEndTime(secondChild.StartTimeUtc.AddMilliseconds(20));
+        secondChild.Stop();
+        processor.OnEnd(secondChild);
+        var hashEntries = root.Baggage.ToList();
+        Assert.Equal(2, hashEntries.Count);
+        var firstEntry = Assert.Single(hashEntries, entry => entry.Value == "same-hash:10");
+        var secondEntry = Assert.Single(hashEntries, entry => entry.Value == "same-hash:20");
+        Assert.Equal("[{\"Value\":1}]", root.GetCustomProperty(firstEntry.Key));
+        Assert.Equal("[{\"Value\":2}]", root.GetCustomProperty(secondEntry.Key));
+        Assert.Null(nested.GetCustomProperty(firstEntry.Key));
+        Assert.Null(nested.GetCustomProperty(secondEntry.Key));
+
+        processor.OnEnd(root);
+
+        string stats = Assert.IsType<string>(root.GetTagItem("db.stats"));
+        Assert.StartsWith("Count: 2, tot dur: 30ms, avg dur: 15ms, hashes:duration:#params ", stats);
+        Assert.Contains("same-hash:10#[{\"Value\":1}]", stats);
+        Assert.Contains("same-hash:20#[{\"Value\":2}]", stats);
+        Assert.Empty(root.Baggage);
+        Assert.All(hashEntries, entry => Assert.Null(root.GetCustomProperty(entry.Key)));
     }
 
     [Fact]
