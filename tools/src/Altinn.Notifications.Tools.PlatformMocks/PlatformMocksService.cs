@@ -4,6 +4,7 @@ using System.Text.Json;
 
 using Altinn.Notifications.Tools.PlatformMocks.Configuration;
 using Altinn.Notifications.Tools.PlatformMocks.Mocks;
+using Altinn.Notifications.Tools.Shared;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -29,8 +30,6 @@ internal sealed class PlatformMocksService(IOptions<PlatformMocksSettings> optio
 
     // Below every mapping the mocks add, which have the default priority 0.
     private const int FallbackPriority = 1000;
-
-    private static readonly string[] _skippedRequestHeaders = ["Host", "Content-Length", "Transfer-Encoding", "Connection"];
 
     private readonly PlatformMocksSettings _settings = options.Value;
     private readonly Dictionary<string, WireMockServer> _servers = [];
@@ -121,54 +120,13 @@ internal sealed class PlatformMocksService(IOptions<PlatformMocksSettings> optio
             .RespondWith(Response.Create().WithCallback(request => ForwardAsync(baseUrl, request)));
     }
 
-    private async Task<IResponseMessage> ForwardAsync(string baseUrl, IRequestMessage request)
+    private Task<IResponseMessage> ForwardAsync(string baseUrl, IRequestMessage request)
     {
-        using var forward = new HttpRequestMessage(new HttpMethod(request.Method), baseUrl + request.Path + request.RawQuery);
-        if (request.BodyAsBytes is { Length: > 0 } body)
+        return WireMockForwarder.ForwardAsync(_fallbackClient, baseUrl + request.Path + request.RawQuery, request, error => new ResponseMessage
         {
-            forward.Content = new ByteArrayContent(body);
-        }
-
-        foreach (var (name, values) in request.Headers ?? new Dictionary<string, WireMockList<string>>())
-        {
-            if (_skippedRequestHeaders.Contains(name, StringComparer.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (!forward.Headers.TryAddWithoutValidation(name, values.ToArray()))
-            {
-                forward.Content?.Headers.TryAddWithoutValidation(name, values.ToArray());
-            }
-        }
-
-        try
-        {
-            using var response = await _fallbackClient.SendAsync(forward);
-            var message = new ResponseMessage
-            {
-                StatusCode = (int)response.StatusCode,
-                BodyData = new BodyData { BodyAsBytes = await response.Content.ReadAsByteArrayAsync(), DetectedBodyType = BodyType.Bytes },
-            };
-
-            foreach (var (name, values) in response.Headers.Concat(response.Content.Headers))
-            {
-                if (!name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
-                {
-                    message.AddHeader(name, values.ToArray());
-                }
-            }
-
-            return message;
-        }
-        catch (HttpRequestException ex)
-        {
-            return new ResponseMessage
-            {
-                StatusCode = 502,
-                BodyData = new BodyData { BodyAsString = $"Fallback to {forward.RequestUri} failed: {ex.Message}", DetectedBodyType = BodyType.String },
-            };
-        }
+            StatusCode = 502,
+            BodyData = new BodyData { BodyAsString = error, DetectedBodyType = BodyType.String },
+        });
     }
 
     private void LogEntry(string system, ILogEntry entry)

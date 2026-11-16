@@ -56,7 +56,7 @@ function render() {
   $("#timeout").textContent = state.intercept ? `Requests time out after ${state.timeoutSeconds} s with 504.` : "";
   $("#intercept-off").hidden = state.intercept;
   $("#tab-pending-count").textContent = state.pending.length;
-  renderAutoReplies();
+  renderAutoReplies().catch(console.error);
   renderPending();
   renderHistory();
   updateDetailState();
@@ -116,7 +116,7 @@ function select(id, from) {
   selectedFrom = from;
   renderPending();
   renderHistory();
-  renderDetail();
+  renderDetail().catch(console.error);
 }
 
 // Builds the detail view from scratch, so it is only called when the selection changes and never wipes an answer being edited.
@@ -153,7 +153,10 @@ async function renderDetail() {
       const template = templates.find(t => t.key === picker.value);
       if (template) applyTemplate(form, template);
     });
-    form.addEventListener("submit", e => { e.preventDefault(); sendAnswer(form, request.id); });
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      sendAnswer(form, request.id).catch(error => { $(".error", form).textContent = `Could not send the answer: ${error.message}`; });
+    });
   } else {
     form.remove();
     showSent($(".sent", view), entry);

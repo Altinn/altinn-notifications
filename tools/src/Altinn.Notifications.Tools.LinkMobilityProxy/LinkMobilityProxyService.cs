@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 
 using Altinn.Notifications.Tools.LinkMobilityProxy.Configuration;
+using Altinn.Notifications.Tools.Shared;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -33,8 +34,6 @@ internal sealed class LinkMobilityProxyService(
 
     // Below the send mapping, which has the default priority 0.
     private const int FallbackPriority = 1000;
-
-    private static readonly string[] _skippedRequestHeaders = ["Host", "Content-Length", "Transfer-Encoding", "Connection"];
 
     private readonly LinkMobilityProxySettings _settings = options.Value;
 
@@ -174,51 +173,10 @@ internal sealed class LinkMobilityProxyService(
     /// <summary>
     /// Sends a request to <c>{FallbackUrl}linkmobility/{path}</c>, so an operator can answer it in the test harness control panel.
     /// </summary>
-    private async Task<IResponseMessage> ForwardAsync(IRequestMessage request)
+    private Task<IResponseMessage> ForwardAsync(IRequestMessage request)
     {
         string url = _settings.FallbackUrl.TrimEnd('/') + "/linkmobility" + request.Path + request.RawQuery;
-        using var forward = new HttpRequestMessage(new HttpMethod(request.Method), url);
-        if (request.BodyAsBytes is { Length: > 0 } body)
-        {
-            forward.Content = new ByteArrayContent(body);
-        }
-
-        foreach (var (name, values) in request.Headers ?? new Dictionary<string, WireMockList<string>>())
-        {
-            if (_skippedRequestHeaders.Contains(name, StringComparer.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (!forward.Headers.TryAddWithoutValidation(name, values.ToArray()))
-            {
-                forward.Content?.Headers.TryAddWithoutValidation(name, values.ToArray());
-            }
-        }
-
-        try
-        {
-            using var response = await _fallbackClient.SendAsync(forward);
-            var message = new ResponseMessage
-            {
-                StatusCode = (int)response.StatusCode,
-                BodyData = new BodyData { BodyAsBytes = await response.Content.ReadAsByteArrayAsync(), DetectedBodyType = BodyType.Bytes },
-            };
-
-            foreach (var (name, values) in response.Headers.Concat(response.Content.Headers))
-            {
-                if (!name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
-                {
-                    message.AddHeader(name, values.ToArray());
-                }
-            }
-
-            return message;
-        }
-        catch (HttpRequestException ex)
-        {
-            return Xml(502, $"Fallback to {url} failed: {ex.Message}");
-        }
+        return WireMockForwarder.ForwardAsync(_fallbackClient, url, request, error => Xml(502, error));
     }
 
     private static ResponseMessage Xml(int statusCode, string body)

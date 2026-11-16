@@ -138,6 +138,9 @@ table.headers { border-collapse: collapse; width: 100%; }
 table.headers td { border-bottom: 1px solid var(--border); padding: 3px 8px 3px 0; vertical-align: top; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; word-break: break-all; }
 table.headers td:first-child { color: var(--muted); white-space: nowrap; width: 1%; }
 
+/* Read by screen readers, not shown. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
 pre.body {
   background: var(--code);
   border-radius: 6px;
