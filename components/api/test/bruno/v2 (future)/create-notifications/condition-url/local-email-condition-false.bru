@@ -1,0 +1,33 @@
+meta {
+  name: local email, condition = false (SendConditionNotMet)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "local-condition-false",
+    "conditionEndpoint": "{{host}}/notifications/api/v1/tests/sendcondition?conditionMet=false",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+        "emailSettings": {
+          "subject": "Condition false",
+          "body": "Should not be sent",
+          "contentType": "Plain"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  Expected: notification status SendConditionNotMet, order status Completed. Nothing is published.
+}

@@ -268,6 +268,39 @@ public abstract class NotificationRepositoryBase
     }
 
     /// <summary>
+    /// Returns a claimed notification to the new state and delays its next claim, within the caller's unit of work.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
+    /// <param name="sqlCommand">The SQL command taking the notification alternate id ($1, uuid) and the delay in seconds ($2, double).</param>
+    /// <param name="notificationId">The unique identifier of the notification.</param>
+    /// <param name="delay">The time to wait before the notification can be claimed again.</param>
+    /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidNotificationIdentifierException">Thrown when <paramref name="notificationId"/> is empty.</exception>
+    /// <exception cref="NotificationNotFoundException">Thrown when no notification matches the given identifier.</exception>
+    protected async Task ExecuteScheduleConditionRetryAsync(
+        Core.Models.UnitOfWork unitOfWork,
+        string sqlCommand,
+        Guid notificationId,
+        TimeSpan delay,
+        CancellationToken cancellationToken)
+    {
+        if (notificationId == Guid.Empty)
+        {
+            throw new InvalidNotificationIdentifierException($"The provided {Channel} identifier is invalid.");
+        }
+
+        await using NpgsqlCommand pgcom = new(sqlCommand, unitOfWork.Connection, unitOfWork.Transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Double, delay.TotalSeconds);
+
+        if (await pgcom.ExecuteNonQueryAsync(cancellationToken) == 0)
+        {
+            throw new NotificationNotFoundException(Channel, notificationId.ToString(), SendStatusIdentifierType.NotificationId);
+        }
+    }
+
+    /// <summary>
     /// Executes a notification status update within the caller's unit of work, handling result validation and order completion.
     /// </summary>
     /// <remarks>

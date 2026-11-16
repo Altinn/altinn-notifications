@@ -12,9 +12,10 @@ namespace Altinn.Notifications.Core.Integrations
         /// Sends a request to the provided url to check if the send condition is met
         /// </summary>
         /// <param name="url">The url to send the request to</param>
+        /// <param name="cancellationToken">The cancellation token to observe</param>
         /// <returns>
         /// A boolean with the send condition result or a <see cref="ConditionClientError"/>
         /// </returns>
-        public Task<Result<bool, ConditionClientError>> CheckSendCondition(Uri url);
+        public Task<Result<bool, ConditionClientError>> CheckSendCondition(Uri url, CancellationToken cancellationToken);
     }
 }

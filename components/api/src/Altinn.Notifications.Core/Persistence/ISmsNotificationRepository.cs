@@ -76,4 +76,18 @@ public interface ISmsNotificationRepository : INotificationRepository
     /// <param name="sender">The substituted sender to be written to the database.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     Task PersistSubstitutedSender(UnitOfWork unitOfWork, Guid notificationId, string sender);
+
+    /// <summary>
+    /// Returns a claimed SMS notification to <see cref="SmsNotificationResultType.New"/> after an inconclusive send condition check
+    /// and prevents it from being claimed again before <paramref name="delay"/> has passed.
+    /// A claimed notification with a scheduled retry is flagged by <see cref="Sms.IsConditionRetry"/>.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work that holds the claim.</param>
+    /// <param name="notificationId">The unique identifier of the SMS notification.</param>
+    /// <param name="delay">The time to wait before the notification can be claimed again.</param>
+    /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="InvalidNotificationIdentifierException">Thrown when <paramref name="notificationId"/> is empty.</exception>
+    /// <exception cref="NotificationNotFoundException">Thrown when no notification matches the provided identifier.</exception>
+    Task ScheduleConditionRetryAsync(UnitOfWork unitOfWork, Guid notificationId, TimeSpan delay, CancellationToken cancellationToken = default);
 }
