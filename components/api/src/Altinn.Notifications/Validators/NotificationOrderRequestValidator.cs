@@ -45,5 +45,17 @@ public class NotificationOrderRequestValidator : AbstractValidator<NotificationO
 
         RuleFor(order => order)
             .ValidateOptionalSmsTemplate();
+
+        When(order => order.EmailTemplate != null, () =>
+        {
+            RuleFor(order => order.EmailTemplate!.FromAddress)
+                .MustBeAllowedEmailSender();
+        });
+
+        When(order => order.SmsTemplate != null, () =>
+        {
+            RuleFor(order => order.SmsTemplate!.SenderNumber)
+                .MustBeAllowedSmsSender();
+        });
     }
 }
