@@ -130,9 +130,14 @@ The check runs in the same database transaction as the claim, before the notific
 - **Condition not met:** the notification gets the terminal result `SendConditionNotMet`
   and is not published. The notification log is updated. When all notifications of the
   order are final, the order is completed and its status feed entry is written.
-- **Check inconclusive (endpoint or token failure):** the transaction is rolled back, so
-  the claim is released and the notification is picked up again on a later poll until it
-  expires. There is currently no retry limit or backoff.
+- **Check inconclusive (endpoint or token failure), first attempt:** the notification
+  stays `New` and its `nextattempt` timestamp is set ahead by
+  `NotificationConfig:SendConditionRetryDelaySeconds` (default 60 seconds). The claim
+  functions skip rows whose `nextattempt` is in the future, so the notification is picked
+  up again once the delay has passed.
+- **Check inconclusive again (the retry):** there is only one retry. A claimed notification
+  with a non-null `nextattempt` is on its retry, and is sent as if no condition endpoint
+  was configured. A conclusive result on the retry is handled as above.
 
 Because the condition is evaluated per notification, notifications of the same order can
 end with different outcomes, and notifications with a daytime send time policy are

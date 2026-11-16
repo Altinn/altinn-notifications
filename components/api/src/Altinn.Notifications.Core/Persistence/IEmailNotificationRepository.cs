@@ -66,6 +66,20 @@ public interface IEmailNotificationRepository : INotificationRepository
     public Task UpdateSendStatusAsync(UnitOfWork unitOfWork, Guid? notificationId, EmailNotificationResultType status, string? operationId = null, string? deliveryReport = null, long? totalAttachmentSizeBytes = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns a claimed email notification to <see cref="EmailNotificationResultType.New"/> after an inconclusive send condition check
+    /// and prevents it from being claimed again before <paramref name="delay"/> has passed.
+    /// A claimed notification with a scheduled retry is flagged by <see cref="Email.IsConditionRetry"/>.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work that holds the claim.</param>
+    /// <param name="notificationId">The unique identifier of the email notification.</param>
+    /// <param name="delay">The time to wait before the notification can be claimed again.</param>
+    /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="InvalidNotificationIdentifierException">Thrown when <paramref name="notificationId"/> is empty.</exception>
+    /// <exception cref="NotificationNotFoundException">Thrown when no notification matches the provided identifier.</exception>
+    public Task ScheduleConditionRetryAsync(UnitOfWork unitOfWork, Guid notificationId, TimeSpan delay, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves all processed email recipients for an order
     /// </summary>
     /// <returns>A list of email recipients</returns>
