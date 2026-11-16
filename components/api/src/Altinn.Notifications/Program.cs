@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using Altinn.Common.AccessToken;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Common.PEP.Authorization;
@@ -22,19 +23,25 @@ using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
 using AltinnCore.Authentication.JwtCookie;
+
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
+
 using FluentValidation;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+
 using Npgsql;
+
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -162,7 +169,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
                 DeliveryReportMetrics.MeterName,
-                BacklogMetrics.MeterName);
+                BacklogMetrics.MeterName,
+                DeprecatedEndpointAttribute.MeterName);
         })
         .WithTracing(tracing =>
         {
