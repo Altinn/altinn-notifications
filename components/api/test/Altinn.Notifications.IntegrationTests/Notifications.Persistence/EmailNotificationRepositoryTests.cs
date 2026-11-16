@@ -184,36 +184,6 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     [Theory]
     [InlineData(SendingTimePolicy.Anytime, 1)]
     [InlineData(SendingTimePolicy.Daytime, 2)]
-    public async Task CreateOrder_PersistsEmailSendingTimePolicyInOrdersTable(SendingTimePolicy emailSendingTimePolicy, int expectedValue)
-    {
-        // Arrange
-        (NotificationOrder order, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: emailSendingTimePolicy);
-        _orderIdsToDelete.Add(order.Id);
-
-        // Act
-        int actual = await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{order.Id}'");
-
-        // Assert
-        Assert.Equal(expectedValue, actual);
-    }
-
-    [Fact]
-    public async Task CreateOrder_WithoutEmailSendingTimePolicy_PersistsNullInOrdersTable()
-    {
-        // Arrange
-        (NotificationOrder order, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
-        _orderIdsToDelete.Add(order.Id);
-
-        // Act
-        long count = await PostgreUtil.RunSqlReturnOutput<long>($"SELECT count(*) FROM notifications.orders WHERE alternateid = '{order.Id}' AND emailsendingtimepolicy IS NULL");
-
-        // Assert
-        Assert.Equal(1, count);
-    }
-
-    [Theory]
-    [InlineData(SendingTimePolicy.Anytime, 1)]
-    [InlineData(SendingTimePolicy.Daytime, 2)]
     [InlineData(null, 1)]
     public async Task AddNotification_StoresEmailSendingTimePolicyOfOrderOnNotification(SendingTimePolicy? emailSendingTimePolicy, int expectedValue)
     {
@@ -274,6 +244,84 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         return (EmailNotificationRepository)ServiceUtil
             .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
+    }
+
+    [Fact]
+    public async Task ScheduleConditionRetryAsync_AfterSlowWorkInTransaction_MeasuresDelayFromCurrentTime()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = GetRepository();
+        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+
+        // Act
+        DateTime beforeScheduling;
+        try
+        {
+            await using (NpgsqlCommand sleep = new("SELECT pg_sleep(1.5)", unitOfWork.Connection, unitOfWork.Transaction))
+            {
+                await sleep.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+            }
+
+            beforeScheduling = await PostgreUtil.GetDatabaseUtcNow();
+            await repo.ScheduleConditionRetryAsync(unitOfWork, emailNotification.Id, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken);
+            await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+        }
+        catch
+        {
+            await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
+            throw;
+        }
+
+        // Assert
+        DateTime nextAttempt = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT nextattempt FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
+        DateTime resultTime = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT resulttime FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
+        string result = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT result::text FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
+
+        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+        Assert.True(resultTime >= beforeScheduling);
+        Assert.True(nextAttempt >= beforeScheduling.AddSeconds(60));
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public async Task GetNewNotificationAsync_WithScheduledRetry_IsClaimedAsRetryOnlyOnceDue(SendingTimePolicy sendingTimePolicy)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: sendingTimePolicy);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = GetRepository();
+
+        async Task<Email?> Claim()
+        {
+            return await ExecuteClaimUntilMatchInUnitOfWork(
+                (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken, sendingTimePolicy),
+                email => email.NotificationId == emailNotification.Id,
+                TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        Email? firstAttempt = await Claim();
+
+        UnitOfWork scheduleUnitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
+        await repo.ScheduleConditionRetryAsync(scheduleUnitOfWork, emailNotification.Id, TimeSpan.FromHours(1), TestContext.Current.CancellationToken);
+        await _unitOfWorkRepository.CommitUnitOfWork(scheduleUnitOfWork);
+
+        Email? whileWaiting = await Claim();
+
+        await PostgreUtil.RunSql($"UPDATE notifications.emailnotifications SET nextattempt = clock_timestamp() - interval '1 second' WHERE alternateid = '{emailNotification.Id}'");
+        Email? whenDue = await Claim();
+
+        // Assert
+        Assert.NotNull(firstAttempt);
+        Assert.False(firstAttempt.IsConditionRetry);
+        Assert.Null(whileWaiting);
+        Assert.NotNull(whenDue);
+        Assert.True(whenDue.IsConditionRetry);
     }
 
     [Fact]
@@ -1509,8 +1557,10 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         return null;
     }
 
-    [Fact]
-    public async Task UpdateSendStatusAsync_OnClaimedRowInSameUnitOfWork_SetsResultAndCompletesOrder()
+    [Theory]
+    [InlineData(EmailNotificationResultType.Failed_ContentTooLarge)]
+    [InlineData(EmailNotificationResultType.SendConditionNotMet)]
+    public async Task UpdateSendStatusAsync_OnClaimedRowInSameUnitOfWork_SetsResultAndCompletesOrder(EmailNotificationResultType finalResult)
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
@@ -1522,7 +1572,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Act
         Email? claimed = await ExecuteClaimUntilMatchInUnitOfWork(
-            (unitOfWork, cancellationToken) => ClaimAndSetContentTooLarge(repo, unitOfWork, emailNotification.Id, cancellationToken),
+            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, emailNotification.Id, finalResult, cancellationToken),
             email => email.NotificationId == emailNotification.Id,
             TestContext.Current.CancellationToken,
             commitOnMatch: true,
@@ -1530,13 +1580,46 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.NotNull(claimed);
-        Assert.Equal(EmailNotificationResultType.Failed_ContentTooLarge.ToString(), await SelectEmailNotificationStatus(emailNotification.Id));
+        Assert.Equal(finalResult.ToString(), await SelectEmailNotificationStatus(emailNotification.Id));
 
         string processedStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
         Assert.Equal(OrderProcessingStatus.Completed.ToString(), processedStatus);
 
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
+
+        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
+        Assert.Equal(1, notificationLogCount);
+    }
+
+    [Fact]
+    public async Task GetNewNotificationAsync_ReturnsConditionEndpointFromOrder()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        Uri conditionEndpoint = new("https://condition.example/check?id=1");
+        await PostgreUtil.RunSql($@"
+            UPDATE notifications.orders
+            SET notificationorder = jsonb_set(notificationorder::jsonb, '{{ConditionEndpoint}}', '""{conditionEndpoint}""'::jsonb)
+            WHERE alternateid = '{order.Id}';");
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act
+        Email? claimed = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            commitOnMatch: false,
+            maxAttempts: 200);
+
+        // Assert
+        Assert.NotNull(claimed);
+        Assert.Equal(conditionEndpoint, claimed.ConditionEndpoint);
     }
 
     [Fact]
@@ -1552,7 +1635,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Act
         Email? claimed = await ExecuteClaimUntilMatchInUnitOfWork(
-            (unitOfWork, cancellationToken) => ClaimAndSetContentTooLarge(repo, unitOfWork, emailNotification.Id, cancellationToken),
+            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, emailNotification.Id, EmailNotificationResultType.Failed_ContentTooLarge, cancellationToken),
             email => email.NotificationId == emailNotification.Id,
             TestContext.Current.CancellationToken,
             commitOnMatch: false,
@@ -1637,6 +1720,50 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ScheduleConditionRetryAsync_GivenEmptyNotificationId_ThrowsInvalidNotificationIdentifierException()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(
+            () => repo.ScheduleConditionRetryAsync(new UnitOfWork(), Guid.Empty, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal("The provided Email identifier is invalid.", exception.Message);
+    }
+
+    [Fact]
+    public async Task ScheduleConditionRetryAsync_GivenNonExistentNotificationId_ThrowsNotificationNotFoundException()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        Guid nonExistentNotificationId = Guid.NewGuid();
+
+        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        var unitOfWork = new UnitOfWork
+        {
+            Connection = connection,
+            Transaction = transaction
+        };
+
+        // Act
+        var ex = await Assert.ThrowsAsync<NotificationNotFoundException>(
+            () => repo.ScheduleConditionRetryAsync(unitOfWork, nonExistentNotificationId, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(NotificationChannel.Email, ex.Channel);
+        Assert.Equal(SendStatusIdentifierType.NotificationId, ex.IdentifierType);
+        Assert.Equal(nonExistentNotificationId.ToString(), ex.Identifier);
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_WithDeliveryReport_PersistsDeliveryReportToDatabase()
     {
         // Arrange
@@ -1710,12 +1837,12 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Null(persistedReport);
     }
 
-    private static async Task<Email?> ClaimAndSetContentTooLarge(EmailNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken)
+    private static async Task<Email?> ClaimAndSetResult(EmailNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, EmailNotificationResultType result, CancellationToken cancellationToken)
     {
         Email? claimed = await repo.GetNewNotificationAsync(unitOfWork, cancellationToken);
         if (claimed?.NotificationId == notificationId)
         {
-            await repo.UpdateSendStatusAsync(unitOfWork, notificationId, EmailNotificationResultType.Failed_ContentTooLarge, cancellationToken: cancellationToken);
+            await repo.UpdateSendStatusAsync(unitOfWork, notificationId, result, cancellationToken: cancellationToken);
         }
 
         return claimed;

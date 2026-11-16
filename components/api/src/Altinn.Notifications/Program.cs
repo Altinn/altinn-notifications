@@ -17,6 +17,7 @@ using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
+using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Swagger;
@@ -29,6 +30,7 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -133,7 +135,7 @@ void ConfigureWebHostCreationLogging()
     logger = logFactory.CreateLogger<Program>();
 }
 
-void ConfigureApplicationLogging(ILoggingBuilder logging)
+static void ConfigureApplicationLogging(ILoggingBuilder logging)
 {
     logging.AddOpenTelemetry(builder =>
     {
@@ -152,6 +154,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     };
 
     services.AddHttpContextAccessor();
+
+    services.Configure<PostgreSqlSettings>(config.GetSection("PostgreSQLSettings"));
 
     services.AddSingleton(new ActivitySource(BackgroundActivitySource.Name));
 
@@ -182,6 +186,12 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddProcessor<RequestFilterProcessor>();
 
             tracing.AddProcessor<WolverineActivityNameProcessor>();
+
+            tracing.AddProcessor(sp =>
+            {
+                var postgreSqlOptions = sp.GetRequiredService<IOptions<PostgreSqlSettings>>();
+                return new NpgsqlProcessor(postgreSqlOptions.Value);
+            });
 
             tracing.AddNpgsql();
 
@@ -270,7 +280,7 @@ void AddSecretsFromKeyVault(ConfigurationManager config)
     }
 }
 
-void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
+static void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
 {
     var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
     if (!string.IsNullOrEmpty(otelEndpoint))
@@ -312,7 +322,7 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
     }));
 }
 
-void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguration config)
+static void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguration config)
 {
     services.AddAuthorizationBuilder()
         .AddPolicy(AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS, policy =>
@@ -344,7 +354,7 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
     services.AddSingleton<IAuthenticationContext, AuthenticationContext>();
 }
 
-void AddInputModelValidators(IServiceCollection services)
+static void AddInputModelValidators(IServiceCollection services)
 {
     ValidatorOptions.Global.LanguageManager.Enabled = false;
     services.AddValidatorsFromAssemblyWithDuplicateCheck(typeof(Program).Assembly);

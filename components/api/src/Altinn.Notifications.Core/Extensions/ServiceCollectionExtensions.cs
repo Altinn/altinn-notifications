@@ -25,7 +25,10 @@ public static class ServiceCollectionExtensions
             ?? throw new ArgumentNullException(nameof(config), "Required NotificationConfig is missing from application configuration");
 
         services
-            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
+            .AddOptions<NotificationConfig>()
+            .Bind(config.GetSection("NotificationConfig"))
+            .Validate(c => c.SendConditionRetryDelaySeconds >= 0, "NotificationConfig:SendConditionRetryDelaySeconds must not be negative.")
+            .ValidateOnStart();
 
         services
             .AddOptions<SmsSenderSubstitutionConfig>()
