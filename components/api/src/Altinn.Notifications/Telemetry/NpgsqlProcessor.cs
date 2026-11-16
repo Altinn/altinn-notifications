@@ -10,8 +10,8 @@ namespace Altinn.Notifications.Telemetry
     /// on the root request activity, and enrich request telemetry with selected user claim tags.
     /// </summary>
     /// <remarks>Short PostgreSQL activities can be marked as not recorded, command parameters are removed for
-    /// short operations, and temporary baggage entries are cleared after use to prevent propagation across process
-    /// boundaries.</remarks>
+    /// short operations unless SQL text or parameter logging is enabled, and temporary baggage entries are cleared
+    /// after use to prevent propagation across process boundaries.</remarks>
     /// <param name="postgreSqlSettings">Postgres config</param>
     public class NpgsqlProcessor(PostgreSqlSettings postgreSqlSettings) : BaseProcessor<Activity>
     {
@@ -41,7 +41,7 @@ namespace Altinn.Notifications.Telemetry
 
                 activity.SetCustomProperty("firsthash", null);
 
-                if (activity.Duration < minimumTotalDuration && !postgreSqlSettings.TelemetryAlwaysLogSqlText)
+                if (activity.Duration < minimumTotalDuration && !postgreSqlSettings.TelemetryAlwaysLogSqlText && !postgreSqlSettings.TelemetryAlwaysLogSqlParameters)
                 {
                     // Remove logged parameters
                     activity.SetTag("db.command.parameters", null);
@@ -61,7 +61,13 @@ namespace Altinn.Notifications.Telemetry
                     if (!string.IsNullOrEmpty(dbHash))
                     {
                         Guid id = Guid.CreateVersion7();
-                        parent.SetBaggage($"{DbStatsBaggagePrefix}{id}", $"{dbHash}:{activity.Duration.TotalMilliseconds:F0}");
+                        string? @params = null;
+                        if (postgreSqlSettings.TelemetryAlwaysLogSqlParameters && activity.GetTagItem("Parameters") is string parameters)
+                        {
+                            @params = $"#{parameters}";
+                        }
+
+                        parent.SetBaggage($"{DbStatsBaggagePrefix}{id}", $"{dbHash}:{activity.Duration.TotalMilliseconds:F0}{@params}");
                     }
                 }
             }
@@ -78,8 +84,8 @@ namespace Altinn.Notifications.Telemetry
                     baggageKeys.Add(b.Key);
                     sb.Append($";{b.Value}");
                     ++dbActivityCount;
-                    var parts = b.Value!.Split(':');
-                    if (parts.Length == 2 && long.TryParse(parts[1], out var duration))
+                    var parts = b.Value!.Split([':', '#'], 3);
+                    if (parts.Length >= 2 && long.TryParse(parts[1], out var duration))
                     {
                         totalDbDuration += duration;
                     }
@@ -93,7 +99,9 @@ namespace Altinn.Notifications.Telemetry
 
                 if (dbActivityCount > 0)
                 {
-                    activity.SetTag("db.stats", $"Count: {dbActivityCount}, tot dur: {totalDbDuration:N0}ms, avg dur: {totalDbDuration / dbActivityCount:N0}ms, hashes:duration: {sb.Remove(0, 1)}");
+                    string value = $"Count: {dbActivityCount}, tot dur: {totalDbDuration:N0}ms, avg dur: {totalDbDuration / dbActivityCount:N0}ms," +
+                        $" hashes:duration:{(postgreSqlSettings.TelemetryAlwaysLogSqlParameters ? "#params" : null)} {sb.Remove(0, 1)}";
+                    activity.SetTag("db.stats", value);
                 }
             }
         }
