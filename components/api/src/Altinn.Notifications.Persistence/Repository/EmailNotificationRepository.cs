@@ -29,9 +29,9 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"; // $1=orderid, $2=alternateid, $3=recipientorgno, $4=recipientnin, $5=toaddress, $6=customizedbody, $7=customizedsubject, $8=result, $9=resulttime, $10=expirytime, $11=total_attachment_size_bytes
-    private const string _claimAnytimeEmailSql = "SELECT * FROM notifications.claim_anytime_email()";
-    private const string _claimDaytimeEmailSql = "SELECT * FROM notifications.claim_daytime_email()";
-    private const string _getComposedEmailNotificationSql = "SELECT * FROM notifications.claim_composed_email()";
+    private const string _claimAnytimeEmailSql = "SELECT * FROM notifications.claim_anytime_email_v2()";
+    private const string _claimDaytimeEmailSql = "SELECT * FROM notifications.claim_daytime_email_v2()";
+    private const string _getComposedEmailNotificationSql = "SELECT * FROM notifications.claim_composed_email_v2()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=total_attachment_size_bytes
 
@@ -156,7 +156,10 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             await reader.GetFieldValueAsync<string>("body", cancellationToken),
             await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
             await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
-            emailContentType);
+            emailContentType)
+        {
+            ConditionEndpoint = await reader.ReadConditionEndpointAsync(cancellationToken)
+        };
     }
 
     /// <inheritdoc/>
@@ -187,6 +190,9 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
             await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
             contentType,
-            attachments);
+            attachments)
+        {
+            ConditionEndpoint = await reader.ReadConditionEndpointAsync(cancellationToken)
+        };
     }
 }
