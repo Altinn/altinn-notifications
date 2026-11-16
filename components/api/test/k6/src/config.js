@@ -42,8 +42,9 @@ const tokenGeneratorUrl = isLocal
 
 // The API calls the condition endpoint itself, so this is the condition mock
 // on the API's machine. The API only accepts condition URLs with a top-level
-// domain, and local.altinn.cloud resolves to 127.0.0.1.
-const localConditionUrl = "http://local.altinn.cloud:5199/condition";
+// domain, and local.altinn.cloud resolves to 127.0.0.1. It stays http until the
+// mock can serve https with a trusted certificate: remove the NOSONAR then (#2043).
+const localConditionUrl = "http://local.altinn.cloud:5199/condition"; // NOSONAR: local mock on loopback, see #2043
 
 const maskinportenBaseUrl = maskinportenBaseUrls[environment];
 
