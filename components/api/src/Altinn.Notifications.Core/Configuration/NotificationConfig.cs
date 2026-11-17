@@ -84,7 +84,7 @@ public class NotificationConfig
     public int RetryOrdersDBDelaySeconds { get; set; } = 60;
 
     /// <summary>
-    /// The number of seconds to wait before a notification with an inconclusive send condition check can be claimed again.
+    /// The number of seconds a notification with an inconclusive send condition check waits in status Retrying before it can be claimed by the retry processing.
     /// An inconclusive check is retried once. If the retry is also inconclusive, the notification is sent as if no condition endpoint was configured.
     /// </summary>
     public int SendConditionRetryDelaySeconds { get; set; } = 60;
@@ -166,6 +166,39 @@ public class NotificationConfig
     public ProcessLoopConfig SmsAnytimeNotificationsProcessLoopConfig { get; set; } = new()
     {
         TaskCount = 30,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the email notifications background service that retries inconclusive send condition checks
+    /// </summary>
+    public ProcessLoopConfig EmailRetryNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 1,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the composed email notifications background service that retries inconclusive send condition checks
+    /// </summary>
+    public ProcessLoopConfig ComposedEmailRetryNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 1,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the sms notifications background service that retries inconclusive send condition checks
+    /// </summary>
+    public ProcessLoopConfig SmsRetryNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 1,
         PrimaryTaskIdleDelaySeconds = 30,
         AdditionalTasksIdleDelaySeconds = 5,
         RampUpLimit = 10

@@ -96,5 +96,10 @@ public enum EmailNotificationResultType
     /// <summary>
     /// The email was not sent because the send condition of the order was not met at send time.
     /// </summary>
-    SendConditionNotMet
+    SendConditionNotMet,
+
+    /// <summary>
+    /// The send condition check was inconclusive. The email waits to be claimed by the retry processing.
+    /// </summary>
+    Retrying
 }

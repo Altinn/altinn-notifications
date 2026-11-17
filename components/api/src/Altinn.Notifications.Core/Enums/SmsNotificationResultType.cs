@@ -83,5 +83,10 @@ public enum SmsNotificationResultType
     /// <summary>
     /// The SMS was not sent because the send condition of the order was not met at send time.
     /// </summary>
-    SendConditionNotMet
+    SendConditionNotMet,
+
+    /// <summary>
+    /// Indicates that the send condition check was inconclusive. The SMS waits to be claimed by the retry processing.
+    /// </summary>
+    Retrying
 }

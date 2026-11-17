@@ -22,6 +22,7 @@ public static class NotificationResultTypeExtensions
         {
             SmsNotificationResultType.New => false,
             SmsNotificationResultType.Sending => false,
+            SmsNotificationResultType.Retrying => false,
             SmsNotificationResultType.Accepted => false,
             SmsNotificationResultType.Delivered => true,
             SmsNotificationResultType.Failed => true,
@@ -52,6 +53,7 @@ public static class NotificationResultTypeExtensions
         {
             EmailNotificationResultType.New => false,
             EmailNotificationResultType.Sending => false,
+            EmailNotificationResultType.Retrying => false,
             EmailNotificationResultType.Succeeded => false,
             EmailNotificationResultType.Delivered => true,
             EmailNotificationResultType.Failed => true,
