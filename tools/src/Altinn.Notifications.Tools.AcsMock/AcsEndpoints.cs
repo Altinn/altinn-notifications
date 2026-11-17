@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 
 using Altinn.Notifications.Tools.AcsMock.Configuration;
+using Altinn.Notifications.Tools.Shared;
 
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
@@ -131,12 +132,12 @@ internal static class AcsEndpoints
 
         logger.LogInformation(
             "ACS fallback {Method} {Path} -> {Target} -> {StatusCode}\nRequest: {RequestBody}\nResponse: {ResponseBody}",
-            context.Request.Method,
-            RawTarget(context),
-            target,
+            LogSanitizer.Clean(context.Request.Method),
+            LogSanitizer.Clean(RawTarget(context)),
+            LogSanitizer.Clean(target.ToString()),
             context.Response.StatusCode,
-            PayloadMasker.Mask(requestBody),
-            PayloadMasker.Mask(Encoding.UTF8.GetString(responseBody)));
+            LogSanitizer.Clean(PayloadMasker.Mask(requestBody)),
+            LogSanitizer.Clean(PayloadMasker.Mask(Encoding.UTF8.GetString(responseBody))));
     }
 
     private static IResult Accept(HttpContext context, EmailOperationStore store, TimeProvider timeProvider, AcsMockSettings settings, EmailScenario scenario, string sender, List<string> recipients)
@@ -201,7 +202,7 @@ internal static class AcsEndpoints
 
         if (!valid)
         {
-            logger.LogWarning("ACS {Method} {Path} rejected with 401: {Reason}. Check that the accesskey in the connection string matches AcsMockSettings:AccessKey.", context.Request.Method, RawTarget(context), reason);
+            logger.LogWarning("ACS {Method} {Path} rejected with 401: {Reason}. Check that the accesskey in the connection string matches AcsMockSettings:AccessKey.", LogSanitizer.Clean(context.Request.Method), LogSanitizer.Clean(RawTarget(context)), LogSanitizer.Clean(reason));
         }
 
         return valid;
@@ -259,12 +260,12 @@ internal static class AcsEndpoints
 
         logger.LogInformation(
             "ACS {Method} {Path} -> {StatusCode} ({Scenario})\nRequest: {RequestBody}\nResponse: {ResponseBody}",
-            context.Request.Method,
-            RawTarget(context),
+            LogSanitizer.Clean(context.Request.Method),
+            LogSanitizer.Clean(RawTarget(context)),
             context.Response.StatusCode,
             scenario?.ToString() ?? "-",
-            PayloadMasker.Mask(requestBody),
-            responseBody);
+            LogSanitizer.Clean(PayloadMasker.Mask(requestBody)),
+            LogSanitizer.Clean(responseBody));
     }
 
     private static async Task<byte[]> ReadBodyAsync(HttpContext context)

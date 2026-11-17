@@ -18,4 +18,8 @@
 		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Compile Include="..\Shared\LogSanitizer.cs" Link="Shared\LogSanitizer.cs" />
+	</ItemGroup>
+
 </Project>

@@ -17,8 +17,11 @@
 			SA1516;
 			SA1600;
 			SA1614;
-			SA1649
+			SA1649;
+			CS0436
 		</NoWarn>
+		<!-- CS0436: the files in tools/src/Shared are linked into several tools, which all give this project access to their internals.
+		     They are linked here too, so the tests use this project's copy instead of an ambiguous one. -->
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -39,6 +42,10 @@
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.MockAuth\Altinn.Notifications.Tools.MockAuth.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.PlatformMocks\Altinn.Notifications.Tools.PlatformMocks.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.RetryDeadDeliveryReports\Altinn.Notifications.Tools.RetryDeadDeliveryReports.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="..\..\src\Shared\LogSanitizer.cs" Link="Shared\LogSanitizer.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
