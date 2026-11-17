@@ -861,6 +861,7 @@ BEGIN
         FROM notifications.emailnotifications email
         WHERE email.result = 'Retrying'::emailnotificationresulttype
             AND email.resulttime <= now() - _retry_delay
+            AND email.expirytime >= now()
             AND email.iscomposed = true
         ORDER BY email.resulttime, email._id
         FOR UPDATE OF email SKIP LOCKED
@@ -898,7 +899,7 @@ ALTER FUNCTION notifications.claim_retry_composed_email_v1(interval)
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.claim_retry_composed_email_v1(interval)
-    IS 'Claims and returns a single composed email notification in status Retrying (after an inconclusive send condition check) that has waited at least _retry_delay. Expirytime is deliberately not checked, so a retry that becomes due after expiry is not lost.';
+    IS 'Claims and returns a single composed email notification in status Retrying (after an inconclusive send condition check) that has waited at least _retry_delay.';
 
 
 -- claimretryemail.sql:
@@ -931,6 +932,7 @@ BEGIN
         FROM notifications.emailnotifications email
         WHERE email.result = 'Retrying'::emailnotificationresulttype
             AND email.resulttime <= now() - _retry_delay
+            AND email.expirytime >= now()
             AND email.iscomposed = false
             AND (email.sendingtimepolicy = 1 OR (_include_daytime AND email.sendingtimepolicy = 2))
         ORDER BY email.resulttime, email._id
@@ -969,8 +971,7 @@ ALTER FUNCTION notifications.claim_retry_email_v1(boolean, interval)
 
 COMMENT ON FUNCTION notifications.claim_retry_email_v1(boolean, interval)
     IS 'Claims and returns a single non-composed email notification in status Retrying (after an inconclusive send condition check) that has waited at least _retry_delay.
-Daytime notifications (sendingtimepolicy = 2) are only claimed when _include_daytime is true.
-Expirytime is deliberately not checked, so a retry that becomes due after expiry is not lost.';
+Daytime notifications (sendingtimepolicy = 2) are only claimed when _include_daytime is true.';
 
 
 -- claimretrysms.sql:
@@ -993,6 +994,7 @@ BEGIN
     FROM notifications.smsnotifications sms
     WHERE sms.result = 'Retrying'::smsnotificationresulttype
       AND sms.resulttime <= now() - _retry_delay
+      AND sms.expirytime >= now()
       AND (sms.sendingtimepolicy = 1 OR (_include_daytime AND sms.sendingtimepolicy = 2))
     ORDER BY sms.resulttime, sms._id
     FOR UPDATE OF sms SKIP LOCKED
@@ -1026,8 +1028,7 @@ $$;
 
 COMMENT ON FUNCTION notifications.claim_retry_sms_v1(boolean, interval) IS
 'Claims and returns a single SMS notification in status Retrying (after an inconclusive send condition check) that has waited at least _retry_delay.
-Daytime notifications (sendingtimepolicy = 2) are only claimed when _include_daytime is true.
-Expirytime is deliberately not checked, so a retry that becomes due after expiry is not lost.';
+Daytime notifications (sendingtimepolicy = 2) are only claimed when _include_daytime is true.';
 
 
 -- deleteoldstatusfeedrecords.sql:

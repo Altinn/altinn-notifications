@@ -27,6 +27,7 @@ BEGIN
         FROM notifications.emailnotifications email
         WHERE email.result = 'Retrying'::emailnotificationresulttype
             AND email.resulttime <= now() - _retry_delay
+            AND email.expirytime >= now()
             AND email.iscomposed = false
             AND (email.sendingtimepolicy = 1 OR (_include_daytime AND email.sendingtimepolicy = 2))
         ORDER BY email.resulttime, email._id
@@ -65,5 +66,4 @@ ALTER FUNCTION notifications.claim_retry_email_v1(boolean, interval)
 
 COMMENT ON FUNCTION notifications.claim_retry_email_v1(boolean, interval)
     IS 'Claims and returns a single non-composed email notification in status Retrying (after an inconclusive send condition check) that has waited at least _retry_delay.
-Daytime notifications (sendingtimepolicy = 2) are only claimed when _include_daytime is true.
-Expirytime is deliberately not checked, so a retry that becomes due after expiry is not lost.';
+Daytime notifications (sendingtimepolicy = 2) are only claimed when _include_daytime is true.';

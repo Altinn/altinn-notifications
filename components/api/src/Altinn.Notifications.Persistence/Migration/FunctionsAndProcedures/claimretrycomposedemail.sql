@@ -36,6 +36,7 @@ BEGIN
         FROM notifications.emailnotifications email
         WHERE email.result = 'Retrying'::emailnotificationresulttype
             AND email.resulttime <= now() - _retry_delay
+            AND email.expirytime >= now()
             AND email.iscomposed = true
         ORDER BY email.resulttime, email._id
         FOR UPDATE OF email SKIP LOCKED
@@ -73,4 +74,4 @@ ALTER FUNCTION notifications.claim_retry_composed_email_v1(interval)
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.claim_retry_composed_email_v1(interval)
-    IS 'Claims and returns a single composed email notification in status Retrying (after an inconclusive send condition check) that has waited at least _retry_delay. Expirytime is deliberately not checked, so a retry that becomes due after expiry is not lost.';
+    IS 'Claims and returns a single composed email notification in status Retrying (after an inconclusive send condition check) that has waited at least _retry_delay.';
