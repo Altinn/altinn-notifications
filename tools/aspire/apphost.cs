@@ -116,8 +116,11 @@ if (authMode == "mock")
 {
     var authPort = builder.Configuration.GetValue("Auth:Port", 5094);
     string authUrl = "http://localhost:" + authPort;
+
+    // The signing key is made for this run, so tokens stay valid when only mock-auth is restarted.
     var auth = builder.AddProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
         .WithEnvironment("MockAuthSettings__Port", authPort.ToString())
+        .WithEnvironment("MockAuthSettings__SigningKey", CreateTokenSigningKey())
         .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration")
         .WithParentRelationship(controlPanel.Resource);
 
@@ -307,6 +310,13 @@ app.Run();
 foreach (var watcher in watchers)
 {
     watcher.Dispose();
+}
+
+// A throwaway RSA key as a base64-encoded PKCS#8 private key, the format MockAuthSettings:SigningKey takes.
+static string CreateTokenSigningKey()
+{
+    using var rsa = RSA.Create(2048);
+    return Convert.ToBase64String(rsa.ExportPkcs8PrivateKey());
 }
 
 // A throwaway RSA key as a base64-encoded JWK, the format MaskinportenSettings:EncodedJwk takes.
