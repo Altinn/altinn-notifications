@@ -16,6 +16,7 @@ namespace Altinn.Notifications.Core.Services
         {
             { SmsNotificationResultType.New, "The SMS has been created, but has not been picked up for processing yet." },
             { SmsNotificationResultType.Sending, "The SMS is being processed and will be attempted sent shortly." },
+            { SmsNotificationResultType.Retrying, "The send condition check was inconclusive. The SMS will be retried shortly." },
             { SmsNotificationResultType.Accepted, "The SMS has been accepted by the gateway service and will be sent shortly." },
             { SmsNotificationResultType.Delivered, "The SMS was successfully delivered to its destination." },
             { SmsNotificationResultType.Failed, "The SMS was not delivered due to an unspecified failure." },

@@ -26,7 +26,6 @@ public class SmsNotificationService : ISmsNotificationService
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
     private readonly IConditionClient _conditionClient;
     private readonly TimeSpan _conditionTimeout;
-    private readonly TimeSpan _conditionRetryDelay;
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
@@ -50,7 +49,6 @@ public class SmsNotificationService : ISmsNotificationService
         IOptions<NotificationConfig> config)
     {
         _conditionClient = conditionClient;
-        _conditionRetryDelay = TimeSpan.FromSeconds(config.Value.SendConditionRetryDelaySeconds);
         _conditionTimeout = TimeSpan.FromSeconds(Math.Max(1, config.Value.SendConditionTimeoutSeconds));
         _guidService = guidService;
         _dateTimeService = dateTimeService;
@@ -103,9 +101,42 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime, CancellationToken cancellationToken = default)
+    public Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime, CancellationToken cancellationToken = default)
     {
-        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Policy", sendingTimePolicy);
+        return SendClaimedNotification(
+            (unitOfWork, token) => _repository.GetNewNotification(unitOfWork, token, sendingTimePolicy),
+            nameof(SendNotification),
+            cancellationToken,
+            sendingTimePolicy);
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> SendConditionRetryNotification(bool includeDaytime, CancellationToken cancellationToken)
+    {
+        return SendClaimedNotification(
+            (unitOfWork, token) => _repository.GetConditionRetryNotification(unitOfWork, includeDaytime, token),
+            nameof(SendConditionRetryNotification),
+            cancellationToken,
+            isRetry: true);
+    }
+
+    /// <summary>
+    /// Claims, publishes and commits the next pending SMS notification within a single unit of work.
+    /// </summary>
+    /// <param name="getNewNotification">Claims the next pending notification on the given unit of work, or returns <see langword="null"/> if none is pending.</param>
+    /// <param name="operationName">The name of the calling operation, used for logging and tracing.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <param name="sendingTimePolicy">The sending time policy the claim is restricted to, added as a tag on the trace activity. <see langword="null"/> when the claim is not policy-specific.</param>
+    /// <param name="isRetry">Whether the claimed notification is on its retry after an inconclusive send condition check. If so, an inconclusive check is not retried again.</param>
+    /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    private async Task<bool> SendClaimedNotification(
+        Func<UnitOfWork, CancellationToken, Task<Sms?>> getNewNotification,
+        string operationName,
+        CancellationToken cancellationToken,
+        SendingTimePolicy? sendingTimePolicy = null,
+        bool isRetry = false)
+    {
+        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName)?.SetTag("Policy", sendingTimePolicy);
         UnitOfWork unitOfWork;
         try
         {
@@ -115,7 +146,7 @@ public class SmsNotificationService : ISmsNotificationService
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(e, "Failed to start a unit of work for {OperationName}.", nameof(SendNotification));
+                _logger.LogError(e, "Failed to start a unit of work for {OperationName}.", operationName);
             }
 
             return false;
@@ -123,7 +154,7 @@ public class SmsNotificationService : ISmsNotificationService
 
         try
         {
-            Sms? newSmsNotification = await _repository.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy);
+            Sms? newSmsNotification = await getNewNotification(unitOfWork, cancellationToken);
             activity?.SetTag("Count", newSmsNotification == null ? 0 : 1);
             if (newSmsNotification is null)
             {
@@ -136,20 +167,21 @@ public class SmsNotificationService : ISmsNotificationService
             bool? isSendConditionMet = await EvaluateSendCondition(newSmsNotification, cancellationToken);
             if (isSendConditionMet is null)
             {
-                if (!newSmsNotification.IsConditionRetry)
+                if (!isRetry)
                 {
-                    await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, _conditionRetryDelay, cancellationToken);
+                    await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
                     _logger.LogInformation(
-                        "// SmsNotificationService // SendNotification // Condition check was inconclusive for notification '{NotificationId}'. Retry scheduled in {RetryDelaySeconds} seconds.",
-                        newSmsNotification.NotificationId,
-                        _conditionRetryDelay.TotalSeconds);
+                        "// SmsNotificationService // {OperationName} // Condition check was inconclusive for notification '{NotificationId}'. Notification set to retrying.",
+                        operationName,
+                        newSmsNotification.NotificationId);
                     return true;
                 }
 
                 _logger.LogWarning(
-                    "// SmsNotificationService // SendNotification // Condition check was inconclusive again for notification '{NotificationId}'. Sending as if no condition endpoint was configured.",
+                    "// SmsNotificationService // {OperationName} // Condition check was inconclusive again for notification '{NotificationId}'. Sending as if no condition endpoint was configured.",
+                    operationName,
                     newSmsNotification.NotificationId);
             }
 
@@ -172,7 +204,7 @@ public class SmsNotificationService : ISmsNotificationService
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(e, "An error occurred while processing {OperationName}.", nameof(SendNotification));
+                _logger.LogError(e, "An error occurred while processing {OperationName}.", operationName);
             }
 
             try
@@ -181,7 +213,7 @@ public class SmsNotificationService : ISmsNotificationService
             }
             catch (Exception rollbackException)
             {
-                _logger.LogError(rollbackException, "Failed to roll back the unit of work for {OperationName}.", nameof(SendNotification));
+                _logger.LogError(rollbackException, "Failed to roll back the unit of work for {OperationName}.", operationName);
             }
 
             return false;

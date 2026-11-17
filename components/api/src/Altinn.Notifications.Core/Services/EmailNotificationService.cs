@@ -33,7 +33,6 @@ public class EmailNotificationService(
     IOptions<NotificationConfig> config) : IEmailNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
-    private readonly TimeSpan _conditionRetryDelay = TimeSpan.FromSeconds(config.Value.SendConditionRetryDelaySeconds);
     private readonly IConditionClient _conditionClient = conditionClient;
     private readonly TimeSpan _conditionTimeout = TimeSpan.FromSeconds(Math.Max(1, config.Value.SendConditionTimeoutSeconds));
     private readonly IGuidService _guidService = guidService;
@@ -107,6 +106,28 @@ public class EmailNotificationService(
     }
 
     /// <inheritdoc/>
+    public Task<bool> SendConditionRetryNotification(bool includeDaytime, CancellationToken cancellationToken)
+    {
+        return SendClaimedNotification(
+            (unitOfWork, token) => _emailNotificationRepository.GetConditionRetryNotificationAsync(unitOfWork, includeDaytime, token),
+            (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
+            nameof(SendConditionRetryNotification),
+            cancellationToken,
+            isRetry: true);
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> SendComposedConditionRetryNotification(CancellationToken cancellationToken)
+    {
+        return SendClaimedNotification(
+            _emailNotificationRepository.GetComposedConditionRetryNotificationAsync,
+            _composedEmailCommandPublisher.PublishAsync,
+            nameof(SendComposedConditionRetryNotification),
+            cancellationToken,
+            isRetry: true);
+    }
+
+    /// <inheritdoc/>
     public async Task UpdateSendStatus(EmailSendOperationResult sendOperationResult)
     {
         if (sendOperationResult.SendResult == EmailNotificationResultType.Failed_TransientError)
@@ -151,13 +172,15 @@ public class EmailNotificationService(
     /// <param name="operationName">The name of the calling operation, used for logging and tracing.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
     /// <param name="sendingTimePolicy">The sending time policy the claim is restricted to, added as a tag on the trace activity. <see langword="null"/> when the claim is not policy-specific.</param>
+    /// <param name="isRetry">Whether the claimed notification is on its retry after an inconclusive send condition check. If so, an inconclusive check is not retried again.</param>
     /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
     private async Task<bool> SendClaimedNotification<TNotification>(
         Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
         Func<TNotification, CancellationToken, Task> publishNotification,
         string operationName,
         CancellationToken cancellationToken,
-        SendingTimePolicy? sendingTimePolicy = null)
+        SendingTimePolicy? sendingTimePolicy = null,
+        bool isRetry = false)
         where TNotification : Email
     {
         using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName)?.SetTag("Policy", sendingTimePolicy);
@@ -191,16 +214,15 @@ public class EmailNotificationService(
             bool? isSendConditionMet = await EvaluateSendCondition(claimedNotification, operationName, cancellationToken);
             if (isSendConditionMet is null)
             {
-                if (!claimedNotification.IsConditionRetry)
+                if (!isRetry)
                 {
-                    await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, _conditionRetryDelay, cancellationToken);
+                    await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
                     _logger.LogInformation(
-                        "// EmailNotificationService // {OperationName} // Condition check was inconclusive for notification '{NotificationId}'. Retry scheduled in {RetryDelaySeconds} seconds.",
+                        "// EmailNotificationService // {OperationName} // Condition check was inconclusive for notification '{NotificationId}'. Notification set to retrying.",
                         operationName,
-                        claimedNotification.NotificationId,
-                        _conditionRetryDelay.TotalSeconds);
+                        claimedNotification.NotificationId);
                     return true;
                 }
 

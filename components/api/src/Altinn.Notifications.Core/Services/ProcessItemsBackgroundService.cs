@@ -10,7 +10,7 @@ namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
 /// Background service that processes items with different shapes (e.g. email daytime notifications, email anytime notifications,
-/// composed email notifications, SMS daytime notifications, and SMS anytime notifications) in separate loops.
+/// composed email notifications, SMS daytime notifications, SMS anytime notifications, and notifications retrying after an inconclusive send condition check) in separate loops.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProcessItemsBackgroundService"/> class.
@@ -30,6 +30,9 @@ public class ProcessItemsBackgroundService(
     private readonly ManyItemsLately _manyComposedEmailNotificationsLately = new();
     private readonly ManyItemsLately _manySmsDaytimeNotificationsLately = new();
     private readonly ManyItemsLately _manySmsAnytimeNotificationsLately = new();
+    private readonly ManyItemsLately _manyEmailRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manyComposedEmailRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manySmsRetryNotificationsLately = new();
     private readonly ManyItemsLately _manyPastDueOrdersLately = new();
     private readonly ManyItemsLately _manyRetryOrdersLately = new();
 
@@ -41,6 +44,9 @@ public class ProcessItemsBackgroundService(
             + _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount
             + _config.SmsDaytimeNotificationsProcessLoopConfig.TaskCount
             + _config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount
+            + _config.EmailRetryNotificationsProcessLoopConfig.TaskCount
+            + _config.ComposedEmailRetryNotificationsProcessLoopConfig.TaskCount
+            + _config.SmsRetryNotificationsProcessLoopConfig.TaskCount
             + _config.PastDueOrdersProcessLoopConfig.TaskCount
             + _config.RetryOrdersProcessLoopConfig.TaskCount;
         if (totalTasks <= 0)
@@ -99,6 +105,35 @@ public class ProcessItemsBackgroundService(
                         _config.SmsAnytimeNotificationsProcessLoopConfig,
                         stoppingToken))];
 
+                // Retry loops claim notifications in status Retrying after an inconclusive send condition check.
+                // Anytime notifications are always eligible, daytime notifications only when daytime sending is currently allowed.
+                Task[] emailRetryNotificationTasks = [.. Enumerable.Range(0, _config.EmailRetryNotificationsProcessLoopConfig.TaskCount)
+                    .Select(i => RunProcessItemLoop(
+                        _manyEmailRetryNotificationsLately,
+                        ct => emailSendingService.SendConditionRetryNotification(notificationScheduleService.CanSendEmailNow(), ct),
+                        null,
+                        isFirstInstance: i == 0,
+                        _config.EmailRetryNotificationsProcessLoopConfig,
+                        stoppingToken))];
+
+                Task[] composedEmailRetryNotificationTasks = [.. Enumerable.Range(0, _config.ComposedEmailRetryNotificationsProcessLoopConfig.TaskCount)
+                    .Select(i => RunProcessItemLoop(
+                        _manyComposedEmailRetryNotificationsLately,
+                        emailSendingService.SendComposedConditionRetryNotification,
+                        null,
+                        isFirstInstance: i == 0,
+                        _config.ComposedEmailRetryNotificationsProcessLoopConfig,
+                        stoppingToken))];
+
+                Task[] smsRetryNotificationTasks = [.. Enumerable.Range(0, _config.SmsRetryNotificationsProcessLoopConfig.TaskCount)
+                    .Select(i => RunProcessItemLoop(
+                        _manySmsRetryNotificationsLately,
+                        ct => smsSendingService.SendConditionRetryNotification(notificationScheduleService.CanSendSmsNow(), ct),
+                        null,
+                        isFirstInstance: i == 0,
+                        _config.SmsRetryNotificationsProcessLoopConfig,
+                        stoppingToken))];
+
                 Task[] pastDueOrdersTasks = [.. Enumerable.Range(0, _config.PastDueOrdersProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manyPastDueOrdersLately,
@@ -122,6 +157,9 @@ public class ProcessItemsBackgroundService(
                     .Concat(composedEmailNotificationTask)
                     .Concat(smsDaytimeNotificationTasks)
                     .Concat(smsAnytimeNotificationTasks)
+                    .Concat(emailRetryNotificationTasks)
+                    .Concat(composedEmailRetryNotificationTasks)
+                    .Concat(smsRetryNotificationTasks)
                     .Concat(pastDueOrdersTasks)
                     .Concat(retryOrdersTasks));
             }

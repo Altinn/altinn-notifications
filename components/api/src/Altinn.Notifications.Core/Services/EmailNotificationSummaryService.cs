@@ -16,6 +16,7 @@ namespace Altinn.Notifications.Core.Services
             {
                 { EmailNotificationResultType.New, "The email has been created, but has not been picked up for processing yet." },
                 { EmailNotificationResultType.Sending, "The email is being processed and will be attempted sent shortly." },
+                { EmailNotificationResultType.Retrying, "The send condition check was inconclusive. The email will be retried shortly." },
                 { EmailNotificationResultType.Succeeded, "The email has been accepted by the third party email service and will be sent shortly." },
                 { EmailNotificationResultType.Delivered, "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient." },
                 { EmailNotificationResultType.Failed, "The email was not sent due to an unspecified failure." },
