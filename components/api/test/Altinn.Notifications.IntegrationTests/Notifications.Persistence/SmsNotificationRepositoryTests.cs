@@ -1083,7 +1083,8 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             return await ExecuteClaimUntilMatchInUnitOfWorkAsync(
                 (unitOfWork, cancellationToken) => repo.GetConditionRetryNotification(unitOfWork, includeDaytime, cancellationToken),
                 claimed => claimed.NotificationId == sms.Id,
-                TestContext.Current.CancellationToken);
+                TestContext.Current.CancellationToken,
+                commitOnMatch: true);
         }
 
         // Act

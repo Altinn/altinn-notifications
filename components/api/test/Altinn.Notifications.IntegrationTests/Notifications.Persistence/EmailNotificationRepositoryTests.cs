@@ -307,7 +307,8 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
             return await ExecuteClaimUntilMatchInUnitOfWork(
                 (unitOfWork, cancellationToken) => repo.GetConditionRetryNotificationAsync(unitOfWork, includeDaytime, cancellationToken),
                 email => email.NotificationId == emailNotification.Id,
-                TestContext.Current.CancellationToken);
+                TestContext.Current.CancellationToken,
+                commitOnMatch: true);
         }
 
         // Act
