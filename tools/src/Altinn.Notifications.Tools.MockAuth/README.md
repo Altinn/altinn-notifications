@@ -2,7 +2,7 @@
 
 A local token issuer, so the API can be called without a token from at23. It issues service owner tokens and publishes the OpenID configuration and JWKS the API needs to validate them.
 
-The tokens are signed with `jwtselfsignedcert.pfx`, the self-signed certificate the API's tests use, and carry the same claims as `PrincipalUtil.GetOrgToken` in those tests. The API validates the signature, lifetime and claims, not the issuer or audience, so it accepts them once `GeneralSettings:OpenIdWellKnownEndpoint` points here.
+The tokens are signed with an RSA key that only exists in memory, and carry the same claims as `PrincipalUtil.GetOrgToken` in the API's tests. The API validates the signature, lifetime and claims, not the issuer or audience, so it accepts them once `GeneralSettings:OpenIdWellKnownEndpoint` points here.
 
 Unlike the other tools this one has no menu: it is a server that runs until you stop it.
 
@@ -41,8 +41,9 @@ GeneralSettings__OpenIdWellKnownEndpoint=http://localhost:5094/authentication/ap
 | `MockAuthSettings:Port` | `5094` | Port the issuer listens on, on localhost only |
 | `MockAuthSettings:Username` | `mock` | Basic auth username for the token endpoint |
 | `MockAuthSettings:Password` | `mock` | Basic auth password for the token endpoint |
+| `MockAuthSettings:SigningKey` | empty | RSA key to sign with, as a base64-encoded PKCS#8 private key. Empty makes a new key each time the issuer starts. The Aspire app host makes one per run, so tokens stay valid when only the issuer restarts. |
 
-There are no secrets. The certificate and its password are test-only and already in the repository.
+There are no secrets in the repository. The signing key is made at startup, and the basic auth credentials only guard a local test issuer. Generating those per run as well is #2017.
 
 ## Bruno
 
