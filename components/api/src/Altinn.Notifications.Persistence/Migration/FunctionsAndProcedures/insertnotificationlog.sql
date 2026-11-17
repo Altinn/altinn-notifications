@@ -30,7 +30,7 @@ BEGIN
         INNER JOIN notifications.orders o ON o._id = email._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
         WHERE o.alternateid = _shipmentId
-          AND email.result NOT IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype, 'Failed_TransientError'::emailnotificationresulttype)
+          AND email.result NOT IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Retrying'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype, 'Failed_TransientError'::emailnotificationresulttype)
 
         UNION ALL
 
@@ -55,7 +55,7 @@ BEGIN
         INNER JOIN notifications.orders o ON o._id = sms._orderid
         LEFT JOIN notifications.orderschain c ON c._id = o._orderchainid
         WHERE o.alternateid = _shipmentId
-          AND sms.result NOT IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
+          AND sms.result NOT IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Retrying'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
     ),
     inserted AS (
         INSERT INTO notifications.notificationlog (

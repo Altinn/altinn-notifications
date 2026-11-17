@@ -1,13 +1,12 @@
--- FUNCTION: notifications.claim_daytime_sms_v4()
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_v4 ()
+-- FUNCTION: notifications.claim_daytime_sms_v3()
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_v3 ()
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
   mobilenumber text,
   body text,
   creatorname text,
-  conditionendpoint text,
-  isconditionretry boolean
+  conditionendpoint text
 )
 LANGUAGE plpgsql
 AS $$
@@ -19,7 +18,6 @@ BEGIN
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
       AND sms.sendingtimepolicy = 2
-      AND (sms.nextattempt IS NULL OR sms.nextattempt <= clock_timestamp())
     ORDER BY sms.expirytime
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT 1
@@ -34,8 +32,7 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody,
-      sms.nextattempt
+      sms.customizedbody
   )
   SELECT
     upd.alternateid,
@@ -43,15 +40,14 @@ BEGIN
     upd.mobilenumber,
     COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
     ord.creatorname,
-    ord.notificationorder->>'ConditionEndpoint' AS conditionendpoint,
-    upd.nextattempt IS NOT NULL AS isconditionretry
+    ord.notificationorder->>'ConditionEndpoint' AS conditionendpoint
   FROM updated_rows upd
   JOIN notifications.smstexts txt ON txt._orderid = upd._orderid
   JOIN notifications.orders ord ON ord._id = upd._orderid;
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_daytime_sms_v4() IS
+COMMENT ON FUNCTION notifications.claim_daytime_sms_v3() IS
 'Claims and returns an SMS notification (sendingtimepolicy = 2).
 Includes the order creatorname to support per-service-owner SMS sender substitution,
 and the order condition endpoint so the send condition can be evaluated at send time.';
