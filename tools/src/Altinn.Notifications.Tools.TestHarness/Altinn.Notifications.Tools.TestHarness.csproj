@@ -17,6 +17,10 @@
 		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Compile Include="..\Shared\LogSanitizer.cs" Link="Shared\LogSanitizer.cs" />
+	</ItemGroup>
+
 	<!-- The GUI and the templates are read from the output folder, so they are found whichever folder the control panel is started from. -->
 	<ItemGroup>
 		<Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />

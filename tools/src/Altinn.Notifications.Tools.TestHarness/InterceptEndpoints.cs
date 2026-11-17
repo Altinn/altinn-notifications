@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.Channels;
 
+using Altinn.Notifications.Tools.Shared;
 using Altinn.Notifications.Tools.TestHarness.Configuration;
 using Altinn.Notifications.Tools.TestHarness.Triggers;
 
@@ -40,16 +41,21 @@ internal static class InterceptEndpoints
         int timeoutSeconds = options.Value.TimeoutSeconds;
         var request = await ReadRequestAsync(context, system.ToLowerInvariant(), timeProvider.GetUtcNow(), timeoutSeconds);
 
+        // The request's own values, escaped for the log.
+        string logSystem = LogSanitizer.Clean(request.System);
+        string logMethod = LogSanitizer.Clean(request.Method);
+        string logPath = LogSanitizer.Clean(request.Path);
+
         if (store.GetAutoReply(request.System) is string key && templates.Find(key) is { } template)
         {
             var reply = template.Render(timeProvider.GetUtcNow());
             store.AddHistory(new HistoryEntry(request, reply, Outcome.AutoReplied, timeProvider.GetUtcNow()));
-            logger.LogInformation("Intercept {System} {Method} {Path} -> {Status} (auto-reply {Template})", request.System, request.Method, request.Path, reply.Status, key);
+            logger.LogInformation("Intercept {System} {Method} {Path} -> {Status} (auto-reply {Template})", logSystem, logMethod, logPath, reply.Status, key);
             await WriteResponseAsync(context, reply, "auto");
             return;
         }
 
-        logger.LogInformation("Intercept {System} {Method} {Path} held for {Seconds} s", request.System, request.Method, request.Path, timeoutSeconds);
+        logger.LogInformation("Intercept {System} {Method} {Path} held for {Seconds} s", logSystem, logMethod, logPath, timeoutSeconds);
         var answer = store.Hold(request);
         try
         {
@@ -62,13 +68,13 @@ internal static class InterceptEndpoints
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
             store.TryResolve(request.Id, null, Outcome.Cancelled, timeProvider.GetUtcNow());
-            logger.LogInformation("Intercept {System} {Method} {Path} cancelled by the caller", request.System, request.Method, request.Path);
+            logger.LogInformation("Intercept {System} {Method} {Path} cancelled by the caller", logSystem, logMethod, logPath);
             return;
         }
 
         // Set by whichever came first, the operator or the timeout.
         var response = await answer;
-        logger.LogInformation("Intercept {System} {Method} {Path} -> {Status}", request.System, request.Method, request.Path, response.Status);
+        logger.LogInformation("Intercept {System} {Method} {Path} -> {Status}", logSystem, logMethod, logPath, response.Status);
         await WriteResponseAsync(context, response, "operator");
     }
 
