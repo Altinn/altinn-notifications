@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -197,6 +198,41 @@ public class MockAuthTests(WebApplicationFactory<MockAuthSettings> factory) : IC
         var jwt = new JsonWebToken(token);
         Assert.Equal("ttd", jwt.GetClaim("urn:altinn:org").Value);
         Assert.Equal("123456789", jwt.GetClaim("urn:altinn:orgNumber").Value);
+    }
+
+    [Fact]
+    public async Task Jwks_WithConfiguredSigningKey_PublishesThatKey_WithTheSameKeyIdEveryStart()
+    {
+        using var rsa = RSA.Create(2048);
+        string signingKey = Convert.ToBase64String(rsa.ExportPkcs8PrivateKey());
+        string expectedModulus = Base64UrlEncoder.Encode(rsa.ExportParameters(false).Modulus);
+
+        string firstKid = await PublishedKeyId(signingKey, expectedModulus);
+        string secondKid = await PublishedKeyId(signingKey, expectedModulus);
+
+        Assert.Equal(firstKid, secondKid);
+    }
+
+    [Fact]
+    public async Task Jwks_WithoutConfiguredSigningKey_MakesANewKeyEachStart()
+    {
+        using var first = factory.WithWebHostBuilder(_ => { });
+        using var second = factory.WithWebHostBuilder(_ => { });
+
+        string firstJwks = await first.CreateClient().GetStringAsync("/authentication/api/v1/openid/jwks", TestContext.Current.CancellationToken);
+        string secondJwks = await second.CreateClient().GetStringAsync("/authentication/api/v1/openid/jwks", TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(firstJwks, secondJwks);
+    }
+
+    // Starts the issuer with signingKey, checks that its JWKS has that key, and returns the key id.
+    private async Task<string> PublishedKeyId(string signingKey, string expectedModulus)
+    {
+        using var issuer = factory.WithWebHostBuilder(builder => builder.UseSetting("MockAuthSettings:SigningKey", signingKey));
+        using var jwks = JsonDocument.Parse(await issuer.CreateClient().GetStringAsync("/authentication/api/v1/openid/jwks", TestContext.Current.CancellationToken));
+        var key = Assert.Single(jwks.RootElement.GetProperty("keys").EnumerateArray());
+        Assert.Equal(expectedModulus, key.GetProperty("n").GetString());
+        return key.GetProperty("kid").GetString()!;
     }
 
     private static AuthenticationHeaderValue Basic(string username, string password)
