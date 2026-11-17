@@ -186,6 +186,19 @@ public class MockAuthTests(WebApplicationFactory<MockAuthSettings> factory) : IC
         Assert.Equal("altinn:serviceowner/notifications.create altinn:serviceowner/notifications.composedemail.create", jwt.GetClaim("urn:altinn:scope").Value);
     }
 
+    [Fact]
+    public async Task GetEnterpriseToken_WithoutOrg_IsForTtd()
+    {
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = Basic("mock", "mock");
+
+        string token = await client.GetStringAsync("/api/GetEnterpriseToken?orgNumber=123456789&scopes=altinn:serviceowner/notifications.create", TestContext.Current.CancellationToken);
+
+        var jwt = new JsonWebToken(token);
+        Assert.Equal("ttd", jwt.GetClaim("urn:altinn:org").Value);
+        Assert.Equal("123456789", jwt.GetClaim("urn:altinn:orgNumber").Value);
+    }
+
     private static AuthenticationHeaderValue Basic(string username, string password)
     {
         return new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}")));

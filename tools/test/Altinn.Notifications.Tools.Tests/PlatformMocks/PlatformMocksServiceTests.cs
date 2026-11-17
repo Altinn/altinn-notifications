@@ -207,6 +207,45 @@ public class PlatformMocksServiceTests
     }
 
     [Fact]
+    public async Task AllSystemsDisabled_StartsNothing()
+    {
+        await using var mocks = await StartAsync(s =>
+        {
+            s.Profile.Enabled = false;
+            s.Register.Enabled = false;
+            s.Authorization.Enabled = false;
+            s.Conditions.Enabled = false;
+            s.Maskinporten.Enabled = false;
+            s.Dialogporten.Enabled = false;
+        });
+
+        Assert.Empty(mocks.Urls);
+    }
+
+    [Theory]
+    [InlineData("12345", "Permit")]
+    [InlineData("666", "Deny")]
+    public async Task Authorization_SingleRequestWithoutMultiRequests_DecidesForTheOneSubject(string userId, string expectedDecision)
+    {
+        await using var mocks = await StartAsync(s => s.Authorization.DeniedUsers = [666]);
+        using var http = new HttpClient();
+        string body = $$$"""
+            {"Request":{
+              "AccessSubject":[{"Attribute":[{"AttributeId":"urn:altinn:userid","Value":"{{{userId}}}","IncludeInResult":true}]}],
+              "Action":[{"Attribute":[{"AttributeId":"urn:oasis:names:tc:xacml:1.0:action:action-id","Value":"read"}]}],
+              "Resource":[{"Attribute":[{"AttributeId":"urn:altinn:resource","Value":"ttd-test"}]}]}}
+            """;
+
+        using var response = await http.PostAsync(mocks.Urls["authorization"] + AuthorizationMock.DecisionPath, new StringContent(body, Encoding.UTF8, "application/json"), TestContext.Current.CancellationToken);
+
+        using var decision = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var result = Assert.Single(decision.RootElement.GetProperty("Response").EnumerateArray());
+        Assert.Equal(expectedDecision, result.GetProperty("Decision").GetString());
+        var category = Assert.Single(result.GetProperty("Category").EnumerateArray());
+        Assert.Equal(AuthorizationMock.SubjectCategory, category.GetProperty("CategoryId").GetString());
+    }
+
+    [Fact]
     public async Task UnknownPath_WithoutFallback_IsNotFound()
     {
         await using var mocks = await StartAsync();
