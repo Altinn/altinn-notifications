@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
@@ -119,6 +121,65 @@ public class SmsNotificationServiceTests
         Assert.False(result);
         unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
         unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SendNotification_WithActivityListener_TagsActivityWithClaimCount(bool notificationFound)
+    {
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd");
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(notificationFound ? sms : null);
+
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(() => CreateUnitOfWork());
+
+        object? countTag = null;
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == BackgroundActivitySource.Name,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => countTag = activity.GetTagItem("Count")
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var service = GetService(repository: repo.Object, unitOfWorkRepository: unitOfWorkRepository.Object);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(notificationFound, result);
+        Assert.Equal(notificationFound ? 1 : 0, countTag);
+    }
+
+    [Fact]
+    public async Task SendNotification_ConditionFailsWithoutErrorMessage_SchedulesRetry()
+    {
+        var endpoint = new Uri("https://condition.example/check");
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd") { ConditionEndpoint = endpoint };
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(sms);
+
+        var conditionClient = new Mock<IConditionClient>();
+        conditionClient
+            .Setup(c => c.CheckSendCondition(endpoint, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ConditionClientError { StatusCode = 500 });
+
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        UnitOfWork unitOfWork = CreateUnitOfWork();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(unitOfWork);
+
+        var service = GetService(repository: repo.Object, unitOfWorkRepository: unitOfWorkRepository.Object, conditionClient: conditionClient.Object);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, sms.NotificationId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
