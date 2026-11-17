@@ -216,6 +216,7 @@ public class PlatformMocksServiceTests
             s.Authorization.Enabled = false;
             s.Conditions.Enabled = false;
             s.Maskinporten.Enabled = false;
+            s.Dialogporten.Enabled = false;
         });
 
         Assert.Empty(mocks.Urls);
