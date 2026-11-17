@@ -340,6 +340,68 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         }
     }
 
+    [Theory]
+    [InlineData("1 hour")]
+    [InlineData("0 seconds")]
+    [InlineData("-1 hour")]
+    public async Task GetConditionRetryNotificationAsync_DueBeforeAtOrAfterExpiry_IsClaimedExactlyOnce(string expiryOffset)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: SendingTimePolicy.Anytime);
+        _orderIdsToDelete.Add(order.Id);
+
+        await PostgreUtil.RunSql($"UPDATE notifications.emailnotifications SET result = 'Retrying', resulttime = clock_timestamp() - interval '1 hour', expirytime = clock_timestamp() + interval '{expiryOffset}' WHERE alternateid = '{emailNotification.Id}'");
+
+        EmailNotificationRepository repo = GetRepository();
+
+        async Task<Email?> ClaimRetry()
+        {
+            return await ExecuteClaimUntilMatchInUnitOfWork(
+                (unitOfWork, cancellationToken) => repo.GetConditionRetryNotificationAsync(unitOfWork, true, cancellationToken),
+                email => email.NotificationId == emailNotification.Id,
+                TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        Email? firstClaim = await ClaimRetry();
+        Email? secondClaim = await ClaimRetry();
+
+        // Assert
+        Assert.NotNull(firstClaim);
+        Assert.Null(secondClaim);
+    }
+
+    [Theory]
+    [InlineData("1 hour")]
+    [InlineData("0 seconds")]
+    [InlineData("-1 hour")]
+    public async Task GetComposedConditionRetryNotificationAsync_DueBeforeAtOrAfterExpiry_IsClaimedExactlyOnce(string expiryOffset)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(emailSendingTimePolicy: SendingTimePolicy.Anytime);
+        _orderIdsToDelete.Add(order.Id);
+
+        await PostgreUtil.RunSql($"UPDATE notifications.emailnotifications SET iscomposed = true, result = 'Retrying', resulttime = clock_timestamp() - interval '1 hour', expirytime = clock_timestamp() + interval '{expiryOffset}' WHERE alternateid = '{emailNotification.Id}'");
+
+        EmailNotificationRepository repo = GetRepository();
+
+        async Task<Email?> ClaimRetry()
+        {
+            return await ExecuteClaimUntilMatchInUnitOfWork(
+                (unitOfWork, cancellationToken) => repo.GetComposedConditionRetryNotificationAsync(unitOfWork, cancellationToken),
+                email => email.NotificationId == emailNotification.Id,
+                TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        Email? firstClaim = await ClaimRetry();
+        Email? secondClaim = await ClaimRetry();
+
+        // Assert
+        Assert.NotNull(firstClaim);
+        Assert.Null(secondClaim);
+    }
+
     [Fact]
     public async Task GetRecipients_ValidOrderId_ReturnsEmailRecipient()
     {

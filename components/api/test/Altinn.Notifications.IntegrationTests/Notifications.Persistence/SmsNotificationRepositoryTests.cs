@@ -1116,6 +1116,38 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         }
     }
 
+    [Theory]
+    [InlineData("1 hour")]
+    [InlineData("0 seconds")]
+    [InlineData("-1 hour")]
+    public async Task GetConditionRetryNotification_DueBeforeAtOrAfterExpiry_IsClaimedExactlyOnce(string expiryOffset)
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification sms) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
+        _orderIdsToCleanup.Add(order.Id);
+
+        await PostgreUtil.RunSql($"UPDATE notifications.smsnotifications SET result = 'Retrying', resulttime = clock_timestamp() - interval '1 hour', expirytime = clock_timestamp() + interval '{expiryOffset}' WHERE alternateid = '{sms.Id}'");
+
+        SmsNotificationRepository repo = GetSmsRepository();
+
+        async Task<Sms?> ClaimRetry()
+        {
+            return await ExecuteClaimUntilMatchInUnitOfWorkAsync(
+                (unitOfWork, cancellationToken) => repo.GetConditionRetryNotification(unitOfWork, true, cancellationToken),
+                claimed => claimed.NotificationId == sms.Id,
+                TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        Sms? firstClaim = await ClaimRetry();
+        Sms? secondClaim = await ClaimRetry();
+
+        // Assert
+        Assert.NotNull(firstClaim);
+        Assert.Null(secondClaim);
+        Assert.Equal(SmsNotificationResultType.Sending.ToString(), await SelectSmsNotificationStatus(sms.Id));
+    }
+
     private static SmsNotificationRepository GetSmsRepository()
     {
         return ServiceUtil

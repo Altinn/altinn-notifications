@@ -17,7 +17,6 @@ BEGIN
     FROM notifications.smsnotifications sms
     WHERE sms.result = 'Retrying'::smsnotificationresulttype
       AND sms.resulttime <= now() - _retry_delay
-      AND sms.expirytime >= now()
       AND (sms.sendingtimepolicy = 1 OR (_include_daytime AND sms.sendingtimepolicy = 2))
     ORDER BY sms.resulttime, sms._id
     FOR UPDATE OF sms SKIP LOCKED
@@ -51,4 +50,5 @@ $$;
 
 COMMENT ON FUNCTION notifications.claim_retry_sms_v1(boolean, interval) IS
 'Claims and returns a single SMS notification in status Retrying (after an inconclusive send condition check) that has waited at least _retry_delay.
-Daytime notifications (sendingtimepolicy = 2) are only claimed when _include_daytime is true.';
+Daytime notifications (sendingtimepolicy = 2) are only claimed when _include_daytime is true.
+Expirytime is deliberately not checked, so a retry that becomes due after expiry is not lost.';

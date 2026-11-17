@@ -136,6 +136,10 @@ The check runs in the same database transaction as the claim, before the notific
   whose `resulttime` is older than `NotificationConfig:SendConditionRetryDelaySeconds`
   (default 60 seconds). The regular claim functions never see these rows and need no
   extra filter. `Retrying` is internal and is exposed as `New` in the status feed and API.
+  The retry claim functions do not check `expirytime`, so a retry that becomes due after
+  the notification has expired is still performed. Expiry cleanup only touches
+  notifications in status `Succeeded` (email) or `Accepted` (SMS), so it never affects
+  `Retrying` rows.
 - **Check inconclusive again (the retry):** there is only one retry. A notification claimed
   by a retry loop is evaluated once more, and if the check is still inconclusive it is sent
   as if no condition endpoint was configured. A conclusive result on the retry is handled
