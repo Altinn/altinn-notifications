@@ -1024,7 +1024,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ScheduleConditionRetryAsync_AfterSlowWorkInTransaction_MeasuresDelayFromCurrentTime()
+    public async Task ScheduleConditionRetryAsync_AfterSlowWorkInTransaction_SetsRetryingWithCurrentTime()
     {
         // Arrange
         (NotificationOrder order, SmsNotification sms) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
@@ -1043,7 +1043,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
             }
 
             beforeScheduling = await PostgreUtil.GetDatabaseUtcNow();
-            await repo.ScheduleConditionRetryAsync(unitOfWork, sms.Id, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken);
+            await repo.ScheduleConditionRetryAsync(unitOfWork, sms.Id, TestContext.Current.CancellationToken);
             await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
         }
         catch
@@ -1053,18 +1053,16 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         }
 
         // Assert
-        DateTime nextAttempt = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT nextattempt FROM notifications.smsnotifications WHERE alternateid = '{sms.Id}'");
         DateTime resultTime = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT resulttime FROM notifications.smsnotifications WHERE alternateid = '{sms.Id}'");
 
-        Assert.Equal(SmsNotificationResultType.New.ToString(), await SelectSmsNotificationStatus(sms.Id));
+        Assert.Equal(SmsNotificationResultType.Retrying.ToString(), await SelectSmsNotificationStatus(sms.Id));
         Assert.True(resultTime >= beforeScheduling);
-        Assert.True(nextAttempt >= beforeScheduling.AddSeconds(60));
     }
 
     [Theory]
     [InlineData(SendingTimePolicy.Anytime)]
     [InlineData(SendingTimePolicy.Daytime)]
-    public async Task GetNewNotification_WithScheduledRetry_IsClaimedAsRetryOnlyOnceDue(SendingTimePolicy sendingTimePolicy)
+    public async Task GetConditionRetryNotification_WithRetryingNotification_IsClaimedOnlyOnceDue(SendingTimePolicy sendingTimePolicy)
     {
         // Arrange
         (NotificationOrder order, SmsNotification sms) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
@@ -1072,7 +1070,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         SmsNotificationRepository repo = GetSmsRepository();
 
-        async Task<Sms?> Claim()
+        async Task<Sms?> ClaimNew()
         {
             return await ExecuteClaimUntilMatchInUnitOfWorkAsync(
                 (unitOfWork, cancellationToken) => repo.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy),
@@ -1080,24 +1078,42 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
                 TestContext.Current.CancellationToken);
         }
 
+        async Task<Sms?> ClaimRetry(bool includeDaytime)
+        {
+            return await ExecuteClaimUntilMatchInUnitOfWorkAsync(
+                (unitOfWork, cancellationToken) => repo.GetConditionRetryNotification(unitOfWork, includeDaytime, cancellationToken),
+                claimed => claimed.NotificationId == sms.Id,
+                TestContext.Current.CancellationToken);
+        }
+
         // Act
-        Sms? firstAttempt = await Claim();
+        Sms? firstAttempt = await ClaimNew();
 
         UnitOfWork scheduleUnitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-        await repo.ScheduleConditionRetryAsync(scheduleUnitOfWork, sms.Id, TimeSpan.FromHours(1), TestContext.Current.CancellationToken);
+        await repo.ScheduleConditionRetryAsync(scheduleUnitOfWork, sms.Id, TestContext.Current.CancellationToken);
         await _unitOfWorkRepository.CommitUnitOfWork(scheduleUnitOfWork);
 
-        Sms? whileWaiting = await Claim();
+        Sms? newClaimWhileRetrying = await ClaimNew();
+        Sms? retryWhileWaiting = await ClaimRetry(includeDaytime: true);
 
-        await PostgreUtil.RunSql($"UPDATE notifications.smsnotifications SET nextattempt = clock_timestamp() - interval '1 second' WHERE alternateid = '{sms.Id}'");
-        Sms? whenDue = await Claim();
+        await PostgreUtil.RunSql($"UPDATE notifications.smsnotifications SET resulttime = clock_timestamp() - interval '1 hour' WHERE alternateid = '{sms.Id}'");
+        Sms? retryExcludingDaytime = await ClaimRetry(includeDaytime: false);
+        Sms? retryWhenDue = await ClaimRetry(includeDaytime: true);
 
         // Assert
         Assert.NotNull(firstAttempt);
-        Assert.False(firstAttempt.IsConditionRetry);
-        Assert.Null(whileWaiting);
-        Assert.NotNull(whenDue);
-        Assert.True(whenDue.IsConditionRetry);
+        Assert.Null(newClaimWhileRetrying);
+        Assert.Null(retryWhileWaiting);
+        if (sendingTimePolicy == SendingTimePolicy.Daytime)
+        {
+            Assert.Null(retryExcludingDaytime);
+            Assert.NotNull(retryWhenDue);
+        }
+        else
+        {
+            Assert.NotNull(retryExcludingDaytime);
+            Assert.Null(retryWhenDue);
+        }
     }
 
     private static SmsNotificationRepository GetSmsRepository()

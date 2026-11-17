@@ -10,6 +10,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
     {
         [Theory]
         [InlineData(EmailNotificationResultType.New, false)]
+        [InlineData(EmailNotificationResultType.Retrying, false)]
         [InlineData(EmailNotificationResultType.Sending, false)]
         [InlineData(EmailNotificationResultType.Succeeded, true)]
         [InlineData(EmailNotificationResultType.Delivered, true)]
@@ -34,6 +35,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
         [Theory]
         [InlineData(EmailNotificationResultType.New, "The email has been created, but has not been picked up for processing yet.")]
+        [InlineData(EmailNotificationResultType.Retrying, "The send condition check was inconclusive. The email will be retried shortly.")]
         [InlineData(EmailNotificationResultType.Sending, "The email is being processed and will be attempted sent shortly.")]
         [InlineData(EmailNotificationResultType.Succeeded, "The email has been accepted by the third party email service and will be sent shortly.")]
         [InlineData(EmailNotificationResultType.Delivered, "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient.")]

@@ -15,6 +15,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [Theory]
         [InlineData(SmsNotificationResultType.Accepted, true)]
         [InlineData(SmsNotificationResultType.New, false)]
+        [InlineData(SmsNotificationResultType.Retrying, false)]
         [InlineData(SmsNotificationResultType.Sending, false)]
         [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified, false)]
         [InlineData(SmsNotificationResultType.Failed_InvalidRecipient, false)]
@@ -28,6 +29,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
         [Theory]
         [InlineData(SmsNotificationResultType.New, "The SMS has been created, but has not been picked up for processing yet.")]
+        [InlineData(SmsNotificationResultType.Retrying, "The send condition check was inconclusive. The SMS will be retried shortly.")]
         [InlineData(SmsNotificationResultType.Sending, "The SMS is being processed and will be attempted sent shortly.")]
         [InlineData(SmsNotificationResultType.Accepted, "The SMS has been accepted by the gateway service and will be sent shortly.")]
         [InlineData(SmsNotificationResultType.Delivered, "The SMS was successfully delivered to its destination.")]

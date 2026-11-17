@@ -11,6 +11,7 @@ public class NotificationResultTypeExtensionsTests
     [
         SmsNotificationResultType.New,
         SmsNotificationResultType.Sending,
+        SmsNotificationResultType.Retrying,
         SmsNotificationResultType.Accepted
     ];
 
@@ -18,6 +19,7 @@ public class NotificationResultTypeExtensionsTests
     [
         EmailNotificationResultType.New,
         EmailNotificationResultType.Sending,
+        EmailNotificationResultType.Retrying,
         EmailNotificationResultType.Succeeded,
         EmailNotificationResultType.Failed_TransientError
     ];

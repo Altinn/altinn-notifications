@@ -317,6 +317,71 @@ public class ProcessItemsBackgroundServiceTests
         scheduleService.Verify(s => s.CanSendSmsNow(), Times.Never);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenRetryLoopsEnabled_PassesDaytimeAllowedFromScheduleToRetryClaims()
+    {
+        // Arrange
+        var config = CreateConfig();
+        config.EmailRetryNotificationsProcessLoopConfig.TaskCount = 1;
+        config.SmsRetryNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        int emailCalled = 0;
+        int smsCalled = 0;
+
+        void StopWhenBothLoopsHaveRun()
+        {
+            if (Volatile.Read(ref emailCalled) == 1 && Volatile.Read(ref smsCalled) == 1)
+            {
+                cts.Cancel();
+            }
+        }
+
+        var emailService = new Mock<IEmailNotificationService>();
+        emailService
+            .Setup(e => e.SendConditionRetryNotification(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                Volatile.Write(ref emailCalled, 1);
+                StopWhenBothLoopsHaveRun();
+                await Task.Yield();
+                return false;
+            });
+
+        var smsService = new Mock<ISmsNotificationService>();
+        smsService
+            .Setup(s => s.SendConditionRetryNotification(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                Volatile.Write(ref smsCalled, 1);
+                StopWhenBothLoopsHaveRun();
+                await Task.Yield();
+                return false;
+            });
+
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var scheduleService = new Mock<INotificationScheduleService>();
+        scheduleService.Setup(s => s.CanSendEmailNow()).Returns(true);
+        scheduleService.Setup(s => s.CanSendSmsNow()).Returns(false);
+
+        var service = new TestableProcessItemsBackgroundService(
+            emailService.Object,
+            smsService.Object,
+            orderService.Object,
+            Options.Create(config),
+            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
+            scheduleService.Object);
+
+        // Act
+        await service.ExecuteForTest(cts.Token);
+
+        // Assert
+        emailService.Verify(e => e.SendConditionRetryNotification(true, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        smsService.Verify(s => s.SendConditionRetryNotification(false, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        emailService.Verify(e => e.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static NotificationConfig CreateConfig()
     {
         return new NotificationConfig
@@ -338,6 +403,18 @@ public class ProcessItemsBackgroundServiceTests
                 TaskCount = 0
             },
             SmsAnytimeNotificationsProcessLoopConfig = new ProcessLoopConfig
+            {
+                TaskCount = 0
+            },
+            EmailRetryNotificationsProcessLoopConfig = new ProcessLoopConfig
+            {
+                TaskCount = 0
+            },
+            ComposedEmailRetryNotificationsProcessLoopConfig = new ProcessLoopConfig
+            {
+                TaskCount = 0
+            },
+            SmsRetryNotificationsProcessLoopConfig = new ProcessLoopConfig
             {
                 TaskCount = 0
             },
@@ -373,6 +450,18 @@ public class ProcessItemsBackgroundServiceTests
         config.SmsAnytimeNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
         config.SmsAnytimeNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
         config.SmsAnytimeNotificationsProcessLoopConfig.RampUpLimit = 1;
+
+        config.EmailRetryNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
+        config.EmailRetryNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
+        config.EmailRetryNotificationsProcessLoopConfig.RampUpLimit = 1;
+
+        config.ComposedEmailRetryNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
+        config.ComposedEmailRetryNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
+        config.ComposedEmailRetryNotificationsProcessLoopConfig.RampUpLimit = 1;
+
+        config.SmsRetryNotificationsProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
+        config.SmsRetryNotificationsProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
+        config.SmsRetryNotificationsProcessLoopConfig.RampUpLimit = 1;
 
         config.PastDueOrdersProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
         config.PastDueOrdersProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;

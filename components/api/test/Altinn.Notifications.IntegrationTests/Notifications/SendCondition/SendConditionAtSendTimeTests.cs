@@ -92,17 +92,16 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
 
         Guid orderId = await PostOrder(conditionEndpoint);
 
-        // Act: the first inconclusive check schedules a retry and keeps the notification New
+        // Act: the first inconclusive check sets the notification to Retrying
         await ProcessOrderAndSendNotification(orderId, expectResolved: false);
 
         // Assert
-        Assert.Equal("New", await GetNotificationResult(orderId));
-        Assert.Equal("true", await GetIsRetryScheduledInFuture(orderId));
+        Assert.Equal("Retrying", await GetNotificationResult(orderId));
         conditionClient.Verify(c => c.CheckSendCondition(conditionEndpoint, It.IsAny<CancellationToken>()), Times.Once);
 
         // Act: once the retry is due, a second inconclusive check sends the notification as if no condition was configured
         await MakeRetryDue(orderId);
-        await SendNotification(orderId);
+        await SendConditionRetryNotification(orderId);
 
         // Assert
         Assert.Equal("Sending", await GetNotificationResult(orderId));
@@ -124,11 +123,11 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
 
         Guid orderId = await PostOrder(conditionEndpoint);
         await ProcessOrderAndSendNotification(orderId, expectResolved: false);
-        Assert.Equal("New", await GetNotificationResult(orderId));
+        Assert.Equal("Retrying", await GetNotificationResult(orderId));
 
         // Act
         await MakeRetryDue(orderId);
-        await SendNotification(orderId);
+        await SendConditionRetryNotification(orderId);
 
         // Assert
         Assert.Equal("SendConditionNotMet", await GetNotificationResult(orderId));
@@ -164,27 +163,21 @@ public sealed class SendConditionAtSendTimeTests : IClassFixture<IntegrationTest
         return PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus::text FROM notifications.orders WHERE alternateid = '{orderId}'");
     }
 
-    private static Task<string> GetIsRetryScheduledInFuture(Guid orderId)
-    {
-        return PostgreUtil.RunSqlReturnOutput<string>(
-            $"SELECT (e.nextattempt > now())::text FROM notifications.emailnotifications e JOIN notifications.orders o ON o._id = e._orderid WHERE o.alternateid = '{orderId}'");
-    }
-
     private static Task MakeRetryDue(Guid orderId)
     {
         return PostgreUtil.RunSql(
-            $"UPDATE notifications.emailnotifications SET nextattempt = clock_timestamp() - interval '1 second' WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')");
+            $"UPDATE notifications.emailnotifications SET resulttime = clock_timestamp() - interval '1 hour' WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')");
     }
 
-    private async Task SendNotification(Guid orderId)
+    private async Task SendConditionRetryNotification(Guid orderId)
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         IEmailNotificationService emailNotificationService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
 
         // The database is shared with other tests, so claims are repeated until this notification has been handled.
-        for (int attempt = 0; attempt < 50 && await GetNotificationResult(orderId) == "New"; attempt++)
+        for (int attempt = 0; attempt < 50 && await GetNotificationResult(orderId) == "Retrying"; attempt++)
         {
-            await emailNotificationService.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+            await emailNotificationService.SendConditionRetryNotification(true, TestContext.Current.CancellationToken);
         }
     }
 
