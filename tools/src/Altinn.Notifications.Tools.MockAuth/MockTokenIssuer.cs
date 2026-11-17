@@ -1,27 +1,40 @@
 using System.Security.Claims;
-using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography;
 
+using Altinn.Notifications.Tools.MockAuth.Configuration;
+
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Altinn.Notifications.Tools.MockAuth;
 
 /// <summary>
-/// Issues Altinn-style tokens signed with the API tests' self-signed certificate, and publishes its public key as a JWKS.
+/// Issues Altinn-style tokens signed with an RSA key that only exists in memory, and publishes its public key as a JWKS.
 /// </summary>
-internal sealed class MockTokenIssuer
+internal sealed class MockTokenIssuer : IDisposable
 {
-    internal const string CertificateFile = "jwtselfsignedcert.pfx";
-    private const string CertificatePassword = "qwer1234";
     private const string ClaimIssuer = "www.altinn.no";
 
-    private readonly X509SecurityKey _key;
+    private readonly RSA _rsa;
+    private readonly RsaSecurityKey _key;
     private readonly SigningCredentials _signingCredentials;
 
-    public MockTokenIssuer()
+    /// <summary>
+    /// Uses the key in <see cref="MockAuthSettings.SigningKey"/>, or makes a new one when it is empty.
+    /// </summary>
+    public MockTokenIssuer(IOptions<MockAuthSettings> options)
     {
-        var certificate = X509CertificateLoader.LoadPkcs12FromFile(Path.Combine(AppContext.BaseDirectory, CertificateFile), CertificatePassword);
-        _key = new X509SecurityKey(certificate);
+        _rsa = RSA.Create(2048);
+        string signingKey = options.Value.SigningKey;
+        if (!string.IsNullOrWhiteSpace(signingKey))
+        {
+            _rsa.ImportPkcs8PrivateKey(Convert.FromBase64String(signingKey), out _);
+        }
+
+        // The key id is derived from the public key, so the same key gets the same id.
+        _key = new RsaSecurityKey(_rsa);
+        _key.KeyId = Base64UrlEncoder.Encode(_key.ComputeJwkThumbprint());
         _signingCredentials = new SigningCredentials(_key, SecurityAlgorithms.RsaSha256);
     }
 
@@ -85,15 +98,25 @@ internal sealed class MockTokenIssuer
     /// </summary>
     public object GetJwks()
     {
-        var jwk = JsonWebKeyConverter.ConvertFromX509SecurityKey(_key, representAsRsaKey: true);
+        var parameters = _rsa.ExportParameters(includePrivateParameters: false);
         return new
         {
             keys = new[]
             {
-                new { kty = jwk.Kty, use = "sig", alg = SecurityAlgorithms.RsaSha256, kid = jwk.Kid, n = jwk.N, e = jwk.E },
+                new
+                {
+                    kty = "RSA",
+                    use = "sig",
+                    alg = SecurityAlgorithms.RsaSha256,
+                    kid = _key.KeyId,
+                    n = Base64UrlEncoder.Encode(parameters.Modulus),
+                    e = Base64UrlEncoder.Encode(parameters.Exponent),
+                },
             },
         };
     }
+
+    public void Dispose() => _rsa.Dispose();
 
     private string CreateToken(ClaimsIdentity identity, string issuer)
     {
