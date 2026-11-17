@@ -27,11 +27,12 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private readonly ILogger<SmsNotificationRepository> _logger;
 
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
-    private const string _claimAnytimeSmsSql = "select * from notifications.claim_anytime_sms_v4()";
-    private const string _claimDaytimeSmsSql = "select * from notifications.claim_daytime_sms_v4()";
+    private const string _claimAnytimeSmsSql = "select * from notifications.claim_anytime_sms_v3()";
+    private const string _claimDaytimeSmsSql = "select * from notifications.claim_daytime_sms_v3()";
+    private const string _claimRetrySmsSql = "select * from notifications.claim_retry_sms_v1($1, $2)"; // (_include_daytime, _retry_delay)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
     private const string _persistSubstitutedSenderSql = "update notifications.smsnotifications set substitutedsender = $2 where alternateid = $1"; // (_alternateid, _substitutedsender)
-    private const string _scheduleConditionRetrySql = "update notifications.smsnotifications set result = 'New'::smsnotificationresulttype, resulttime = clock_timestamp(), nextattempt = clock_timestamp() + make_interval(secs => $2) where alternateid = $1"; // $1=alternateid, $2=delayseconds
+    private const string _scheduleConditionRetrySql = "update notifications.smsnotifications set result = 'Retrying'::smsnotificationresulttype, resulttime = clock_timestamp() where alternateid = $1"; // $1=alternateid
     private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification_v3($1, $2, $3, $4)"; // (_result, _gatewayreference, _alternateid, _deliveryreport)
 
     /// <inheritdoc/>
@@ -105,7 +106,20 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         };
 
         await using var command = new NpgsqlCommand(claimSmsForSending, unitOfWork.Connection, unitOfWork.Transaction);
+        return await ReadSmsAsync(command, cancellationToken);
+    }
 
+    /// <inheritdoc/>
+    public async Task<Sms?> GetConditionRetryNotification(UnitOfWork unitOfWork, bool includeDaytime, CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand(_claimRetrySmsSql, unitOfWork.Connection, unitOfWork.Transaction);
+        command.Parameters.AddWithValue(NpgsqlDbType.Boolean, includeDaytime);
+        command.Parameters.AddWithValue(NpgsqlDbType.Interval, ConditionRetryDelay);
+        return await ReadSmsAsync(command, cancellationToken);
+    }
+
+    private static async Task<Sms?> ReadSmsAsync(NpgsqlCommand command, CancellationToken cancellationToken)
+    {
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         if (!await reader.ReadAsync(cancellationToken))
@@ -120,8 +134,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             await reader.GetFieldValueAsync<string>("body", cancellationToken),
             await reader.GetFieldValueAsync<string>("creatorname", cancellationToken))
         {
-            ConditionEndpoint = await reader.ReadConditionEndpointAsync(cancellationToken),
-            IsConditionRetry = await reader.GetFieldValueAsync<bool>("isconditionretry", cancellationToken)
+            ConditionEndpoint = await reader.ReadConditionEndpointAsync(cancellationToken)
         };
     }
 
@@ -178,8 +191,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>
-    public Task ScheduleConditionRetryAsync(UnitOfWork unitOfWork, Guid notificationId, TimeSpan delay, CancellationToken cancellationToken = default)
+    public Task ScheduleConditionRetryAsync(UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken = default)
     {
-        return ExecuteScheduleConditionRetryAsync(unitOfWork, _scheduleConditionRetrySql, notificationId, delay, cancellationToken);
+        return ExecuteScheduleConditionRetryAsync(unitOfWork, _scheduleConditionRetrySql, notificationId, cancellationToken);
     }
 }

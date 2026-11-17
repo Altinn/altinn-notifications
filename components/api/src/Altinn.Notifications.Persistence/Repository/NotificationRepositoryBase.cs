@@ -47,10 +47,14 @@ public abstract class NotificationRepositoryBase
     private readonly ILogger _logger;
     private readonly int _terminationBatchSize;
     private readonly int _expiryOffsetSeconds;
-
     private const string _referenceColumnName = "reference";
     private const string _typeColumnName = "type";
     private const string _statusColumnName = "status";
+
+    /// <summary>
+    /// Gets the time a notification waits in status Retrying before the retry processing can claim it.
+    /// </summary>
+    protected TimeSpan ConditionRetryDelay { get; }
 
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
@@ -63,6 +67,7 @@ public abstract class NotificationRepositoryBase
         _dataSource = dataSource;
         _logger = logger;
         _expiryOffsetSeconds = config.Value.ExpiryOffsetSeconds;
+        ConditionRetryDelay = TimeSpan.FromSeconds(config.Value.SendConditionRetryDelaySeconds);
 
         if (config.Value.TerminationBatchSize > 0)
         {
@@ -268,12 +273,11 @@ public abstract class NotificationRepositoryBase
     }
 
     /// <summary>
-    /// Returns a claimed notification to the new state and delays its next claim, within the caller's unit of work.
+    /// Sets a claimed notification to the retrying state, within the caller's unit of work.
     /// </summary>
     /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
-    /// <param name="sqlCommand">The SQL command taking the notification alternate id ($1, uuid) and the delay in seconds ($2, double).</param>
+    /// <param name="sqlCommand">The SQL command taking the notification alternate id ($1, uuid).</param>
     /// <param name="notificationId">The unique identifier of the notification.</param>
-    /// <param name="delay">The time to wait before the notification can be claimed again.</param>
     /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="InvalidNotificationIdentifierException">Thrown when <paramref name="notificationId"/> is empty.</exception>
@@ -282,7 +286,6 @@ public abstract class NotificationRepositoryBase
         Core.Models.UnitOfWork unitOfWork,
         string sqlCommand,
         Guid notificationId,
-        TimeSpan delay,
         CancellationToken cancellationToken)
     {
         if (notificationId == Guid.Empty)
@@ -292,7 +295,6 @@ public abstract class NotificationRepositoryBase
 
         await using NpgsqlCommand pgcom = new(sqlCommand, unitOfWork.Connection, unitOfWork.Transaction);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Double, delay.TotalSeconds);
 
         if (await pgcom.ExecuteNonQueryAsync(cancellationToken) == 0)
         {

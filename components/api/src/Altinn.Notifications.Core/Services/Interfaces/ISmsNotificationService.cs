@@ -22,6 +22,15 @@ public interface ISmsNotificationService : INotificationService
     Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Sends the next SMS notification in status <see cref="SmsNotificationResultType.Retrying"/> after an earlier inconclusive send condition check, if any.
+    /// If the check is inconclusive again, the notification is sent as if no condition endpoint was configured.
+    /// </summary>
+    /// <param name="includeDaytime">Whether notifications with the Daytime sending time policy are eligible, in addition to Anytime notifications.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns><see langword="true"/> when an SMS notification was found and processed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendConditionRetryNotification(bool includeDaytime, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Updates the send status of an SMS notification based on the provided send operation result.
     /// </summary>
     /// <param name="sendOperationResult">The result of the send operation.</param>

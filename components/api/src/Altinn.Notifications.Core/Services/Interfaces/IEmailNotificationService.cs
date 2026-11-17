@@ -38,6 +38,23 @@ public interface IEmailNotificationService : INotificationService
     Task<bool> SendComposedNotification(CancellationToken cancellationToken);
 
     /// <summary>
+    /// Sends the next email notification in status <see cref="EmailNotificationResultType.Retrying"/> after an earlier inconclusive send condition check, if any.
+    /// If the check is inconclusive again, the notification is sent as if no condition endpoint was configured.
+    /// </summary>
+    /// <param name="includeDaytime">Whether notifications with the Daytime sending time policy are eligible, in addition to Anytime notifications.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendConditionRetryNotification(bool includeDaytime, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sends the next composed email notification in status <see cref="EmailNotificationResultType.Retrying"/> after an earlier inconclusive send condition check, if any.
+    /// If the check is inconclusive again, the notification is sent as if no condition endpoint was configured.
+    /// </summary>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns><see langword="true"/> if a composed notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendComposedConditionRetryNotification(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Updates the send status of a notification.
     /// </summary>
     /// <param name="sendOperationResult">The result of the send operation.</param>
