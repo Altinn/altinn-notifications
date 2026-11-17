@@ -54,4 +54,9 @@ public class PostgreSqlSettings
     /// Gets or sets whether SQL text is always included in telemetry logs.
     /// </summary>
     public bool TelemetryAlwaysLogSqlText { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether SQL parameters are always logged in telemetry.
+    /// </summary>
+    public bool TelemetryAlwaysLogSqlParameters { get; set; } = false;
 }
