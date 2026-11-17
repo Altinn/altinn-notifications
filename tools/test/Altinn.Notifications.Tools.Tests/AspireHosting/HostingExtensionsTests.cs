@@ -72,6 +72,11 @@ public class HostingExtensionsTests
 
         var environment = await EnvironmentOf(api);
         Assert.Equal("http://localhost:5094/authentication/api/v1/openid/", environment["GeneralSettings__OpenIdWellKnownEndpoint"]);
+
+        // A signing key for this run, which the issuer can import.
+        using var rsa = System.Security.Cryptography.RSA.Create();
+        rsa.ImportPkcs8PrivateKey(Convert.FromBase64String((await EnvironmentOf(auth))["MockAuthSettings__SigningKey"]), out _);
+        Assert.Equal(2048, rsa.KeySize);
     }
 
     [Fact]

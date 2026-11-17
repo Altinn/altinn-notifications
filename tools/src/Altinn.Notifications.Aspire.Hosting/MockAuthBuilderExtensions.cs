@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 using Altinn.Notifications.Aspire.Hosting;
 
 using Aspire.Hosting.ApplicationModel;
@@ -12,7 +14,8 @@ public static class MockAuthBuilderExtensions
     private const string _openIdPath = "/authentication/api/v1/openid/";
 
     /// <summary>
-    /// Adds the mock token issuer on <paramref name="port"/>, as a child of the test harness control panel.
+    /// Adds the mock token issuer on <paramref name="port"/>, as a child of the test harness control panel. It signs with a key made
+    /// for this run of the app host, so tokens stay valid when only the issuer restarts.
     /// </summary>
     /// <param name="builder">The app host builder.</param>
     /// <param name="name">The resource name.</param>
@@ -25,6 +28,7 @@ public static class MockAuthBuilderExtensions
             .WithUrlForEndpoint("http", u => u.DisplayLocation = UrlDisplayLocation.DetailsOnly)
             .WithUrl("http://localhost:" + port + _openIdPath + ".well-known/openid-configuration", "OpenID configuration")
             .WithEnvironment("MockAuthSettings__Port", port.ToString())
+            .WithEnvironment("MockAuthSettings__SigningKey", CreateSigningKey())
             .WithParentRelationship(testHarness);
     }
 
@@ -37,5 +41,12 @@ public static class MockAuthBuilderExtensions
     {
         return service.WithEnvironment("GeneralSettings__OpenIdWellKnownEndpoint", ReferenceExpression.Create($"{auth.GetEndpoint("http")}{_openIdPath}"))
             .WaitFor(auth);
+    }
+
+    // A throwaway RSA key as a base64-encoded PKCS#8 private key, the format MockAuthSettings:SigningKey takes.
+    private static string CreateSigningKey()
+    {
+        using var rsa = RSA.Create(2048);
+        return Convert.ToBase64String(rsa.ExportPkcs8PrivateKey());
     }
 }
