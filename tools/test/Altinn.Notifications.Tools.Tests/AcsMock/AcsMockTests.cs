@@ -80,6 +80,28 @@ public class AcsMockTests(AcsMockFactory factory) : IClassFixture<AcsMockFactory
     }
 
     [Theory]
+    [InlineData("""{"content":{"subject":"s"},"recipients":{"to":[{"displayName":"no address"}]}}""")]
+    [InlineData("""{"senderAddress":"a@b.no","recipients":{"to":[]}}""")]
+    [InlineData("not json")]
+    public async Task Send_SignedWithoutRecipients_ReturnsBadRequest(string body)
+    {
+        using var client = factory.CreateClient();
+        string date = DateTimeOffset.UtcNow.ToString("r");
+        string hash = HmacValidator.ContentHash(Encoding.UTF8.GetBytes(body));
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/emails:send?api-version=2025-09-01")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Add("x-ms-date", date);
+        request.Headers.Add("x-ms-content-sha256", hash);
+        request.Headers.TryAddWithoutValidation("Authorization", HmacValidator.Sign(AcsMockFactory.AccessKey, "POST", "/emails:send?api-version=2025-09-01", "localhost", date, hash));
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
     [InlineData("ola.nordmann@example.com", "Delivered")]
     [InlineData("bounce@example.com", "Bounced")]
     [InlineData("quarantine+1@example.com", "Quarantined")]

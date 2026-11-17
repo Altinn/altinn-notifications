@@ -40,9 +40,19 @@ public class PayloadMaskerTests
     [InlineData(null, "")]
     [InlineData("", "")]
     [InlineData("not json ola@example.com", "[not JSON, 24 chars]")]
+    [InlineData("null", "")]
     public void Mask_EmptyOrNotJson_HidesEverything(string? input, string expected)
     {
         Assert.Equal(expected, PayloadMasker.Mask(input));
+    }
+
+    [Theory]
+    [InlineData("ola.nordmann@example.com", "o***@example.com")]
+    [InlineData("@example.com", "***")]
+    [InlineData("not an address", "***")]
+    public void MaskAddress_KeepsFirstLetterAndDomain(string address, string expected)
+    {
+        Assert.Equal(expected, PayloadMasker.MaskAddress(address));
     }
 
     [Theory]
