@@ -41,8 +41,11 @@ public class DbEnricher
     /// <param name="command">The NpgsqlCommand containing the parameters to add to the activity.</param>
     public void Enrich(Activity activity, NpgsqlCommand command)
     {
-        var parameterWrapper = command.Parameters.Select((p, i) => new { Id = i, p.ParameterName, p.Value });
-        activity.SetTag("Parameters", JsonSerializer.Serialize(parameterWrapper));
+        if (command.Parameters.Count > 0)
+        {
+            var parameterWrapper = command.Parameters.Select((p, i) => new { Id = i, p.ParameterName, p.Value });
+            activity.SetTag("Parameters", JsonSerializer.Serialize(parameterWrapper));
+        }
 
         activity.SetTag("db.connection_id", null);
         activity.SetTag("db.connection_string", null);
