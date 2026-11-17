@@ -138,6 +138,43 @@ public class HostingExtensionsTests
     }
 
     [Fact]
+    public async Task WithPlatformMocks_RegisterMaskinportenAndConditionsOff_LeavesTheirSettingsToTheApi()
+    {
+        var harness = _builder.AddTestHarness("controlpanel", 5096, intercept: false, timeoutSeconds: 120);
+        var settings = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Register:Enabled"] = "false", ["Maskinporten:Enabled"] = "false", ["Conditions:Enabled"] = "false" })
+            .Build();
+        var mocks = _builder.AddPlatformMocks("wiremock-platform", harness, settings);
+        var api = AddService("api", 5090);
+
+        api.WithPlatformMocks(mocks);
+
+        var apiEnvironment = await EnvironmentOf(api);
+        Assert.Equal("http://localhost:5131/profile/api/v1/", apiEnvironment["PlatformSettings__ApiProfileEndpoint"]);
+        Assert.False(apiEnvironment.ContainsKey("PlatformSettings__ApiRegisterEndpoint"));
+        Assert.False(apiEnvironment.ContainsKey("RegisterSettings__ApiEndpoint"));
+        Assert.DoesNotContain(apiEnvironment.Keys, key => key.StartsWith("SendConditionClient__MaskinportenSettings__"));
+    }
+
+    [Fact]
+    public void WithPlatformMocks_OtherResource_IsRejected()
+    {
+        var api = AddService("api", 5090);
+
+        var error = Assert.Throws<ArgumentException>(() => api.WithPlatformMocks(AddService("profile", 5030)));
+        Assert.Contains("AddPlatformMocks", error.Message);
+    }
+
+    [Fact]
+    public void WithLinkMobilityMock_OtherResource_IsRejected()
+    {
+        var sms = AddService("sms", 5092);
+
+        var error = Assert.Throws<ArgumentException>(() => sms.WithLinkMobilityMock(AddService("gateway", 5093)));
+        Assert.Contains("AddLinkMobilityMock", error.Message);
+    }
+
+    [Fact]
     public async Task WithTriggers_PassesJobOverrides_AndAddsTheTriggerCommands()
     {
         var harness = _builder.AddTestHarness("controlpanel", 5096, intercept: false, timeoutSeconds: 120);
