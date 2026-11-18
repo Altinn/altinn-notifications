@@ -372,6 +372,7 @@ public class ProcessItemsBackgroundServiceTests
         var lifetime = new Mock<IHostApplicationLifetime>();
         lifetime.SetupGet(l => l.ApplicationStopping).Returns(applicationStopping.Token);
 
+        int callCount = 0;
         var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
         var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
         var smsService = new Mock<ISmsNotificationService>();
@@ -379,6 +380,13 @@ public class ProcessItemsBackgroundServiceTests
             .Setup(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
             .Returns<SendingTimePolicy, CancellationToken>(async (_, _) =>
             {
+                if (Interlocked.Increment(ref callCount) > 1)
+                {
+                    // The loop ignored ApplicationStopping; end the test now instead of waiting for the watchdog timeout.
+                    await hostStopToken.CancelAsync();
+                    return false;
+                }
+
                 await applicationStopping.CancelAsync();
                 return true;
             });
