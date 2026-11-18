@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Integrations.Wolverine;
 using Altinn.Notifications.Integrations.Wolverine.Policies;
@@ -41,6 +43,12 @@ public static class WolverineServiceCollectionExtensions
             .AddSingleton(wolverineSettings)
             .AddSingleton<DeliveryReportMetrics>()
             .Configure<WolverineSettings>(wolverineSection);
+
+        services.AddHealthChecks()
+            .AddCheck<WolverineMessagingHealthCheck>(
+                "notifications_service_bus_health_check",
+                timeout: TimeSpan.FromSeconds(5),
+                tags: [HealthCheckTags.Dependency]);
 
         services.AddWolverine(opts =>
         {

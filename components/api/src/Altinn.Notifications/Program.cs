@@ -30,6 +30,8 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -119,6 +121,16 @@ app.MapControllers();
 
 app.MapHealthChecks("/health");
 
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(HealthCheckTags.Live)
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(HealthCheckTags.Ready)
+});
+
 app.UseOrgExtractor();
 
 await app.RunAsync();
@@ -170,6 +182,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "System.Net.Http",
                 DeliveryReportMetrics.MeterName,
                 BacklogMetrics.MeterName,
+                HealthCheckMetricsPublisher.MeterName,
                 DeprecatedEndpointAttribute.MeterName);
         })
         .WithTracing(tracing =>
@@ -211,7 +224,14 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     });
     services.AddControllersWithViews();
 
-    services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
+    services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check", tags: [HealthCheckTags.Live]);
+    services.AddSingleton<IHealthCheckPublisher, HealthCheckMetricsPublisher>();
+    services.Configure<HealthCheckPublisherOptions>(options =>
+    {
+        options.Delay = TimeSpan.FromSeconds(5);
+        options.Period = TimeSpan.FromSeconds(30);
+    });
+    services.AddPostgresHealthChecks(config);
 
     services.AddSingleton(config);
 
