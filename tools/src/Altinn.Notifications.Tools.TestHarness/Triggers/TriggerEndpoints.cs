@@ -105,7 +105,7 @@ internal static class TriggerEndpoints
         OutsideHours = !job.RunsAt(now),
         Running = job.Running.CurrentCount == 0,
         job.NextRunAt,
-        LastRun = job.History.FirstOrDefault(),
+        job.LastRun,
         job.History,
     };
 

@@ -19,6 +19,8 @@ internal sealed record SmsResult(string Id, string? Reference, string? Error = n
 /// </summary>
 internal static class GatewayXml
 {
+    private const string MessageList = "MSGLST";
+
     /// <summary>
     /// Reads the messages of a send, <c>SESSION/MSGLST/MSG</c> with <c>ID</c>, <c>RCV</c>, <c>SND</c>, <c>TEXT</c> and <c>TTL</c>.
     /// </summary>
@@ -31,7 +33,7 @@ internal static class GatewayXml
             return false;
         }
 
-        messages = session.Elements("MSGLST").Elements("MSG")
+        messages = session.Elements(MessageList).Elements("MSG")
             .Select(m => new SmsMessage(
                 (string?)m.Element("ID") ?? string.Empty,
                 (string?)m.Element("RCV") ?? string.Empty,
@@ -55,7 +57,7 @@ internal static class GatewayXml
             new XElement("INFO", r.Error ?? string.Empty),
             r.Reference is null ? null : new XElement("REF", r.Reference)));
 
-        var session = new XElement("SESSION", new XElement("LOGON", "OK"), new XElement("REASON", string.Empty), new XElement("MSGLST", messages));
+        var session = new XElement("SESSION", new XElement("LOGON", "OK"), new XElement("REASON", string.Empty), new XElement(MessageList, messages));
         return """<?xml version="1.0" encoding="ISO-8859-1"?>""" + session.ToString(SaveOptions.DisableFormatting);
     }
 
@@ -70,7 +72,7 @@ internal static class GatewayXml
             return [];
         }
 
-        return session.Elements("MSGLST").Elements("MSG")
+        return session.Elements(MessageList).Elements("MSG")
             .Where(m => (string?)m.Element("STATUS") == "OK" && !string.IsNullOrEmpty((string?)m.Element("REF")))
             .Select(m => new SmsResult((string?)m.Element("ID") ?? string.Empty, (string)m.Element("REF")!))
             .ToList();
@@ -89,7 +91,7 @@ internal static class GatewayXml
             new XElement("STATE", state),
             new XElement("DELIVERYTIME", deliveryTime.ToString("yyyy.MM.dd HH:mm:ss")));
 
-        return """<?xml version="1.0"?>""" + new XElement("MSGLST", message).ToString(SaveOptions.DisableFormatting);
+        return """<?xml version="1.0"?>""" + new XElement(MessageList, message).ToString(SaveOptions.DisableFormatting);
     }
 
     private static XElement? Parse(string? xml)
