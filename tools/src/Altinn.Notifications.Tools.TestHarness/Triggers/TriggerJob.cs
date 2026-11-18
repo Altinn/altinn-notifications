@@ -18,7 +18,7 @@ internal sealed record TriggerRun(DateTimeOffset StartedAt, long DurationMs, str
 /// </summary>
 internal sealed class TriggerJob
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly LinkedList<TriggerRun> _history = new();
     private readonly int _historySize;
     private CancellationTokenSource _wake = new();
@@ -59,6 +59,20 @@ internal sealed class TriggerJob
             lock (_lock)
             {
                 return [.. _history];
+            }
+        }
+    }
+
+    /// <summary>
+    /// The latest run, or <c>null</c> before the first one.
+    /// </summary>
+    public TriggerRun? LastRun
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _history.First?.Value;
             }
         }
     }
@@ -124,26 +138,16 @@ internal static class HourRange
 
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries))
         {
-            string[] ends = part.Split('-', StringSplitOptions.TrimEntries);
-            if (ends.Length > 2 || !int.TryParse(ends[0], out int from) || from is < 0 or > 23)
-            {
-                return false;
-            }
-
-            int to = from;
-            if (ends.Length == 2 && (!int.TryParse(ends[1], out to) || to is < 0 or > 23))
+            if (!TryParseRange(part, out int from, out int to))
             {
                 return false;
             }
 
             // 22-2 wraps past midnight.
-            for (int hour = from; ; hour = (hour + 1) % 24)
+            int count = ((to - from + 24) % 24) + 1;
+            for (int i = 0; i < count; i++)
             {
-                hours[hour] = true;
-                if (hour == to)
-                {
-                    break;
-                }
+                hours[(from + i) % 24] = true;
             }
         }
 
@@ -161,10 +165,12 @@ internal static class HourRange
         }
 
         List<string> parts = [];
-        for (int hour = 0; hour < 24; hour++)
+        int hour = 0;
+        while (hour < 24)
         {
             if (!hours[hour])
             {
+                hour++;
                 continue;
             }
 
@@ -175,9 +181,33 @@ internal static class HourRange
             }
 
             parts.Add(end == hour ? $"{hour}" : $"{hour}-{end}");
-            hour = end;
+            hour = end + 1;
         }
 
         return string.Join(',', parts);
     }
+
+    /// <summary>
+    /// Reads <c>7-16</c> or <c>3</c>. A single hour is a range that starts and ends in it.
+    /// </summary>
+    private static bool TryParseRange(string text, out int from, out int to)
+    {
+        string[] ends = text.Split('-', StringSplitOptions.TrimEntries);
+        from = -1;
+        to = -1;
+        if (ends.Length > 2 || !TryParseHour(ends[0], out from))
+        {
+            return false;
+        }
+
+        if (ends.Length == 1)
+        {
+            to = from;
+            return true;
+        }
+
+        return TryParseHour(ends[1], out to);
+    }
+
+    private static bool TryParseHour(string text, out int hour) => int.TryParse(text, out hour) && hour is >= 0 and <= 23;
 }

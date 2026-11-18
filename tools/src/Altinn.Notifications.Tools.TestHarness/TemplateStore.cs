@@ -93,7 +93,8 @@ internal sealed class TemplateStore(IOptions<TestHarnessSettings> options, ILogg
         }
     }
 
-    private sealed class TemplateFile
+    // Internal, not private, because only the serializer sets its properties. Code analysis would see the setters as unused.
+    internal sealed class TemplateFile
     {
         public string? Name { get; set; }
 

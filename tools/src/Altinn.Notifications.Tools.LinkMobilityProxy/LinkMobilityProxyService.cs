@@ -42,7 +42,28 @@ internal sealed class LinkMobilityProxyService(
 
     private WireMockServer? _server;
 
-    private string Mode => !string.IsNullOrWhiteSpace(_settings.Target) ? "proxy" : _settings.Interactive ? "interactive" : "stub";
+    private enum ProxyMode
+    {
+        Stub,
+        Interactive,
+        Proxy,
+    }
+
+    private ProxyMode Mode
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(_settings.Target))
+            {
+                return ProxyMode.Proxy;
+            }
+
+            return _settings.Interactive ? ProxyMode.Interactive : ProxyMode.Stub;
+        }
+    }
+
+    // Lower case in the log, like the README.
+    private string ModeName => Mode.ToString().ToLowerInvariant();
 
     private bool HasFallback => !string.IsNullOrWhiteSpace(_settings.FallbackUrl);
 
@@ -53,7 +74,7 @@ internal sealed class LinkMobilityProxyService(
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        if (Mode == "interactive" && !HasFallback)
+        if (Mode == ProxyMode.Interactive && !HasFallback)
         {
             throw new InvalidOperationException("LinkMobilityProxySettings:Interactive needs a FallbackUrl, e.g. the test harness control panel's http://localhost:5096/intercept/.");
         }
@@ -65,7 +86,7 @@ internal sealed class LinkMobilityProxyService(
             MaxRequestLogCount = 100,
         });
 
-        if (Mode == "proxy")
+        if (Mode == ProxyMode.Proxy)
         {
             _server
                 .Given(Request.Create().WithPath("/*"))
@@ -96,12 +117,19 @@ internal sealed class LinkMobilityProxyService(
             }
         };
 
+        string target = Mode switch
+        {
+            ProxyMode.Proxy => $" to {_settings.Target}",
+            _ when HasFallback => $" with fallback to {_settings.FallbackUrl}",
+            _ => string.Empty,
+        };
+
         logger.LogInformation(
             "LinkMobility proxy listening on {Url} in {Mode} mode{Target}, delivery reports {DeliveryReports}",
             _server.Url,
-            Mode,
-            Mode == "proxy" ? $" to {_settings.Target}" : HasFallback ? $" with fallback to {_settings.FallbackUrl}" : string.Empty,
-            Mode != "proxy" && deliveryReports.IsEnabled ? $"to {_settings.DeliveryReportUrl}" : "off");
+            ModeName,
+            target,
+            Mode != ProxyMode.Proxy && deliveryReports.IsEnabled ? $"to {_settings.DeliveryReportUrl}" : "off");
 
         return Task.CompletedTask;
     }
@@ -206,13 +234,13 @@ internal sealed class LinkMobilityProxyService(
         activity?.SetTag("http.response.status_code", response.StatusCode);
 
         string? requestBody = BodyText(request.BodyData);
-        string scenarios = Mode != "proxy" && GatewayXml.TryReadSend(requestBody, out var messages)
+        string scenarios = Mode != ProxyMode.Proxy && GatewayXml.TryReadSend(requestBody, out var messages)
             ? string.Join(", ", messages.Select(m => SmsScenarios.Pick(m.Recipient)))
             : "-";
 
         logger.LogInformation(
             "LinkMobility {Mode} {Method} {Path} -> {StatusCode} ({Scenario})\nRequest: {RequestBody}\nResponse: {ResponseBody}",
-            Mode,
+            ModeName,
             request.Method,
             request.Path,
             response.StatusCode,

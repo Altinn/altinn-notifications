@@ -141,6 +141,7 @@ internal sealed class DeliveryReportService(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            // The proxy is stopping, so the report is dropped with the rest of its state.
         }
         catch (Exception e)
         {

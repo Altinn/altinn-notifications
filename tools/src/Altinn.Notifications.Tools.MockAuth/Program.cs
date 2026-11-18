@@ -36,7 +36,7 @@ app.MapGet("/api/GetEnterpriseToken", (HttpContext context, MockTokenIssuer issu
 
 // An end user token, like the test token generator's personal token. Bruno's "test-util/end user dialog token" asks for one
 // with the scopes the end user notification log and Dialogporten need.
-app.MapGet("/api/GetPersonalToken", (HttpContext context, MockTokenIssuer issuer, IOptions<MockAuthSettings> settings, int? userId, int? partyId, string? pid, int? authLvl, string? scopes) =>
+app.MapGet("/api/GetPersonalToken", (HttpContext context, MockTokenIssuer issuer, IOptions<MockAuthSettings> settings, [AsParameters] PersonalTokenQuery query) =>
 {
     if (!HasBasicAuth(context, settings.Value))
     {
@@ -44,7 +44,7 @@ app.MapGet("/api/GetPersonalToken", (HttpContext context, MockTokenIssuer issuer
         return Results.Unauthorized();
     }
 
-    return Results.Text(issuer.CreatePersonalToken(BaseUrl(context), userId ?? 20000000, partyId ?? 50000000, pid ?? "12345678901", authLvl ?? 3, scopes));
+    return Results.Text(issuer.CreatePersonalToken(BaseUrl(context), query.UserId ?? 20000000, query.PartyId ?? 50000000, query.Pid ?? "12345678901", query.AuthLvl ?? 3, query.Scopes));
 });
 
 string[] signingAlgorithms = ["RS256"];
