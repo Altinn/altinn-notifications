@@ -24,7 +24,7 @@ builder.Services.Configure<TriggerSettings>(builder.Configuration.GetSection(nam
 builder.Services.AddHttpClient(TriggerScheduler.HttpClientName, (services, client) =>
 {
     var settings = services.GetRequiredService<IOptions<TriggerSettings>>().Value;
-    client.BaseAddress = new Uri(settings.ApiBaseUrl.TrimEnd('/') + "/");
+    client.BaseAddress = new Uri($"{settings.ApiBaseUrl.TrimEnd('/')}/");
     client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
 });
 builder.Services.AddSingleton<TriggerScheduler>();
@@ -52,4 +52,4 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapInterceptEndpoints();
 app.MapTriggerEndpoints();
-app.Run();
+await app.RunAsync();

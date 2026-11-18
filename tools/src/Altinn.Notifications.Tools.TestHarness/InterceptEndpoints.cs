@@ -36,7 +36,7 @@ internal static class InterceptEndpoints
     /// <summary>
     /// Holds the request until the operator answers it, an auto-reply does, or the timeout runs out.
     /// </summary>
-    private static async Task InterceptAsync(HttpContext context, string system, RequestStore store, TemplateStore templates, IOptions<TestHarnessSettings> options, TimeProvider timeProvider, ILogger<InterceptLog> logger)
+    private static async Task InterceptAsync(HttpContext context, string system, RequestStore store, TemplateStore templates, IOptions<TestHarnessSettings> options, TimeProvider timeProvider, ILogger<IInterceptLog> logger)
     {
         int timeoutSeconds = options.Value.TimeoutSeconds;
         var request = await ReadRequestAsync(context, system.ToLowerInvariant(), timeProvider.GetUtcNow(), timeoutSeconds);
@@ -57,6 +57,7 @@ internal static class InterceptEndpoints
 
         logger.LogInformation("Intercept {System} {Method} {Path} held for {Seconds} s", logSystem, logMethod, logPath, timeoutSeconds);
         var answer = store.Hold(request);
+        bool cancelled = false;
         try
         {
             await answer.WaitAsync(TimeSpan.FromSeconds(timeoutSeconds), timeProvider, context.RequestAborted);
@@ -68,6 +69,11 @@ internal static class InterceptEndpoints
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
             store.TryResolve(request.Id, null, Outcome.Cancelled, timeProvider.GetUtcNow());
+            cancelled = true;
+        }
+
+        if (cancelled)
+        {
             logger.LogInformation("Intercept {System} {Method} {Path} cancelled by the caller", logSystem, logMethod, logPath);
             return;
         }
@@ -95,7 +101,7 @@ internal static class InterceptEndpoints
             settings.Intercept,
             settings.TimeoutSeconds,
             Systems = systems,
-            store.AutoReplies,
+            AutoReplies = store.GetAutoReplies(),
             Pending = pending.Select(r => View(r, settings)),
             History = history.Select(h => new { Request = View(h.Request, settings), h.Response, Outcome = h.Outcome.ToString(), h.HandledAt }),
         });
@@ -214,11 +220,11 @@ internal static class InterceptEndpoints
         string path = target.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? target[prefix.Length..] : target;
         if (!path.StartsWith('/'))
         {
-            path = "/" + path;
+            path = $"/{path}";
         }
 
         var headers = context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString(), StringComparer.OrdinalIgnoreCase);
-        string? traceparent = context.Request.Headers["traceparent"].FirstOrDefault();
+        string? traceparent = context.Request.Headers.TraceParent.FirstOrDefault();
         string[] traceParts = traceparent?.Split('-') ?? [];
 
         return new SimulatedRequest(
@@ -295,4 +301,4 @@ internal static class InterceptEndpoints
 /// <summary>
 /// The log category of intercepted requests.
 /// </summary>
-internal sealed class InterceptLog;
+internal interface IInterceptLog;

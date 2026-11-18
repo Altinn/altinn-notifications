@@ -33,7 +33,10 @@ internal sealed class RequestStore(IOptions<TestHarnessSettings> options)
         }
     }
 
-    public IReadOnlyDictionary<string, string> AutoReplies => new Dictionary<string, string>(_autoReplies);
+    /// <summary>
+    /// A copy of the auto-replies, by system.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> GetAutoReplies() => new Dictionary<string, string>(_autoReplies);
 
     /// <summary>
     /// Holds <paramref name="request"/> until <see cref="TryResolve"/> is called for it. The task completes with the answer.

@@ -149,7 +149,7 @@ pre.body {
   max-height: 360px;
   overflow: auto;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 pre.body:empty::before { content: "(empty)"; color: var(--muted); }
@@ -215,7 +215,7 @@ button:disabled { opacity: .5; cursor: default; }
 .trigger-settings label { display: flex; align-items: center; gap: 5px; }
 .trigger-settings input[name=interval] { width: 80px; }
 .trigger .last-run { margin-top: 8px; }
-.trigger .response { white-space: pre-wrap; word-break: break-word; }
+.trigger .response { white-space: pre-wrap; overflow-wrap: anywhere; }
 .next-run { color: var(--muted); font-variant-numeric: tabular-nums; }
 .badge.running { color: var(--accent); }
 
@@ -230,4 +230,3 @@ button:disabled { opacity: .5; cursor: default; }
   main { grid-template-columns: 1fr; height: auto; }
   aside { border-right: 0; border-bottom: 1px solid var(--border); }
 }
-.notice { margin: 0; padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--panel); color: var(--warn); }

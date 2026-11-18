@@ -152,7 +152,7 @@ internal sealed class TriggerScheduler : BackgroundService
     /// </summary>
     private void LogRun(TriggerJob job, TriggerRun run)
     {
-        bool failedBefore = job.History.FirstOrDefault() is { Succeeded: false };
+        bool failedBefore = job.LastRun is { Succeeded: false };
         if (!run.Succeeded && !failedBefore)
         {
             _logger.LogWarning("Trigger {Name} failed with {Status}: {Response}", job.Name, run.Status?.ToString() ?? "no response", run.Response);

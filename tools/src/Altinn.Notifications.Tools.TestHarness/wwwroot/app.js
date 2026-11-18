@@ -258,7 +258,7 @@ function pretty(body) {
 
 // Puts each element on its own line, indented by depth. Elements with only text, or nothing, stay on one line.
 function prettyXml(xml) {
-  const tokens = (xml.match(/<[^>]+>|[^<]+/g) ?? []).map(t => t.trim()).filter(t => t !== "");
+  const tokens = xmlTokens(xml).map(t => t.trim()).filter(t => t !== "");
   const isOpen = t => /^<[^!?/]/.test(t) && !t.endsWith("/>");
   const isClose = t => t.startsWith("</");
   const lines = [];
@@ -279,6 +279,25 @@ function prettyXml(xml) {
     }
   }
   return lines.join("\n");
+}
+
+// Splits XML into its tags and the text between them.
+function xmlTokens(xml) {
+  const tokens = [];
+  let start = 0;
+  while (start < xml.length) {
+    let end;
+    if (xml[start] === "<") {
+      const close = xml.indexOf(">", start);
+      end = close === -1 ? xml.length : close + 1;
+    } else {
+      const open = xml.indexOf("<", start);
+      end = open === -1 ? xml.length : open;
+    }
+    tokens.push(xml.slice(start, end));
+    start = end;
+  }
+  return tokens;
 }
 
 function countdown(expiresAt) {
