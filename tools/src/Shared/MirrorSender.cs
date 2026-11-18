@@ -52,7 +52,7 @@ internal abstract class MirrorSender(string mirrorUrl, string name, ILogger logg
             return;
         }
 
-        string baseUrl = _mirrorUrl.TrimEnd('/') + "/";
+        string baseUrl = $"{_mirrorUrl.TrimEnd('/')}/";
         await foreach (var (path, body) in _queue.Reader.ReadAllAsync(stoppingToken))
         {
             await PostAsync(baseUrl + path, body, stoppingToken);
@@ -60,8 +60,10 @@ internal abstract class MirrorSender(string mirrorUrl, string name, ILogger logg
     }
 
     // Logs once when the control panel stops answering and once when it answers again, not for every copy.
+    // The failure is logged after the catch, with the message only: a stack trace says nothing about a control panel that is not running.
     private async Task PostAsync(string url, object body, CancellationToken cancellationToken)
     {
+        string? error = null;
         try
         {
             using var response = await _client.PostAsJsonAsync(url, body, cancellationToken);
@@ -78,11 +80,13 @@ internal abstract class MirrorSender(string mirrorUrl, string name, ILogger logg
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
         {
-            if (!_failing)
-            {
-                _failing = true;
-                logger.LogInformation("{Name} mirror to {Url} failed, copies are dropped until it answers: {Message}", name, _mirrorUrl, e.Message);
-            }
+            error = e.Message;
+        }
+
+        if (error is not null && !_failing)
+        {
+            _failing = true;
+            logger.LogInformation("{Name} mirror to {Url} failed, copies are dropped until it answers: {Message}", name, _mirrorUrl, error);
         }
     }
 }

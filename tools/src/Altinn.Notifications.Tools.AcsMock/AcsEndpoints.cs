@@ -63,9 +63,9 @@ internal static class AcsEndpoints
         await LogAndExecuteAsync(context, result, requestBody, scenario, logger);
     }
 
-    private static async Task GetOperationAsync(HttpContext context, string operationId, EmailOperationStore store, DeliveryReportService deliveryReports, EmailMirror mirror, IOptions<AcsMockSettings> options, TimeProvider timeProvider, ILogger<IAcsMockLog> logger)
+    private static async Task GetOperationAsync(HttpContext context, string operationId, [AsParameters] OperationServices services, IOptions<AcsMockSettings> options, ILogger<IAcsMockLog> logger)
     {
-        var operation = store.Get(operationId);
+        var operation = services.Store.Get(operationId);
 
         IResult result;
         if (!IsSigned(context, options.Value, [], logger))
@@ -78,14 +78,14 @@ internal static class AcsEndpoints
         }
         else
         {
-            string status = operation.Status(timeProvider.GetUtcNow());
+            string status = operation.Status(services.TimeProvider.GetUtcNow());
             if (status == "Succeeded")
             {
-                deliveryReports.Queue(operation);
+                services.DeliveryReports.Queue(operation);
             }
             else if (status == "Failed" && operation.MarkFailureMirrored())
             {
-                mirror.Completed(operation.Id, operation.Scenario == EmailScenario.Suppressed ? "EmailDroppedAllRecipientsSuppressed" : "EmailSendFailed");
+                services.Mirror.Completed(operation.Id, operation.Scenario == EmailScenario.Suppressed ? "EmailDroppedAllRecipientsSuppressed" : "EmailSendFailed");
             }
 
             result = Results.Json(new { id = operation.Id, status, error = OperationError(operation, status) });
@@ -296,6 +296,11 @@ internal static class AcsEndpoints
         string? raw = context.Features.Get<IHttpRequestFeature>()?.RawTarget;
         return string.IsNullOrEmpty(raw) ? context.Request.Path + context.Request.QueryString : raw;
     }
+
+    /// <summary>
+    /// The services a status poll reads and updates, bound with <c>[AsParameters]</c> to keep the handler's parameter list short.
+    /// </summary>
+    internal sealed record OperationServices(EmailOperationStore Store, DeliveryReportService DeliveryReports, EmailMirror Mirror, TimeProvider TimeProvider);
 }
 
 /// <summary>
