@@ -113,7 +113,7 @@ internal sealed class PlatformMocksService(IOptions<PlatformMocksSettings> optio
             return;
         }
 
-        string baseUrl = _settings.FallbackUrl.TrimEnd('/') + "/" + system;
+        string baseUrl = $"{_settings.FallbackUrl.TrimEnd('/')}/{system}";
         server
             .Given(Request.Create().WithPath("/*"))
             .AtPriority(FallbackPriority)

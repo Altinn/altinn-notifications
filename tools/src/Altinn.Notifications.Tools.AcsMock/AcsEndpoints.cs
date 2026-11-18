@@ -20,10 +20,10 @@ internal static class AcsEndpoints
     {
         app.MapPost("/emails:send", SendAsync);
         app.MapGet("/emails/operations/{operationId}", GetOperationAsync);
-        app.Map("{**path}", FallbackAsync);
+        app.MapFallback(FallbackAsync);
     }
 
-    private static async Task SendAsync(HttpContext context, EmailOperationStore store, IOptions<AcsMockSettings> options, TimeProvider timeProvider, ILogger<AcsMockLog> logger)
+    private static async Task SendAsync(HttpContext context, EmailOperationStore store, IOptions<AcsMockSettings> options, TimeProvider timeProvider, ILogger<IAcsMockLog> logger)
     {
         var settings = options.Value;
         byte[] body = await ReadBodyAsync(context);
@@ -53,7 +53,7 @@ internal static class AcsEndpoints
         await LogAndExecuteAsync(context, result, requestBody, scenario, logger);
     }
 
-    private static async Task GetOperationAsync(HttpContext context, string operationId, EmailOperationStore store, DeliveryReportService deliveryReports, IOptions<AcsMockSettings> options, TimeProvider timeProvider, ILogger<AcsMockLog> logger)
+    private static async Task GetOperationAsync(HttpContext context, string operationId, EmailOperationStore store, DeliveryReportService deliveryReports, IOptions<AcsMockSettings> options, TimeProvider timeProvider, ILogger<IAcsMockLog> logger)
     {
         var operation = store.Get(operationId);
 
@@ -83,7 +83,7 @@ internal static class AcsEndpoints
     /// <summary>
     /// Forwards anything the mock does not handle to <c>{FallbackUrl}acs/{path}</c>, so an operator can answer it in the simulator.
     /// </summary>
-    private static async Task FallbackAsync(HttpContext context, IOptions<AcsMockSettings> options, IHttpClientFactory httpClientFactory, ILogger<AcsMockLog> logger)
+    private static async Task FallbackAsync(HttpContext context, IOptions<AcsMockSettings> options, IHttpClientFactory httpClientFactory, ILogger<IAcsMockLog> logger)
     {
         string fallbackUrl = options.Value.FallbackUrl;
         byte[] body = await ReadBodyAsync(context);
@@ -153,8 +153,8 @@ internal static class AcsEndpoints
             Sender = sender,
             Recipients = recipients,
             CompletesAt = timeProvider.GetUtcNow().AddSeconds(runningSeconds),
-            TraceParent = context.Request.Headers["traceparent"].FirstOrDefault(),
-            TraceState = context.Request.Headers["tracestate"].FirstOrDefault(),
+            TraceParent = context.Request.Headers.TraceParent.FirstOrDefault(),
+            TraceState = context.Request.Headers.TraceState.FirstOrDefault(),
         });
 
         string apiVersion = context.Request.Query["api-version"].FirstOrDefault() ?? string.Empty;
@@ -189,16 +189,15 @@ internal static class AcsEndpoints
     private static bool IsSigned(HttpContext context, AcsMockSettings settings, byte[] body, ILogger logger)
     {
         var headers = context.Request.Headers;
-        bool valid = HmacValidator.IsValid(
-            settings.AccessKey,
+        var request = new SignedRequest(
             context.Request.Method,
             RawTarget(context),
             context.Request.Host.Value ?? string.Empty,
             headers["x-ms-date"].FirstOrDefault(),
             headers["x-ms-content-sha256"].FirstOrDefault(),
             headers.Authorization.FirstOrDefault(),
-            body,
-            out string reason);
+            body);
+        bool valid = HmacValidator.IsValid(settings.AccessKey, request, out string reason);
 
         if (!valid)
         {
@@ -288,4 +287,4 @@ internal static class AcsEndpoints
 /// <summary>
 /// The log category of the mock's request log, so it can be filtered on in the dashboard.
 /// </summary>
-internal sealed class AcsMockLog;
+internal interface IAcsMockLog;

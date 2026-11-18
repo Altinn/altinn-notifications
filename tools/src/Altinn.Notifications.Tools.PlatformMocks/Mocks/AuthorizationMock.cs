@@ -77,12 +77,14 @@ internal sealed class AuthorizationMock(AuthorizationMockSettings settings) : IP
         return attributes is { Count: > 0 } ? new { CategoryId = categoryId, Attribute = attributes } : null;
     }
 
-    private sealed class XacmlRequestRoot
+    // The XACML types are internal, not private, because only the serializer sets their properties, and it also writes the
+    // attributes back in the result. Code analysis would see their setters as unused.
+    internal sealed class XacmlRequestRoot
     {
         public XacmlRequest Request { get; set; } = new();
     }
 
-    private sealed class XacmlRequest
+    internal sealed class XacmlRequest
     {
         public List<XacmlCategory> AccessSubject { get; set; } = [];
 
@@ -93,24 +95,24 @@ internal sealed class AuthorizationMock(AuthorizationMockSettings settings) : IP
         public XacmlMultiRequests? MultiRequests { get; set; }
     }
 
-    private sealed class XacmlMultiRequests
+    internal sealed class XacmlMultiRequests
     {
         public List<XacmlRequestReference> RequestReference { get; set; } = [];
     }
 
-    private sealed class XacmlRequestReference
+    internal sealed class XacmlRequestReference
     {
         public List<string> ReferenceId { get; set; } = [];
     }
 
-    private sealed class XacmlCategory
+    internal sealed class XacmlCategory
     {
         public string? Id { get; set; }
 
         public List<XacmlAttribute> Attribute { get; set; } = [];
     }
 
-    private sealed class XacmlAttribute
+    internal sealed class XacmlAttribute
     {
         public string? AttributeId { get; set; }
 
