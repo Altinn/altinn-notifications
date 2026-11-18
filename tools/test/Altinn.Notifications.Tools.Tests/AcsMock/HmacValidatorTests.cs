@@ -22,16 +22,16 @@ public class HmacValidatorTests
         string hash = HmacValidator.ContentHash(_body);
         string authorization = HmacValidator.Sign(AcsMockFactory.AccessKey, "POST", PathAndQuery, "localhost", date, hash);
 
-        bool valid = HmacValidator.IsValid(
-            AcsMockFactory.AccessKey,
+        var request = new SignedRequest(
             "POST",
             PathAndQuery,
             "localhost",
             withoutDate ? null : date,
             withoutContentHash ? null : hash,
             withoutAuthorization ? null : authorization,
-            _body,
-            out string reason);
+            _body);
+
+        bool valid = HmacValidator.IsValid(AcsMockFactory.AccessKey, request, out string reason);
 
         Assert.False(valid);
         Assert.Equal("x-ms-date, x-ms-content-sha256 or Authorization is missing", reason);
@@ -44,7 +44,9 @@ public class HmacValidatorTests
         string hash = HmacValidator.ContentHash(_body);
         string authorization = HmacValidator.Sign(AcsMockFactory.AccessKey, "POST", PathAndQuery, "localhost", date, hash);
 
-        Assert.True(HmacValidator.IsValid(AcsMockFactory.AccessKey, "POST", PathAndQuery, "localhost", date, hash, authorization, _body, out string reason));
+        var request = new SignedRequest("POST", PathAndQuery, "localhost", date, hash, authorization, _body);
+
+        Assert.True(HmacValidator.IsValid(AcsMockFactory.AccessKey, request, out string reason));
         Assert.Empty(reason);
     }
 }

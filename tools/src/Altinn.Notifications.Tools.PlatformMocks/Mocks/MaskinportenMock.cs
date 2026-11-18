@@ -32,7 +32,7 @@ internal sealed class MaskinportenMock : IPlatformMock
     /// <summary>
     /// The scope comes from the grant, so the token looks like one for the client that asked.
     /// </summary>
-    private static object Token(IReadOnlyDictionary<string, string> form)
+    private static Dictionary<string, object> Token(Dictionary<string, string> form)
     {
         string scope = form.TryGetValue("assertion", out var assertion) ? Claim(assertion, "scope") ?? string.Empty : string.Empty;
         return new Dictionary<string, object>

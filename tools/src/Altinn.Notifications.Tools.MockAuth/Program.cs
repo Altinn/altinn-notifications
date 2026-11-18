@@ -34,6 +34,10 @@ app.MapGet("/api/GetEnterpriseToken", (HttpContext context, MockTokenIssuer issu
     return Results.Text(issuer.CreateEnterpriseToken(BaseUrl(context), org ?? "ttd", orgNumber ?? "991825827", scopes));
 });
 
+string[] signingAlgorithms = ["RS256"];
+string[] subjectTypes = ["public"];
+string[] responseTypes = ["code"];
+
 app.MapGet($"{OpenIdPath}/.well-known/openid-configuration", (HttpContext context) =>
 {
     string baseUrl = BaseUrl(context);
@@ -41,15 +45,15 @@ app.MapGet($"{OpenIdPath}/.well-known/openid-configuration", (HttpContext contex
     {
         issuer = baseUrl,
         jwks_uri = $"{baseUrl}{OpenIdPath}/jwks",
-        id_token_signing_alg_values_supported = new[] { "RS256" },
-        subject_types_supported = new[] { "public" },
-        response_types_supported = new[] { "code" },
+        id_token_signing_alg_values_supported = signingAlgorithms,
+        subject_types_supported = subjectTypes,
+        response_types_supported = responseTypes,
     });
 });
 
 app.MapGet($"{OpenIdPath}/jwks", (MockTokenIssuer issuer) => Results.Json(issuer.GetJwks()));
 
-app.Run();
+await app.RunAsync();
 
 static string BaseUrl(HttpContext context) => $"{context.Request.Scheme}://{context.Request.Host}";
 
