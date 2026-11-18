@@ -35,12 +35,12 @@ public class ProcessItemsBackgroundService(
     private readonly ManyItemsLately _manyRetryOrdersLately = new();
 
     /// <inheritdoc/>
-    protected override async Task ExecuteAsync(CancellationToken hostStoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // ApplicationStopping fires at SIGTERM, before hosted services are stopped in reverse registration order.
         // Linking it makes the loops stop claiming new items immediately instead of when this service is stopped.
-        using var shutdownSource = CancellationTokenSource.CreateLinkedTokenSource(hostStoppingToken, applicationLifetime.ApplicationStopping);
-        CancellationToken stoppingToken = shutdownSource.Token;
+        using var shutdownSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, applicationLifetime.ApplicationStopping);
+        CancellationToken shutdownToken = shutdownSource.Token;
 
         int totalTasks = _config.EmailDaytimeNotificationsProcessLoopConfig.TaskCount
             + _config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount
@@ -56,7 +56,7 @@ public class ProcessItemsBackgroundService(
             return;
         }
 
-        while (!stoppingToken.IsCancellationRequested)
+        while (!shutdownToken.IsCancellationRequested)
         {
             try
             {
@@ -67,7 +67,7 @@ public class ProcessItemsBackgroundService(
                         notificationScheduleService.CanSendEmailNow,
                         isFirstInstance: i == 0,
                         _config.EmailDaytimeNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        shutdownToken))];
 
                 Task[] emailAnytimeNotificationTasks = [.. Enumerable.Range(0, _config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
@@ -76,7 +76,7 @@ public class ProcessItemsBackgroundService(
                         null,
                         isFirstInstance: i == 0,
                         _config.EmailAnytimeNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        shutdownToken))];
 
                 Task[] composedEmailNotificationTask = [.. Enumerable.Range(0, _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
@@ -85,7 +85,7 @@ public class ProcessItemsBackgroundService(
                         null,
                         isFirstInstance: i == 0,
                         _config.ComposedEmailNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        shutdownToken))];
 
                 Task[] smsDaytimeNotificationTasks = [.. Enumerable.Range(0, _config.SmsDaytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
@@ -94,7 +94,7 @@ public class ProcessItemsBackgroundService(
                         notificationScheduleService.CanSendSmsNow,
                         isFirstInstance: i == 0,
                         _config.SmsDaytimeNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        shutdownToken))];
 
                 Task[] smsAnytimeNotificationTasks = [.. Enumerable.Range(0, _config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
@@ -103,7 +103,7 @@ public class ProcessItemsBackgroundService(
                         null,
                         isFirstInstance: i == 0,
                         _config.SmsAnytimeNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        shutdownToken))];
 
                 Task[] pastDueOrdersTasks = [.. Enumerable.Range(0, _config.PastDueOrdersProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
@@ -112,7 +112,7 @@ public class ProcessItemsBackgroundService(
                         null,
                         isFirstInstance: i == 0,
                         _config.PastDueOrdersProcessLoopConfig,
-                        stoppingToken))];
+                        shutdownToken))];
 
                 Task[] retryOrdersTasks = [.. Enumerable.Range(0, _config.RetryOrdersProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
@@ -121,7 +121,7 @@ public class ProcessItemsBackgroundService(
                         null,
                         isFirstInstance: i == 0,
                         _config.RetryOrdersProcessLoopConfig,
-                        stoppingToken))];
+                        shutdownToken))];
 
                 await Task.WhenAll(emailDaytimeNotificationTasks
                     .Concat(emailAnytimeNotificationTasks)
@@ -133,16 +133,16 @@ public class ProcessItemsBackgroundService(
             }
             catch (Exception)
             {
-                if (stoppingToken.IsCancellationRequested)
+                if (shutdownToken.IsCancellationRequested)
                 {
                     return;
                 }
 
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken); // Wait before restarting
+                    await Task.Delay(TimeSpan.FromSeconds(60), shutdownToken); // Wait before restarting
                 }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
                 {
                     return;
                 }
