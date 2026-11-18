@@ -18,13 +18,17 @@ internal static partial class LogSanitizer
     /// </summary>
     public static string Clean(string? value) => value is null ? string.Empty : UnsafeCharacters().Replace(value, Escape);
 
-    private static string Escape(Match match) => match.Value[0] switch
+    private static string Escape(Match match)
     {
-        '\r' => @"\r",
-        '\n' => @"\n",
-        '\t' => @"\t",
-        char c => $@"\u{(int)c:x4}",
-    };
+        char c = match.Value[0];
+        return c switch
+        {
+            '\r' => @"\r",
+            '\n' => @"\n",
+            '\t' => @"\t",
+            _ => $@"\u{(int)c:x4}",
+        };
+    }
 
     [GeneratedRegex(@"[\p{Cc}\p{Zl}\p{Zp}]")]
     private static partial Regex UnsafeCharacters();
