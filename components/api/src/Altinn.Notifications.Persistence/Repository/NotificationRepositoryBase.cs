@@ -273,36 +273,6 @@ public abstract class NotificationRepositoryBase
     }
 
     /// <summary>
-    /// Sets a claimed notification to the retrying state, within the caller's unit of work.
-    /// </summary>
-    /// <param name="unitOfWork">The unit of work that provides the active connection and transaction.</param>
-    /// <param name="sqlCommand">The SQL command taking the notification alternate id ($1, uuid).</param>
-    /// <param name="notificationId">The unique identifier of the notification.</param>
-    /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="InvalidNotificationIdentifierException">Thrown when <paramref name="notificationId"/> is empty.</exception>
-    /// <exception cref="NotificationNotFoundException">Thrown when no notification matches the given identifier.</exception>
-    protected async Task ExecuteScheduleConditionRetryAsync(
-        Core.Models.UnitOfWork unitOfWork,
-        string sqlCommand,
-        Guid notificationId,
-        CancellationToken cancellationToken)
-    {
-        if (notificationId == Guid.Empty)
-        {
-            throw new InvalidNotificationIdentifierException($"The provided {Channel} identifier is invalid.");
-        }
-
-        await using NpgsqlCommand pgcom = new(sqlCommand, unitOfWork.Connection, unitOfWork.Transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-
-        if (await pgcom.ExecuteNonQueryAsync(cancellationToken) == 0)
-        {
-            throw new NotificationNotFoundException(Channel, notificationId.ToString(), SendStatusIdentifierType.NotificationId);
-        }
-    }
-
-    /// <summary>
     /// Executes a notification status update within the caller's unit of work, handling result validation and order completion.
     /// </summary>
     /// <remarks>
@@ -320,7 +290,7 @@ public abstract class NotificationRepositoryBase
     /// <param name="parameters">Action to configure the command parameters before execution.</param>
     /// <param name="identifier">The identifier reported if the update fails. Callers should mirror the SQL function's lookup precedence.</param>
     /// <param name="identifierType">The type of <paramref name="identifier"/>.</param>
-    /// <param name="isIntermediateStatus">Whether the new status is an intermediate one that should skip order completion.</param>
+    /// <param name="isIntermediateStatus">Whether the new status is an intermediate one that should skip order completion (e.g. Succeeded, Accepted, Retrying).</param>
     /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="NotificationNotFoundException">Thrown when no notification matches the given identifiers.</exception>
@@ -366,7 +336,7 @@ public abstract class NotificationRepositoryBase
             throw new NotificationExpiredException(Channel, identifier, identifierType);
         }
 
-        // Skip order completion when nothing was updated or the status is intermediate (Succeeded, Accepted)
+        // Skip order completion when nothing was updated or the status is intermediate (Succeeded, Accepted, Retrying)
         if (!wasUpdated || isIntermediateStatus)
         {
             return;

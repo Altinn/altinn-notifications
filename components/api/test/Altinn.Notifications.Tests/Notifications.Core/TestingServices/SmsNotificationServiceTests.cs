@@ -179,7 +179,7 @@ public class SmsNotificationServiceTests
         var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result);
-        repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, sms.NotificationId, It.IsAny<CancellationToken>()), Times.Once);
+        repo.Verify(r => r.UpdateSendStatusAsync(unitOfWork, sms.NotificationId, SmsNotificationResultType.Retrying, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotification_ConditionInconclusiveOnFirstAttempt_SetsRetryingWithoutPublishingOrSettingStatus()
+    public async Task SendNotification_ConditionInconclusiveOnFirstAttempt_SetsRetryingWithoutPublishing()
     {
         var (service, repo, publisher, unitOfWorkRepository, unitOfWork) = CreateConditionScenario(new Uri("https://condition.example/check"), false, false);
 
@@ -269,9 +269,11 @@ public class SmsNotificationServiceTests
 
         Assert.True(result);
         publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
-        repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
         repo.Verify(
-            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            r => r.UpdateSendStatusAsync(unitOfWork, It.IsAny<Guid?>(), SmsNotificationResultType.Retrying, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.Is<SmsNotificationResultType>(s => s != SmsNotificationResultType.Retrying), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
         unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
         unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
@@ -286,7 +288,6 @@ public class SmsNotificationServiceTests
 
         Assert.True(result);
         publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Once);
-        repo.Verify(r => r.ScheduleConditionRetryAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         repo.Verify(
             r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -358,7 +359,7 @@ public class SmsNotificationServiceTests
         Assert.True(result);
         Assert.True(tokenCancelledByTimeout);
         publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
-        repo.Verify(r => r.ScheduleConditionRetryAsync(unitOfWork, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
+        repo.Verify(r => r.UpdateSendStatusAsync(unitOfWork, It.IsAny<Guid?>(), SmsNotificationResultType.Retrying, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(unitOfWork), Times.Once);
         unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
     }
@@ -418,8 +419,9 @@ public class SmsNotificationServiceTests
 
         Assert.False(result);
         publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
-        repo.Verify(r => r.ScheduleConditionRetryAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
+        repo.Verify(
+            r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), SmsNotificationResultType.Retrying, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         logger.Verify(
             l => l.Log(LogLevel.Warning, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception?>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()),

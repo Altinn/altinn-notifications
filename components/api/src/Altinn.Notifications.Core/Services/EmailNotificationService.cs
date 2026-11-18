@@ -216,7 +216,7 @@ public class EmailNotificationService(
             {
                 if (!isRetry)
                 {
-                    await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, cancellationToken);
+                    await _emailNotificationRepository.UpdateSendStatusAsync(unitOfWork, claimedNotification.NotificationId, EmailNotificationResultType.Retrying, cancellationToken: cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
                     _logger.LogInformation(

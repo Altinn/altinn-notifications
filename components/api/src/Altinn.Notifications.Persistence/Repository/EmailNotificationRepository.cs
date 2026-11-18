@@ -35,7 +35,6 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _claimRetryEmailSql = "SELECT * FROM notifications.claim_retry_email_v1($1, $2)"; // $1=include_daytime, $2=retry_delay
     private const string _claimRetryComposedEmailSql = "SELECT * FROM notifications.claim_retry_composed_email_v1($1)"; // $1=retry_delay
-    private const string _scheduleConditionRetrySql = "update notifications.emailnotifications set result = 'Retrying'::emailnotificationresulttype, resulttime = clock_timestamp() where alternateid = $1"; // $1=alternateid
     private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=total_attachment_size_bytes
 
     /// <inheritdoc/>
@@ -126,7 +125,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             },
             identifier,
             identifierType,
-            isIntermediateStatus: status == EmailNotificationResultType.Succeeded,
+            isIntermediateStatus: status is EmailNotificationResultType.Succeeded or EmailNotificationResultType.Retrying,
             cancellationToken);
     }
 
@@ -214,11 +213,5 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         {
             ConditionEndpoint = await reader.ReadConditionEndpointAsync(cancellationToken)
         };
-    }
-
-    /// <inheritdoc/>
-    public Task ScheduleConditionRetryAsync(UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken = default)
-    {
-        return ExecuteScheduleConditionRetryAsync(unitOfWork, _scheduleConditionRetrySql, notificationId, cancellationToken);
     }
 }

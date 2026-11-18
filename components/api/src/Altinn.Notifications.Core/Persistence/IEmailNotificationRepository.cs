@@ -83,18 +83,6 @@ public interface IEmailNotificationRepository : INotificationRepository
     public Task<ComposedEmail?> GetComposedConditionRetryNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Sets a claimed email notification to <see cref="EmailNotificationResultType.Retrying"/> after an inconclusive send condition check.
-    /// The notification is picked up again by the retry processing once the configured retry delay has passed.
-    /// </summary>
-    /// <param name="unitOfWork">The unit of work that holds the claim.</param>
-    /// <param name="notificationId">The unique identifier of the email notification.</param>
-    /// <param name="cancellationToken">A token used for cancelling the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="InvalidNotificationIdentifierException">Thrown when <paramref name="notificationId"/> is empty.</exception>
-    /// <exception cref="NotificationNotFoundException">Thrown when no notification matches the provided identifier.</exception>
-    public Task ScheduleConditionRetryAsync(UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Retrieves all processed email recipients for an order
     /// </summary>
     /// <returns>A list of email recipients</returns>

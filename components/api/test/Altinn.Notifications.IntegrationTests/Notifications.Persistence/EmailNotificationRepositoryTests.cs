@@ -247,7 +247,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ScheduleConditionRetryAsync_AfterSlowWorkInTransaction_SetsRetryingWithCurrentTime()
+    public async Task UpdateSendStatusAsync_Retrying_SetsRetryingAndDoesNotCompleteOrder()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -257,16 +257,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
 
         // Act
-        DateTime beforeScheduling;
         try
         {
-            await using (NpgsqlCommand sleep = new("SELECT pg_sleep(1.5)", unitOfWork.Connection, unitOfWork.Transaction))
-            {
-                await sleep.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
-            }
-
-            beforeScheduling = await PostgreUtil.GetDatabaseUtcNow();
-            await repo.ScheduleConditionRetryAsync(unitOfWork, emailNotification.Id, TestContext.Current.CancellationToken);
+            await repo.UpdateSendStatusAsync(unitOfWork, emailNotification.Id, EmailNotificationResultType.Retrying, cancellationToken: TestContext.Current.CancellationToken);
             await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
         }
         catch
@@ -276,11 +269,11 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         }
 
         // Assert
-        DateTime resultTime = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT resulttime FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
-        string result = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT result::text FROM notifications.emailnotifications WHERE alternateid = '{emailNotification.Id}'");
+        Assert.Equal(EmailNotificationResultType.Retrying.ToString(), await SelectEmailNotificationStatus(emailNotification.Id));
 
-        Assert.Equal(EmailNotificationResultType.Retrying.ToString(), result);
-        Assert.True(resultTime >= beforeScheduling);
+        string processedStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
+        Assert.NotEqual(OrderProcessingStatus.Completed.ToString(), processedStatus);
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
     }
 
     [Theory]
@@ -315,7 +308,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         Email? firstAttempt = await ClaimNew();
 
         UnitOfWork scheduleUnitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-        await repo.ScheduleConditionRetryAsync(scheduleUnitOfWork, emailNotification.Id, TestContext.Current.CancellationToken);
+        await repo.UpdateSendStatusAsync(scheduleUnitOfWork, emailNotification.Id, EmailNotificationResultType.Retrying, cancellationToken: TestContext.Current.CancellationToken);
         await _unitOfWorkRepository.CommitUnitOfWork(scheduleUnitOfWork);
 
         Email? newClaimWhileRetrying = await ClaimNew();
@@ -1734,50 +1727,6 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Equal("The provided Email identifier is invalid.", exception.Message);
-    }
-
-    [Fact]
-    public async Task ScheduleConditionRetryAsync_GivenEmptyNotificationId_ThrowsInvalidNotificationIdentifierException()
-    {
-        // Arrange
-        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
-            .GetServices([typeof(IEmailNotificationRepository)])
-            .First(i => i.GetType() == typeof(EmailNotificationRepository));
-
-        // Act
-        var exception = await Assert.ThrowsAsync<InvalidNotificationIdentifierException>(
-            () => repo.ScheduleConditionRetryAsync(new UnitOfWork(), Guid.Empty, TestContext.Current.CancellationToken));
-
-        // Assert
-        Assert.Equal("The provided Email identifier is invalid.", exception.Message);
-    }
-
-    [Fact]
-    public async Task ScheduleConditionRetryAsync_GivenNonExistentNotificationId_ThrowsNotificationNotFoundException()
-    {
-        // Arrange
-        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
-            .GetServices([typeof(IEmailNotificationRepository)])
-            .First(i => i.GetType() == typeof(EmailNotificationRepository));
-
-        Guid nonExistentNotificationId = Guid.NewGuid();
-
-        await using var connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(TestContext.Current.CancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        var unitOfWork = new UnitOfWork
-        {
-            Connection = connection,
-            Transaction = transaction
-        };
-
-        // Act
-        var ex = await Assert.ThrowsAsync<NotificationNotFoundException>(
-            () => repo.ScheduleConditionRetryAsync(unitOfWork, nonExistentNotificationId, TestContext.Current.CancellationToken));
-
-        // Assert
-        Assert.Equal(NotificationChannel.Email, ex.Channel);
-        Assert.Equal(SendStatusIdentifierType.NotificationId, ex.IdentifierType);
-        Assert.Equal(nonExistentNotificationId.ToString(), ex.Identifier);
     }
 
     [Fact]

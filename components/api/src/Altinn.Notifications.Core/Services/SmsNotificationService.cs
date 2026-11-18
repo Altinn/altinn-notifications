@@ -169,7 +169,7 @@ public class SmsNotificationService : ISmsNotificationService
             {
                 if (!isRetry)
                 {
-                    await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, cancellationToken);
+                    await _repository.UpdateSendStatusAsync(unitOfWork, newSmsNotification.NotificationId, SmsNotificationResultType.Retrying, cancellationToken: cancellationToken);
                     await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
                     _logger.LogInformation(

@@ -1024,7 +1024,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ScheduleConditionRetryAsync_AfterSlowWorkInTransaction_SetsRetryingWithCurrentTime()
+    public async Task UpdateSendStatus_Retrying_SetsRetryingAndDoesNotCompleteOrder()
     {
         // Arrange
         (NotificationOrder order, SmsNotification sms) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
@@ -1034,16 +1034,9 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
 
         // Act
-        DateTime beforeScheduling;
         try
         {
-            await using (NpgsqlCommand sleep = new("SELECT pg_sleep(1.5)", unitOfWork.Connection, unitOfWork.Transaction))
-            {
-                await sleep.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
-            }
-
-            beforeScheduling = await PostgreUtil.GetDatabaseUtcNow();
-            await repo.ScheduleConditionRetryAsync(unitOfWork, sms.Id, TestContext.Current.CancellationToken);
+            await repo.UpdateSendStatusAsync(unitOfWork, sms.Id, SmsNotificationResultType.Retrying, cancellationToken: TestContext.Current.CancellationToken);
             await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
         }
         catch
@@ -1053,10 +1046,11 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         }
 
         // Assert
-        DateTime resultTime = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT resulttime FROM notifications.smsnotifications WHERE alternateid = '{sms.Id}'");
-
         Assert.Equal(SmsNotificationResultType.Retrying.ToString(), await SelectSmsNotificationStatus(sms.Id));
-        Assert.True(resultTime >= beforeScheduling);
+
+        string processedStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
+        Assert.NotEqual(OrderProcessingStatus.Completed.ToString(), processedStatus);
+        Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
     }
 
     [Theory]
@@ -1091,7 +1085,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         Sms? firstAttempt = await ClaimNew();
 
         UnitOfWork scheduleUnitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-        await repo.ScheduleConditionRetryAsync(scheduleUnitOfWork, sms.Id, TestContext.Current.CancellationToken);
+        await repo.UpdateSendStatusAsync(scheduleUnitOfWork, sms.Id, SmsNotificationResultType.Retrying, cancellationToken: TestContext.Current.CancellationToken);
         await _unitOfWorkRepository.CommitUnitOfWork(scheduleUnitOfWork);
 
         Sms? newClaimWhileRetrying = await ClaimNew();
