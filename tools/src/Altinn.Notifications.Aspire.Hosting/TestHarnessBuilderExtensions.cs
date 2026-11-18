@@ -16,6 +16,11 @@ namespace Aspire.Hosting;
 public static class TestHarnessBuilderExtensions
 {
     /// <summary>
+    /// The name of the phone number or email address argument of the test message commands.
+    /// </summary>
+    private const string RecipientArgument = "recipient";
+
+    /// <summary>
     /// The trigger jobs the control panel knows, the names in its <c>TriggerCatalog</c>.
     /// </summary>
     internal static readonly string[] TriggerJobs =
@@ -45,7 +50,7 @@ public static class TestHarnessBuilderExtensions
     /// <param name="timeoutSeconds">How long the control panel holds a request.</param>
     public static IResourceBuilder<ProjectResource> AddTestHarness(this IDistributedApplicationBuilder builder, string name, int port, bool intercept, int timeoutSeconds)
     {
-        string url = "http://localhost:" + port;
+        string url = Localhost.Url(port);
 
         // The dashboard's own URL, so each held request can link to its trace.
         string dashboardUrl = (builder.Configuration["ASPNETCORE_URLS"] ?? string.Empty).Split(';')[0];
@@ -167,28 +172,28 @@ public static class TestHarnessBuilderExtensions
             .WithCommand(
                 "send-test-sms",
                 "Send test SMS",
-                context => sender.SendSmsAsync(context.Services.GetRequiredService<IHttpClientFactory>().CreateClient(), context.Arguments.GetString("recipient")!, context.Arguments.GetString("text")!, context.CancellationToken),
+                context => sender.SendSmsAsync(context.Services.GetRequiredService<IHttpClientFactory>().CreateClient(), context.Arguments.GetString(RecipientArgument)!, context.Arguments.GetString("text")!, context.CancellationToken),
                 new CommandOptions
                 {
                     Description = "Orders an instant SMS from the API. It shows up in the Phone tab.",
                     IconName = "Phone",
                     Arguments =
                     [
-                        new InteractionInput { Name = "recipient", Label = "Phone number", InputType = InputType.Text, Required = true, Value = "+4799999999", Description = "The last two digits pick the outcome, e.g. 01 ends as undelivered." },
+                        new InteractionInput { Name = RecipientArgument, Label = "Phone number", InputType = InputType.Text, Required = true, Value = "+4799999999", Description = "The last two digits pick the outcome, e.g. 01 ends as undelivered." },
                         new InteractionInput { Name = "text", Label = "Text", InputType = InputType.Text, Required = true, Value = "Test SMS from the Aspire dashboard" },
                     ],
                 })
             .WithCommand(
                 "send-test-email",
                 "Send test email",
-                context => sender.SendEmailAsync(context.Services.GetRequiredService<IHttpClientFactory>().CreateClient(), context.Arguments.GetString("recipient")!, context.Arguments.GetString("subject")!, context.Arguments.GetString("body")!, context.CancellationToken),
+                context => sender.SendEmailAsync(context.Services.GetRequiredService<IHttpClientFactory>().CreateClient(), context.Arguments.GetString(RecipientArgument)!, context.Arguments.GetString("subject")!, context.Arguments.GetString("body")!, context.CancellationToken),
                 new CommandOptions
                 {
                     Description = "Orders an instant email from the API. It shows up in the Inbox tab.",
                     IconName = "Mail",
                     Arguments =
                     [
-                        new InteractionInput { Name = "recipient", Label = "Email address", InputType = InputType.Text, Required = true, Value = "aspire@example.com", Description = "The local part picks the outcome, e.g. bounce@example.com bounces." },
+                        new InteractionInput { Name = RecipientArgument, Label = "Email address", InputType = InputType.Text, Required = true, Value = "aspire@example.com", Description = "The local part picks the outcome, e.g. bounce@example.com bounces." },
                         new InteractionInput { Name = "subject", Label = "Subject", InputType = InputType.Text, Required = true, Value = "Test email from the Aspire dashboard" },
                         new InteractionInput { Name = "body", Label = "Body", InputType = InputType.Text, Required = true, Value = "Sent with the Send test email command." },
                     ],

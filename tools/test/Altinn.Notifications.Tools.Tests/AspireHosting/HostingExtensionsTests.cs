@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Tools.Tests.AspireHosting;
 /// <summary>
 /// The app host extensions in <c>Altinn.Notifications.Aspire.Hosting</c>, checked on the app model without starting anything.
 /// </summary>
-public class HostingExtensionsTests
+public partial class HostingExtensionsTests
 {
     private readonly IDistributedApplicationBuilder _builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions { Args = [], DisableDashboard = true });
 
@@ -247,8 +247,8 @@ public class HostingExtensionsTests
         string appHost = File.ReadAllText(Path.Combine(root, "tools", "aspire", "apphost.cs"));
         string packages = File.ReadAllText(Path.Combine(root, "Directory.Packages.props"));
 
-        string sdkVersion = Regex.Match(appHost, @"#:sdk Aspire\.AppHost\.Sdk@(\S+)").Groups[1].Value;
-        string packageVersion = Regex.Match(packages, @"Include=""Aspire\.Hosting"" Version=""([^""]+)""").Groups[1].Value;
+        string sdkVersion = AppHostSdkVersion().Match(appHost).Groups[1].Value;
+        string packageVersion = AspireHostingVersion().Match(packages).Groups[1].Value;
 
         Assert.NotEmpty(sdkVersion);
         Assert.Equal(sdkVersion, packageVersion);
@@ -284,4 +284,10 @@ public class HostingExtensionsTests
 
         return directory?.FullName ?? throw new InvalidOperationException("Directory.Packages.props not found above " + AppContext.BaseDirectory);
     }
+
+    [GeneratedRegex(@"#:sdk Aspire\.AppHost\.Sdk@(\S+)")]
+    private static partial Regex AppHostSdkVersion();
+
+    [GeneratedRegex(@"Include=""Aspire\.Hosting"" Version=""([^""]+)""")]
+    private static partial Regex AspireHostingVersion();
 }

@@ -70,7 +70,7 @@ public static class LinkMobilityMockBuilderExtensions
 
         linkMobility.WithEnvironment("LinkMobilityProxySettings__DeliveryReportUrl", ReferenceExpression.Create($"{sms.GetEndpoint("http")}/notifications/sms/api/v1/reports"));
 
-        sms.WithEnvironment("SmsGatewaySettings__Endpoint", "http://localhost:" + mock.Port)
+        sms.WithEnvironment("SmsGatewaySettings__Endpoint", Localhost.Url(mock.Port))
             .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Username", _deliveryReportUsername)
             .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Password", _deliveryReportPassword)
             .WaitFor(linkMobility);

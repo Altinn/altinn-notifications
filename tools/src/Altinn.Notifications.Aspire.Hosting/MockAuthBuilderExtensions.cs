@@ -26,7 +26,7 @@ public static class MockAuthBuilderExtensions
         return builder.AddProject(name, MockProjects.MockAuth, launchProfileName: null)
             .WithHttpEndpoint(port: port, targetPort: port, isProxied: false)
             .WithUrlForEndpoint("http", u => u.DisplayLocation = UrlDisplayLocation.DetailsOnly)
-            .WithUrl("http://localhost:" + port + _openIdPath + ".well-known/openid-configuration", "OpenID configuration")
+            .WithUrl(Localhost.Url(port) + _openIdPath + ".well-known/openid-configuration", "OpenID configuration")
             .WithEnvironment("MockAuthSettings__Port", port.ToString())
             .WithEnvironment("MockAuthSettings__SigningKey", CreateSigningKey())
             .WithParentRelationship(testHarness);

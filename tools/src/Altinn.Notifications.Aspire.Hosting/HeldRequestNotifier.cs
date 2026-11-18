@@ -33,6 +33,7 @@ internal sealed class HeldRequestNotifier(HttpClient client, Uri controlPanel, I
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            string? error = null;
             try
             {
                 await FollowAsync(cancellationToken);
@@ -43,8 +44,14 @@ internal sealed class HeldRequestNotifier(HttpClient client, Uri controlPanel, I
             }
             catch (Exception e) when (e is HttpRequestException or IOException)
             {
-                // Not up yet, or restarted. Held requests do not survive a restart, so their notifications go.
-                logger.LogDebug("Waiting for the control panel's event stream: {Message}", e.Message);
+                error = e.Message;
+            }
+
+            // Not up yet, or restarted. Held requests do not survive a restart, so their notifications go. Only the message is logged,
+            // since a stack trace says nothing about a control panel that is still starting.
+            if (error is not null)
+            {
+                logger.LogDebug("Waiting for the control panel's event stream: {Message}", error);
             }
 
             Update([]);
