@@ -86,12 +86,12 @@
   </div>
 
   <template id="email-template">
-    <h2 class="subject"></h2>
+    <h2 class="subject">(no subject)</h2>
     <dl class="meta email-meta"></dl>
-    <div class="body-switch" role="group" aria-label="Body">
+    <fieldset class="body-switch" aria-label="Body">
       <button type="button" class="secondary" data-view="html">HTML</button>
       <button type="button" class="secondary" data-view="text">Text</button>
-    </div>
+    </fieldset>
     <!-- An empty sandbox: no scripts, forms, popups or same-origin access. -->
     <iframe class="email-html" sandbox="" referrerpolicy="no-referrer" title="HTML body"></iframe>
     <pre class="body email-text"></pre>

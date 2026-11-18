@@ -17,6 +17,8 @@ public class MirrorTests : IDisposable
 {
     private const int MirrorSize = 3;
 
+    private static readonly string[] _emailRecipients = ["ola@example.com"];
+
     private readonly WebApplicationFactory<TestHarnessSettings> _factory = new WebApplicationFactory<TestHarnessSettings>()
         .WithWebHostBuilder(builder => builder.UseSetting("TestHarnessSettings:MirrorSize", MirrorSize.ToString()));
 
@@ -127,7 +129,7 @@ public class MirrorTests : IDisposable
 
         var created = await client.PostAsJsonAsync(
             "/mirror/email",
-            new { sender = "noreply@altinn.example", to = new[] { "ola@example.com" }, subject = "Hei", plainText = "Hei Ola", html = "<p>Hei <b>Ola</b></p>", operationId = "op-1", scenario = "Delivered" },
+            new { sender = "noreply@altinn.example", to = _emailRecipients, subject = "Hei", plainText = "Hei Ola", html = "<p>Hei <b>Ola</b></p>", operationId = "op-1", scenario = "Delivered" },
             TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
 
