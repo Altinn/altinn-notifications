@@ -40,31 +40,25 @@ internal static class HmacValidator
     /// Checks the content hash and the signature of a request.
     /// </summary>
     /// <param name="accessKey">The base64 access key the request should be signed with.</param>
-    /// <param name="method">The HTTP method.</param>
-    /// <param name="pathAndQuery">The raw path and query of the request.</param>
-    /// <param name="host">The <c>Host</c> header.</param>
-    /// <param name="date">The <c>x-ms-date</c> header.</param>
-    /// <param name="contentHash">The <c>x-ms-content-sha256</c> header.</param>
-    /// <param name="authorization">The <c>Authorization</c> header.</param>
-    /// <param name="body">The request body.</param>
+    /// <param name="request">The parts of the request that are signed.</param>
     /// <param name="reason">Why the request was rejected, when it was.</param>
     /// <returns><c>true</c> when the request was signed with <paramref name="accessKey"/>.</returns>
-    public static bool IsValid(string accessKey, string method, string pathAndQuery, string host, string? date, string? contentHash, string? authorization, byte[] body, out string reason)
+    public static bool IsValid(string accessKey, SignedRequest request, out string reason)
     {
-        if (string.IsNullOrEmpty(date) || string.IsNullOrEmpty(contentHash) || string.IsNullOrEmpty(authorization))
+        if (string.IsNullOrEmpty(request.Date) || string.IsNullOrEmpty(request.ContentHash) || string.IsNullOrEmpty(request.Authorization))
         {
             reason = "x-ms-date, x-ms-content-sha256 or Authorization is missing";
             return false;
         }
 
-        if (contentHash != ContentHash(body))
+        if (request.ContentHash != ContentHash(request.Body))
         {
             reason = "x-ms-content-sha256 does not match the body";
             return false;
         }
 
-        string expected = Sign(accessKey, method, pathAndQuery, host, date, contentHash);
-        if (!CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(authorization)))
+        string expected = Sign(accessKey, request.Method, request.PathAndQuery, request.Host, request.Date, request.ContentHash);
+        if (!CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(request.Authorization)))
         {
             reason = "the signature does not match the access key";
             return false;
@@ -74,3 +68,15 @@ internal static class HmacValidator
         return true;
     }
 }
+
+/// <summary>
+/// The parts of a request that the SDK signs, as the mock received them.
+/// </summary>
+/// <param name="Method">The HTTP method.</param>
+/// <param name="PathAndQuery">The raw path and query of the request.</param>
+/// <param name="Host">The <c>Host</c> header.</param>
+/// <param name="Date">The <c>x-ms-date</c> header.</param>
+/// <param name="ContentHash">The <c>x-ms-content-sha256</c> header.</param>
+/// <param name="Authorization">The <c>Authorization</c> header.</param>
+/// <param name="Body">The request body.</param>
+internal sealed record SignedRequest(string Method, string PathAndQuery, string Host, string? Date, string? ContentHash, string? Authorization, byte[] Body);

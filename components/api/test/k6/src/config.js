@@ -33,12 +33,20 @@ if (!baseUrl && !isLocal) {
 // token issuer on 5094. Override them with 'base_url' and 'token_generator_url',
 // e.g. with host.docker.internal when k6 runs in a container.
 const platformUrl = isLocal
-    ? (__ENV.base_url || "http://localhost:5090").replace(/\/+$/, "")
+    ? trimTrailingSlashes(__ENV.base_url || "http://localhost:5090")
     : `https://platform.${baseUrl}`;
 
 const tokenGeneratorUrl = isLocal
-    ? (__ENV.token_generator_url || "http://localhost:5094").replace(/\/+$/, "")
+    ? trimTrailingSlashes(__ENV.token_generator_url || "http://localhost:5094")
     : "https://altinn-testtools-token-generator.azurewebsites.net";
+
+function trimTrailingSlashes(url) {
+    let end = url.length;
+    while (end > 0 && url[end - 1] === "/") {
+        end--;
+    }
+    return url.slice(0, end);
+}
 
 // The API calls the condition endpoint itself, so this is the condition mock
 // on the API's machine. The API only accepts condition URLs with a top-level

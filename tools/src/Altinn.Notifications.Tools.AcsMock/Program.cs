@@ -40,4 +40,4 @@ builder.WebHost.UseUrls($"http://localhost:{port}");
 
 var app = builder.Build();
 app.MapAcsEndpoints();
-app.Run();
+await app.RunAsync();
