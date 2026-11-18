@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -357,6 +358,48 @@ public class ProcessItemsBackgroundServiceTests
         smsService.Verify(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenApplicationStoppingFires_StopsClaimingWithoutHostStopToken()
+    {
+        // Arrange
+        var config = CreateConfig();
+        config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var applicationStopping = new CancellationTokenSource();
+        using var hostStopToken = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+        var lifetime = new Mock<IHostApplicationLifetime>();
+        lifetime.SetupGet(l => l.ApplicationStopping).Returns(applicationStopping.Token);
+
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        var smsService = new Mock<ISmsNotificationService>();
+        smsService
+            .Setup(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>(async (_, _) =>
+            {
+                await applicationStopping.CancelAsync();
+                return true;
+            });
+
+        var service = new TestableProcessItemsBackgroundService(
+            emailService.Object,
+            smsService.Object,
+            orderService.Object,
+            Options.Create(config),
+            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
+            new Mock<INotificationScheduleService>().Object,
+            lifetime.Object);
+
+        // Act
+        await service.ExecuteForTest(hostStopToken.Token);
+
+        // Assert
+        Assert.False(hostStopToken.IsCancellationRequested);
+        smsService.Verify(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static NotificationConfig CreateConfig()
     {
         return new NotificationConfig
@@ -431,8 +474,9 @@ public class ProcessItemsBackgroundServiceTests
             IOrderProcessingService orderProcessingService,
             IOptions<NotificationConfig> config,
             ILogger<ProcessItemsBackgroundService> logger,
-            INotificationScheduleService notificationScheduleService)
-            : base(emailSendingService, smsSendingService, orderProcessingService, config, logger, notificationScheduleService)
+            INotificationScheduleService notificationScheduleService,
+            IHostApplicationLifetime? applicationLifetime = null)
+            : base(emailSendingService, smsSendingService, orderProcessingService, config, logger, notificationScheduleService, applicationLifetime ?? new Mock<IHostApplicationLifetime>().Object)
         {
         }
 

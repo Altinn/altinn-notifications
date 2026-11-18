@@ -21,7 +21,8 @@ public class ProcessItemsBackgroundService(
     IOrderProcessingService orderProcessingService,
     IOptions<NotificationConfig> config,
     ILogger<ProcessItemsBackgroundService> logger,
-    INotificationScheduleService notificationScheduleService)
+    INotificationScheduleService notificationScheduleService,
+    IHostApplicationLifetime applicationLifetime)
     : BackgroundService
 {
     private readonly NotificationConfig _config = config.Value;
@@ -34,8 +35,13 @@ public class ProcessItemsBackgroundService(
     private readonly ManyItemsLately _manyRetryOrdersLately = new();
 
     /// <inheritdoc/>
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken hostStoppingToken)
     {
+        // ApplicationStopping fires at SIGTERM, before hosted services are stopped in reverse registration order.
+        // Linking it makes the loops stop claiming new items immediately instead of when this service is stopped.
+        using var shutdownSource = CancellationTokenSource.CreateLinkedTokenSource(hostStoppingToken, applicationLifetime.ApplicationStopping);
+        CancellationToken stoppingToken = shutdownSource.Token;
+
         int totalTasks = _config.EmailDaytimeNotificationsProcessLoopConfig.TaskCount
             + _config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount
             + _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount
@@ -129,10 +135,17 @@ public class ProcessItemsBackgroundService(
             {
                 if (stoppingToken.IsCancellationRequested)
                 {
-                    throw;
+                    return;
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken); // Wait before restarting
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken); // Wait before restarting
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    return;
+                }
             }
         }
     }
