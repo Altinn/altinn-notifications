@@ -11,6 +11,17 @@ public static class HealthCheckTags
     public const string Live = "live";
 
     /// <summary>
+    /// Checks verifying that the application has finished starting up.
+    /// </summary>
+    public const string Startup = "startup";
+
+    /// <summary>
+    /// Checks reflecting the application lifecycle (starting up or shutting down) rather than the health of a dependency.
+    /// They gate probes but are excluded from the health check metric.
+    /// </summary>
+    public const string Lifecycle = "lifecycle";
+
+    /// <summary>
     /// Checks verifying that hard dependencies are available and the application can serve traffic.
     /// </summary>
     public const string Ready = "ready";

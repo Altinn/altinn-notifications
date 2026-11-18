@@ -20,6 +20,7 @@ public class RequestFilterProcessorTests
     [InlineData("/HEALTH")]
     [InlineData("/health/live")]
     [InlineData("/health/live/")]
+    [InlineData("/health/startup")]
     [InlineData("/health/ready")]
     [InlineData("/Health/Ready")]
     [InlineData("/notifications/api/v1/health/ready")]

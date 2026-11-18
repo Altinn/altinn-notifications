@@ -157,7 +157,8 @@ public class ProcessItemsBackgroundService(
                 bool shouldDelay = false;
                 if (shouldAttemptProcessing)
                 {
-                    bool gotItem = await processItem(stoppingToken);
+                    // In-flight work is not cancelled on shutdown so it can finish; the host's shutdown timeout bounds how long it may take.
+                    bool gotItem = await processItem(CancellationToken.None);
                     if (!gotItem && !stoppingToken.IsCancellationRequested)
                     {
                         consecutiveRunsWithItemReturned = 0;

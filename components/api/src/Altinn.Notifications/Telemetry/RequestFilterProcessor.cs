@@ -142,16 +142,17 @@ public class RequestFilterProcessor(IHttpContextAccessor httpContextAccessor) : 
     }
 
     /// <summary>
-    /// Determines whether the path targets one of the health, liveness or readiness endpoints.
+    /// Determines whether the path targets one of the health, liveness, startup or readiness endpoints.
     /// Trailing slashes and casing are ignored.
     /// </summary>
     /// <param name="path">The request path.</param>
-    /// <returns><c>true</c> if the path ends with <c>/health</c>, <c>/health/live</c> or <c>/health/ready</c>; otherwise <c>false</c>.</returns>
+    /// <returns><c>true</c> if the path ends with <c>/health</c>, <c>/health/live</c>, <c>/health/startup</c> or <c>/health/ready</c>; otherwise <c>false</c>.</returns>
     private static bool IsHealthPath(string path)
     {
         string trimmed = path.TrimEnd('/');
         return trimmed.EndsWith("/health", StringComparison.OrdinalIgnoreCase)
             || trimmed.EndsWith("/health/live", StringComparison.OrdinalIgnoreCase)
+            || trimmed.EndsWith("/health/startup", StringComparison.OrdinalIgnoreCase)
             || trimmed.EndsWith("/health/ready", StringComparison.OrdinalIgnoreCase);
     }
 }

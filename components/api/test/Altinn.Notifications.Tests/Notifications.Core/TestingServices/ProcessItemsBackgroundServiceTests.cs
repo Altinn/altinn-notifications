@@ -317,6 +317,46 @@ public class ProcessItemsBackgroundServiceTests
         scheduleService.Verify(s => s.CanSendSmsNow(), Times.Never);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenStopRequestedDuringProcessing_DoesNotCancelInFlightWork()
+    {
+        // Arrange
+        var config = CreateConfig();
+        config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        bool? tokenCancelledDuringWork = null;
+
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var smsService = new Mock<ISmsNotificationService>();
+        smsService
+            .Setup(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>(async (_, token) =>
+            {
+                await cts.CancelAsync();
+                tokenCancelledDuringWork = token.IsCancellationRequested;
+                return false;
+            });
+
+        var service = new TestableProcessItemsBackgroundService(
+            emailService.Object,
+            smsService.Object,
+            orderService.Object,
+            Options.Create(config),
+            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
+            new Mock<INotificationScheduleService>().Object);
+
+        // Act
+        await service.ExecuteForTest(cts.Token);
+
+        // Assert
+        Assert.NotNull(tokenCancelledDuringWork);
+        Assert.False(tokenCancelledDuringWork);
+        smsService.Verify(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static NotificationConfig CreateConfig()
     {
         return new NotificationConfig

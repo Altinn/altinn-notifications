@@ -126,6 +126,11 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
     Predicate = check => check.Tags.Contains(HealthCheckTags.Live)
 });
 
+app.MapHealthChecks("/health/startup", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(HealthCheckTags.Startup)
+});
+
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains(HealthCheckTags.Ready)
@@ -224,12 +229,21 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     });
     services.AddControllersWithViews();
 
-    services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check", tags: [HealthCheckTags.Live]);
+    services.AddHealthChecks()
+        .AddCheck<HealthCheck>("notifications_health_check", tags: [HealthCheckTags.Live])
+        .AddCheck<StartupHealthCheck>("notifications_startup_health_check", tags: [HealthCheckTags.Startup, HealthCheckTags.Ready, HealthCheckTags.Lifecycle])
+        .AddCheck<ShutdownHealthCheck>("notifications_shutdown_health_check", tags: [HealthCheckTags.Ready, HealthCheckTags.Lifecycle]);
+
+    // Finish in-flight work before the default Kubernetes terminationGracePeriodSeconds (30s) sends SIGKILL.
+    services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(25));
     services.AddSingleton<IHealthCheckPublisher, HealthCheckMetricsPublisher>();
     services.Configure<HealthCheckPublisherOptions>(options =>
     {
         options.Delay = TimeSpan.FromSeconds(5);
         options.Period = TimeSpan.FromSeconds(30);
+
+        // Lifecycle checks flip during every rollout and would otherwise look like dependency failures in monitoring.
+        options.Predicate = check => !check.Tags.Contains(HealthCheckTags.Lifecycle);
     });
     services.AddPostgresHealthChecks(config);
 
