@@ -73,7 +73,7 @@ string interceptUrl = interceptEnabled ? controlPanelUrl + "/intercept/" : strin
 
 // The dashboard's own URL, so each held request can link to its trace.
 string dashboardUrl = (builder.Configuration["ASPNETCORE_URLS"] ?? string.Empty).Split(';')[0];
-var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn.Notifications.Tools.TestHarness/Altinn.Notifications.Tools.TestHarness.csproj", launchProfileName: null)
+var controlPanel = builder.AddDotnetProject("testharness-controlpanel", "../src/Altinn.Notifications.Tools.TestHarness/Altinn.Notifications.Tools.TestHarness.csproj", options => options.ExcludeLaunchProfile = true)
     .WithEnvironment("TestHarnessSettings__Port", controlPanelPort.ToString())
     .WithEnvironment("TestHarnessSettings__Intercept", interceptEnabled.ToString())
     .WithEnvironment("TestHarnessSettings__TimeoutSeconds", builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120).ToString())
@@ -181,7 +181,7 @@ if (linkMobilityInteractive && !interceptEnabled)
 // Test-only credentials. The mock sends its delivery reports with them, and sms rejects reports that do not have them.
 const string deliveryReportUsername = "linkmobility-mock";
 const string deliveryReportPassword = "linkmobility-mock-test-password";
-var linkMobility = builder.AddProject("wiremock-linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", launchProfileName: null)
+var linkMobility = builder.AddDotnetProject("wiremock-linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", options => options.ExcludeLaunchProfile = true)
     .WithEnvironment("LinkMobilityProxySettings__Port", linkMobilityPort.ToString())
     .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty)
     .WithEnvironment("LinkMobilityProxySettings__Interactive", linkMobilityInteractive.ToString())
@@ -222,7 +222,7 @@ if (linkMobilityInteractive)
 
 if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m => builder.Configuration.GetValue($"Mocks:{m.Name}:Enabled", true)))
 {
-    var mocks = builder.AddProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
+    var mocks = builder.AddDotnetProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", options => options.ExcludeLaunchProfile = true)
         .WithEnvironment("PlatformMocksSettings__FallbackUrl", interceptUrl)
         .WithParentRelationship(controlPanel.Resource);
 
