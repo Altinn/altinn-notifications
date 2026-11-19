@@ -55,6 +55,10 @@ public class DbEnricher
         activity.SetTag("net.peer.name", null);
         activity.SetTag("net.transport", null);
         activity.SetTag("db.query.text", null);
+        if (!string.IsNullOrEmpty(_options.TelemetryAlternateDbProviderName))
+        {
+            activity.SetTag("db.system.name", _options.TelemetryAlternateDbProviderName);
+        }
 
         (var hash, var firstHash) = GetCommandTextHash(command.CommandText);
         if (firstHash || _options.TelemetryAlwaysLogSqlText)
