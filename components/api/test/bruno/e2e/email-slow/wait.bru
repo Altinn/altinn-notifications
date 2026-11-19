@@ -1,0 +1,23 @@
+meta {
+  name: wait for Email_Delivered
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/{{e2e_shipment_id}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  expected_status: Email_Delivered
+}
+
+tests {
+  test("recipient ends as Email_Delivered", function() {
+    expect(res.status).to.equal(200);
+    const statuses = res.body.recipients.map(r => r.status);
+    expect(statuses, `recipient statuses: ${statuses.join(", ")}`).to.include(bru.getRequestVar("expected_status"));
+  });
+}

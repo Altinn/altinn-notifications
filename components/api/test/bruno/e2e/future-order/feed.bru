@@ -1,0 +1,57 @@
+meta {
+  name: status feed has the order
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/feed?seq={{e2e_feed_seq}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  seq: {{e2e_feed_seq}}
+}
+
+script:pre-request {
+  // The feed is shared by every order of the organisation, so page through it until the order shows up.
+  // The request then reads the feed from just before the entry.
+  const shipmentId = bru.getVar("e2e_shipment_id");
+  if (!shipmentId) {
+    throw new Error("No shipment to look for. Run the flow from its first request.");
+  }
+
+  bru.setVar("e2e_feed_seq", 0);
+  const deadline = Date.now() + 60 * 1000;
+  let seq = 0;
+  while (Date.now() < deadline) {
+    const response = await bru.sendRequest({
+      method: "GET",
+      url: `${bru.getEnvVar("host")}/notifications/api/v1/future/shipment/feed?seq=${seq}`,
+      headers: { Authorization: `Bearer ${bru.getEnvVar("jwt")}` }
+    });
+    const entries = response.data || [];
+    const entry = entries.find(e => e.shipmentId === shipmentId);
+    if (entry) {
+      bru.setVar("e2e_feed_seq", entry.sequenceNumber - 1);
+      break;
+    }
+
+    if (entries.length > 0) {
+      seq = entries[entries.length - 1].sequenceNumber;
+    } else {
+      await bru.sleep(2000);
+    }
+  }
+}
+
+tests {
+  test("the first entry is the order, completed", function() {
+    expect(res.status).to.equal(200);
+    const entry = res.body[0];
+    expect(entry, "no entry for the order in the feed").to.be.an("object");
+    expect(entry.shipmentId).to.equal(bru.getVar("e2e_shipment_id"));
+    expect(entry.status).to.equal("Order_Completed");
+  });
+}
