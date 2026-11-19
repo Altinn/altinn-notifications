@@ -1,0 +1,132 @@
+# Builds the backend developer agent's image from agents/backend-dev and publishes it, for linux/amd64 and linux/arm64,
+# as ghcr.io/altinn/altinn-notifications/backend-dev-agent-minimal:latest and :sha-<commit>, which
+# agents/backend-dev/minimal/agent.yaml runs. Each architecture builds on its own native runner and pushes by digest,
+# and the publish job joins them under the tags.
+#
+# Pull requests only build it. A weekly run on main picks up the newest .NET 10 SDK, which the image installs at build
+# time, so it stays ahead of global.json.
+name: Backend dev agent image
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - agents/backend-dev/Dockerfile
+      - agents/backend-dev/.dockerignore
+      - agents/backend-dev/common/**
+      - .github/workflows/backend-dev-agent-image.yml
+  push:
+    branches: [main]
+    paths:
+      - agents/backend-dev/Dockerfile
+      - agents/backend-dev/.dockerignore
+      - agents/backend-dev/common/**
+      - .github/workflows/backend-dev-agent-image.yml
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: backend-dev-agent-image-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE: ghcr.io/altinn/altinn-notifications/backend-dev-agent-minimal
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: agents/backend-dev
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: printf '%s' "${TOKEN}" | docker login ghcr.io --username "${ACTOR}" --password-stdin
+
+      - name: Build
+        env:
+          ARCH: ${{ matrix.arch }}
+          PUSH: ${{ github.event_name != 'pull_request' }}
+        run: |
+          set -euo pipefail
+          if [ "${PUSH}" = true ]; then
+            output="type=image,name=${IMAGE},push-by-digest=true,name-canonical=true,push=true"
+            cache_to=(--cache-to "type=registry,ref=${IMAGE}:buildcache-${ARCH},mode=max")
+          else
+            output="type=cacheonly"
+            cache_to=()
+          fi
+          docker buildx build agents/backend-dev \
+            --file agents/backend-dev/Dockerfile \
+            --target minimal \
+            --platform "linux/${ARCH}" \
+            --cache-from "type=registry,ref=${IMAGE}:buildcache-${ARCH}" \
+            "${cache_to[@]}" \
+            --output "${output}" \
+            --metadata-file "${RUNNER_TEMP}/metadata.json"
+          if [ "${PUSH}" = true ]; then
+            mkdir -p "${RUNNER_TEMP}/digests"
+            digest="$(jq -r '."containerimage.digest"' "${RUNNER_TEMP}/metadata.json")"
+            case "${digest}" in
+              sha256:*) printf '%s\n' "${digest}" > "${RUNNER_TEMP}/digests/${ARCH}" ;;
+              *) echo "::error::no image digest in the build's metadata"; exit 1 ;;
+            esac
+          fi
+
+      - name: Upload the image digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/
+
+  publish:
+    name: Publish
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: digest-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/digests
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Tag both architectures as one image
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          printf '%s' "${TOKEN}" | docker login ghcr.io --username "${ACTOR}" --password-stdin
+          docker buildx imagetools create \
+            --tag "${IMAGE}:latest" \
+            --tag "${IMAGE}:sha-${GITHUB_SHA::10}" \
+            "${IMAGE}@$(cat "${RUNNER_TEMP}/digests/amd64")" \
+            "${IMAGE}@$(cat "${RUNNER_TEMP}/digests/arm64")"
+          docker buildx imagetools inspect "${IMAGE}:latest"
