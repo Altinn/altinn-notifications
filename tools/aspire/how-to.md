@@ -140,8 +140,8 @@ To answer every call to one system the same way, e.g. while k6 runs, turn on **A
 To see how a service handles a queue that is disabled in Service Bus, for example that the SMS service cannot receive:
 
 1. Run **Set queue status** on `servicebus` in the dashboard. Pick `altinn.notifications.sms.send` and `ReceiveDisabled`. From the terminal: `aspire resource servicebus set-queue-status --queue altinn.notifications.sms.send --status ReceiveDisabled`.
-2. Send a test SMS. The SMS service's log shows `MessagingEntityDisabled`, and the SMS waits on the queue.
-3. Set the queue back to `Active`. The SMS service picks up the SMS and sends it.
+2. Order an SMS that is not instant, with `"sendingTimePolicy": "Anytime"`, as in [Call the API yourself](#call-the-api-yourself), and run the `sendsmsanytime` trigger. The SMS service's log shows `MessagingEntityDisabled`, and the SMS stays at `SMS_Sending` on the queue. **Send test SMS** does not show this: an instant order goes to the SMS service over HTTP, not through the queue.
+3. Set the queue back to `Active`. The SMS service picks up the SMS, and it ends as `SMS_Delivered`.
 
 The emulator sets every queue back to `Active` when it restarts. See [Set queue status](README.md#set-queue-status) for what each status does.
 
