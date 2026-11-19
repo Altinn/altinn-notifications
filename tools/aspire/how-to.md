@@ -12,6 +12,7 @@ Run the `aspire` commands from `tools/aspire`. Put your own settings in a git-ig
 - [Run Bruno or k6 against the stack](#run-bruno-or-k6-against-the-stack)
 - [Send an order that is not instant](#send-an-order-that-is-not-instant)
 - [Answer an external call yourself](#answer-an-external-call-yourself)
+- [See what happens when a queue is suspended](#see-what-happens-when-a-queue-is-suspended)
 - [Pick up a code change](#pick-up-a-code-change)
 - [Run a component's tests](#run-a-components-tests)
 - [Compare with a service in the cluster](#compare-with-a-service-in-the-cluster)
@@ -133,6 +134,16 @@ The platform mocks, the ACS mock and the LinkMobility proxy answer the calls the
 3. Answer the call in the control panel. The caller gets your answer. Without an answer it gets a 504 after `TestHarness:TimeoutSeconds`, 120 by default.
 
 To answer every call to one system the same way, e.g. while k6 runs, turn on **Auto-reply** for that system in the control panel. To answer every SMS send yourself, not only the unknown calls, also set `"LinkMobility": { "Interactive": true }`. See [Test harness control panel](README.md#test-harness-control-panel).
+
+## See what happens when a queue is suspended
+
+To see how a service handles a queue that is disabled in Service Bus, for example that the SMS service cannot receive:
+
+1. Run **Set queue status** on `servicebus` in the dashboard. Pick `altinn.notifications.sms.send` and `ReceiveDisabled`. From the terminal: `aspire resource servicebus set-queue-status --queue altinn.notifications.sms.send --status ReceiveDisabled`.
+2. Order an SMS that is not instant, with `"sendingTimePolicy": "Anytime"`, as in [Call the API yourself](#call-the-api-yourself), and run the `sendsmsanytime` trigger. The SMS service's log shows `MessagingEntityDisabled`, and the SMS stays at `SMS_Sending` on the queue. **Send test SMS** does not show this: an instant order goes to the SMS service over HTTP, not through the queue.
+3. Set the queue back to `Active`. The SMS service picks up the SMS, and it ends as `SMS_Delivered`.
+
+The emulator sets every queue back to `Active` when it restarts. See [Set queue status](README.md#set-queue-status) for what each status does.
 
 ## Pick up a code change
 
