@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
@@ -228,8 +228,8 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
         await repo.Create(order);
 
-        // Record time before setting status
-        DateTime beforeStatusUpdate = DateTime.UtcNow;
+        // Record time before setting status, from the database clock since processed is set by the database itself
+        DateTime beforeStatusUpdate = await PostgreUtil.GetDatabaseUtcNow();
 
         // Act
         await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
@@ -240,10 +240,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
                             WHERE alternateid = '{order.Id}'";
 
         DateTime? processedTimestamp = await PostgreUtil.RunSqlReturnOutput<DateTime?>(sql);
+        DateTime afterStatusUpdate = await PostgreUtil.GetDatabaseUtcNow();
 
         Assert.NotNull(processedTimestamp);
         Assert.True(processedTimestamp.Value >= beforeStatusUpdate, "Processed timestamp should be set to current time or later");
-        Assert.True(processedTimestamp.Value <= DateTime.UtcNow.AddSeconds(5), "Processed timestamp should be close to current time");
+        Assert.True(processedTimestamp.Value <= afterStatusUpdate, "Processed timestamp should be close to current time");
     }
 
     [Fact]
@@ -776,11 +777,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql));
         Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>(emailTextSql));
 
-        Assert.Equal(2, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{mainOrderId}'"));
-        Assert.Equal(1, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}'"));
-        Assert.Equal(2, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}'"));
+        Assert.Equal(2, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT (notificationorder ->> 'EmailSendingTimePolicy')::int FROM notifications.orders WHERE alternateid = '{mainOrderId}'"));
+        Assert.Equal(1, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT (notificationorder ->> 'EmailSendingTimePolicy')::int FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}'"));
+        Assert.Equal(2, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT (notificationorder ->> 'EmailSendingTimePolicy')::int FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}'"));
 
-        Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT count(*) FROM notifications.orders WHERE alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND smssendingtimepolicy IS NULL"));
+        Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT count(*) FROM notifications.orders WHERE alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND notificationorder ->> 'sendingTimePolicy' IS NULL"));
     }
 
     [Fact]

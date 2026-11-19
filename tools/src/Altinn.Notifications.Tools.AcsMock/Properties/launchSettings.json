@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Altinn.Notifications.Tools.AcsMock": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:58463;http://localhost:58465"
+    }
+  }
+}

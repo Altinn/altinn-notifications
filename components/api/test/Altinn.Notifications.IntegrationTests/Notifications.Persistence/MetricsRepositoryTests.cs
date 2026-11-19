@@ -1,4 +1,4 @@
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -76,10 +76,13 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
 
         var metrics = result.Metrics.FirstOrDefault(m => m.CreatorName == orgName);
         Assert.NotNull(metrics);
-        Assert.NotNull(metrics.Rate);
         Assert.Equal("innland", metrics.Rate);
         Assert.Equal("+479", metrics.MobileNumberPrefix);
         Assert.Equal(orgName, metrics.CreatorName);
+        Assert.True(Guid.TryParse(metrics.SmsShipmentId, out _));
+        Assert.Equal(order.Id.ToString(), metrics.OrderShipmentId);
+        Assert.NotEqual(default, metrics.RequestedSendTime);
+        Assert.NotEqual(default, metrics.ResultTime);
     }
 
     [Fact]
@@ -105,11 +108,79 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
         var metrics = result.Metrics.FirstOrDefault(m => m.CreatorName == orgName);
         Assert.NotNull(metrics);
         Assert.Equal(orgName, metrics.CreatorName);
-        Assert.NotEmpty(metrics.RequestedSendTime);
+        Assert.NotEqual(default, metrics.RequestedSendTime);
+        Assert.NotEqual(default, metrics.ResultTime);
         Assert.Equal("Delivered", metrics.Result);
         Assert.Equal("local-testing", metrics.SendersReference);
         Assert.Null(metrics.ResourceId);
         Assert.Empty(metrics.OperationId);
-        Assert.NotEmpty(metrics.ShipmentId);
+        Assert.True(Guid.TryParse(metrics.EmailShipmentId, out _));
+        Assert.Equal(order.Id.ToString(), metrics.OrderShipmentId);
+    }
+
+    [Fact]
+    public async Task GetEmailNotificationsMetrics_ReturnsNonNegativeCounts()
+    {
+        // Arrange
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        // Act
+        var (anytimeCount, daytimeCount, composedCount) = await sut.GetEmailNotificationsMetrics(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(anytimeCount >= 0);
+        Assert.True(daytimeCount >= 0);
+        Assert.True(composedCount >= 0);
+    }
+
+    [Fact]
+    public async Task GetSmsNotificationsMetrics_ReturnsNonNegativeCounts()
+    {
+        // Arrange
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        // Act
+        var (anytimeCount, daytimeCount) = await sut.GetSmsNotificationsMetrics(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(anytimeCount >= 0);
+        Assert.True(daytimeCount >= 0);
+    }
+
+    [Fact]
+    public async Task GetOrderMetrics_ReturnsNonNegativeCounts()
+    {
+        // Arrange
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        // Act
+        var (ordersNotDue, ordersPastDue, ordersFailed) = await sut.GetOrderMetrics(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(ordersNotDue >= 0);
+        Assert.True(ordersPastDue >= 0);
+        Assert.True(ordersFailed >= 0);
+    }
+
+    [Fact]
+    public async Task GetOrderNotDueDistributionMetrics_ReturnsRowsWithNonNegativeCount()
+    {
+        // Arrange
+        MetricsRepository sut = (MetricsRepository)ServiceUtil
+            .GetServices([typeof(IMetricsRepository)])
+            .First(i => i.GetType() == typeof(MetricsRepository));
+
+        // Act
+        List<(DateOnly Day, long Count)> result = await sut.GetOrderNotDueDistributionMetrics(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.DoesNotContain(result, row => row.Count < 0);
     }
 }

@@ -303,8 +303,8 @@ public static class PostgreUtil
     public static async Task RefreshMaterializedViews()
     {
         string sql = @"
-            REFRESH MATERIALIZED VIEW notifications.email_metrics_recent;
-            REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent;";
+            REFRESH MATERIALIZED VIEW notifications.email_metrics_recent_v2;
+            REFRESH MATERIALIZED VIEW notifications.sms_metrics_recent_v2;";
         await using NpgsqlCommand pgcom = AdminDataSource.CreateCommand(sql);
         await pgcom.ExecuteNonQueryAsync();
     }
@@ -419,6 +419,16 @@ public static class PostgreUtil
             new NpgsqlParameter("@id", notificationId));
     }
 
+    /// <summary>
+    /// Reads the current time from the database clock.
+    /// Use it as the reference when asserting on timestamps the database sets itself (now(), CURRENT_TIMESTAMP),
+    /// since the clock of the test process can be slightly ahead of the database clock.
+    /// </summary>
+    public static async Task<DateTime> GetDatabaseUtcNow()
+    {
+        return await RunSqlReturnOutput<DateTime>("SELECT clock_timestamp()");
+    }
+
     public static async Task<T> RunSqlReturnOutput<T>(string query)
     {
         await using NpgsqlCommand pgcom = DataSource.CreateCommand(query);
@@ -477,6 +487,15 @@ public static class PostgreUtil
         }
 
         await pgcom.ExecuteNonQueryAsync();
+    }
+
+    public static async Task InsertServiceOwnerSender(string serviceOwner, string addressTypeName, string senderAddress)
+    {
+        await RunSql(
+            "INSERT INTO notifications.serviceowner (serviceowner, addresstypeid, senderaddress) SELECT @owner, id, @address FROM notifications.senderaddresstype WHERE name = @type",
+            new NpgsqlParameter("@owner", serviceOwner),
+            new NpgsqlParameter("@address", senderAddress),
+            new NpgsqlParameter("@type", addressTypeName));
     }
 
     public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
@@ -633,7 +652,7 @@ public static class PostgreUtil
         Guid dialogId,
         string transmissionId,
         string toAddress = "log-test@example.com",
-        string operationId = "op-id-test-abc123",
+        string? operationId = null,
         string creatorName = "ttd",
         string resourceId = "ttd-resource")
     {
@@ -664,18 +683,16 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v3(
+        SELECT notifications.insertorder_v4(
             @alternateid,
             @creatorname,
             @sendersreference,
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @smssendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid,
-            @emailsendingtimepolicy
+            @orderchainid
         )
         """;
 
@@ -742,11 +759,9 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
-                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 
@@ -769,7 +784,7 @@ public static class PostgreUtil
             await using (NpgsqlCommand cmd = new(updateEmailSql, connection, transaction))
             {
                 cmd.Parameters.AddWithValue("@result", NpgsqlTypes.NpgsqlDbType.Text, "Delivered");
-                cmd.Parameters.AddWithValue("@operationid", NpgsqlTypes.NpgsqlDbType.Text, operationId);
+                cmd.Parameters.AddWithValue("@operationid", NpgsqlTypes.NpgsqlDbType.Text, operationId ?? $"op-id-test-{Guid.NewGuid()}");
                 cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, notificationId);
                 cmd.Parameters.AddWithValue("@totalattachmentsizebytes", NpgsqlTypes.NpgsqlDbType.Bigint, 0L);
                 await cmd.ExecuteNonQueryAsync();
@@ -801,7 +816,7 @@ public static class PostgreUtil
         Guid dialogId,
         string transmissionId,
         string mobileNumber = "+4799999999",
-        string gatewayReference = "gw-ref-test-123",
+        string? gatewayReference = null,
         string creatorName = "ttd",
         string resourceId = "ttd-resource")
     {
@@ -832,18 +847,16 @@ public static class PostgreUtil
         """;
 
         const string insertOrderSql = """
-        SELECT notifications.insertorder_v3(
+        SELECT notifications.insertorder_v4(
             @alternateid,
             @creatorname,
             @sendersreference,
             @created,
             @requestedsendtime,
             @notificationorder::jsonb,
-            @smssendingtimepolicy,
             @type,
             @processingstatus,
-            @orderchainid,
-            @emailsendingtimepolicy
+            @orderchainid
         )
         """;
 
@@ -907,11 +920,9 @@ public static class PostgreUtil
                 cmd.Parameters.AddWithValue("@created", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@requestedsendtime", NpgsqlTypes.NpgsqlDbType.TimestampTz, now);
                 cmd.Parameters.AddWithValue("@notificationorder", notificationOrderJson);
-                cmd.Parameters.AddWithValue("@smssendingtimepolicy", DBNull.Value);
                 cmd.Parameters.AddWithValue("@type", NpgsqlTypes.NpgsqlDbType.Text, "Notification");
                 cmd.Parameters.AddWithValue("@processingstatus", NpgsqlTypes.NpgsqlDbType.Text, "Processing");
                 cmd.Parameters.AddWithValue("@orderchainid", NpgsqlTypes.NpgsqlDbType.Bigint, chainDbId);
-                cmd.Parameters.AddWithValue("@emailsendingtimepolicy", DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
 
@@ -932,7 +943,7 @@ public static class PostgreUtil
             await using (NpgsqlCommand cmd = new(updateSmsSql, connection, transaction))
             {
                 cmd.Parameters.AddWithValue("@result", NpgsqlTypes.NpgsqlDbType.Text, "Delivered");
-                cmd.Parameters.AddWithValue("@gatewayreference", NpgsqlTypes.NpgsqlDbType.Text, gatewayReference);
+                cmd.Parameters.AddWithValue("@gatewayreference", NpgsqlTypes.NpgsqlDbType.Text, gatewayReference ?? $"gw-ref-test-{Guid.NewGuid()}");
                 cmd.Parameters.AddWithValue("@alternateid", NpgsqlTypes.NpgsqlDbType.Uuid, notificationId);
                 await cmd.ExecuteNonQueryAsync();
             }

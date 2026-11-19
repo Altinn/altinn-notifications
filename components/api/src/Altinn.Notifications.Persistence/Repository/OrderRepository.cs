@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
@@ -31,8 +31,8 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// Initializes a new instance of the <see cref="OrderRepository"/> class.
 /// </remarks>
 /// <param name="dataSource">The npgsql data source.</param>
-/// <param name="config">The notification config</param>
 /// <param name="logger">The logger associated with this implementation of the IOrderRepository</param>
+/// <param name="config">The notification config</param>
 [ExcludeFromCodeCoverage]
 public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepository> logger, IOptions<NotificationConfig> config) : IOrderRepository
 {
@@ -45,7 +45,7 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
 
     private const string _getOrderByIdSql = "select notificationorder from notifications.orders where alternateid=$1 and creatorname=$2";
     private const string _getOrdersBySendersReferenceSql = "select notificationorder from notifications.orders where sendersreference=$1 and creatorname=$2";
-    private const string _insertOrderSql = "select notifications.insertorder_v3($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder, _smssendingtimepolicy, _type, _processingstatus, _orderchainid, _emailsendingtimepolicy)
+    private const string _insertOrderSql = "select notifications.insertorder_v4($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder, _type, _processingstatus, _orderchainid)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _advanceStatusSql = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
@@ -584,11 +584,9 @@ public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepositor
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.Created);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.RequestedSendTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int?)order.SmsSendingTimePolicy ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Type.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, processingStatus.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, orderChainId.HasValue ? (object)orderChainId.Value : DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int?)order.EmailSendingTimePolicy ?? (object)DBNull.Value);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);

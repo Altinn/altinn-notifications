@@ -12,11 +12,6 @@ public class PlatformSettings
     public string ApiProfileEndpoint { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the URL for the Register API.
-    /// </summary>
-    public string ApiRegisterEndpoint { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the URL for the Altinn Notifications SMS API.
     /// </summary>
     public string ApiShortMessageServiceEndpoint { get; set; } = string.Empty;

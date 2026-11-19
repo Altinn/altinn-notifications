@@ -33,10 +33,10 @@ public sealed class GetBySendersRefTests : IClassFixture<IntegrationTestWebAppli
         string uniqueOrg = $"org{Guid.NewGuid():N}";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(uniqueOrg, scope: "altinn:serviceowner/notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(uniqueOrg, scope: "altinn:serviceowner/notifications.create"));
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
@@ -57,10 +57,10 @@ public sealed class GetBySendersRefTests : IClassFixture<IntegrationTestWebAppli
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
@@ -84,10 +84,10 @@ public sealed class GetBySendersRefTests : IClassFixture<IntegrationTestWebAppli
         await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage, TestContext.Current.CancellationToken);
@@ -106,8 +106,7 @@ public sealed class GetBySendersRefTests : IClassFixture<IntegrationTestWebAppli
 
     public async ValueTask DisposeAsync()
     {
-        string sql = $"delete from notifications.orders where sendersreference like '{_sendersRefBase}%'";
-        await PostgreUtil.RunSql(sql);
+        await PostgreUtil.DeleteOrdersByRefPrefix(_sendersRefBase);
     }
 
     private HttpClient GetTestClient()

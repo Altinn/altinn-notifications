@@ -3,37 +3,49 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using Altinn.Common.AccessToken;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Common.PEP.Authorization;
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
+using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
 using AltinnCore.Authentication.JwtCookie;
+
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
+
 using FluentValidation;
+
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+
 using Npgsql;
+
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
+
+using RequestFilterProcessor = Altinn.Notifications.Telemetry.RequestFilterProcessor;
 
 ILogger logger;
 
@@ -125,7 +137,7 @@ void ConfigureWebHostCreationLogging()
     logger = logFactory.CreateLogger<Program>();
 }
 
-void ConfigureApplicationLogging(ILoggingBuilder logging)
+static void ConfigureApplicationLogging(ILoggingBuilder logging)
 {
     logging.AddOpenTelemetry(builder =>
     {
@@ -145,6 +157,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddHttpContextAccessor();
 
+    services.Configure<PostgreSqlSettings>(config.GetSection("PostgreSQLSettings"));
+
     services.AddSingleton(new ActivitySource(BackgroundActivitySource.Name));
 
     services.AddOpenTelemetry()
@@ -156,7 +170,9 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
-                DeliveryReportMetrics.MeterName);
+                DeliveryReportMetrics.MeterName,
+                BacklogMetrics.MeterName,
+                DeprecatedEndpointAttribute.MeterName);
         })
         .WithTracing(tracing =>
         {
@@ -172,6 +188,12 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddProcessor<RequestFilterProcessor>();
 
             tracing.AddProcessor<WolverineActivityNameProcessor>();
+
+            tracing.AddProcessor(sp =>
+            {
+                var postgreSqlOptions = sp.GetRequiredService<IOptions<PostgreSqlSettings>>();
+                return new NpgsqlProcessor(postgreSqlOptions.Value);
+            });
 
             tracing.AddNpgsql();
 
@@ -223,6 +245,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);
     services.AddCoreServices(config);
+    services.AddSingleton<IBacklogMetrics, BacklogMetrics>();
     services.AddAuthorizationService(config);
     services.AddWolverineServices(config, builder.Environment);
 
@@ -259,7 +282,7 @@ void AddSecretsFromKeyVault(ConfigurationManager config)
     }
 }
 
-void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
+static void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfiguration config)
 {
     var otelEndpoint = config.GetValue<string>("OtelSettings:Endpoint");
     if (!string.IsNullOrEmpty(otelEndpoint))
@@ -301,7 +324,7 @@ void AddAzureMonitorTelemetryExporters(IServiceCollection services, IConfigurati
     }));
 }
 
-void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguration config)
+static void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguration config)
 {
     services.AddAuthorizationBuilder()
         .AddPolicy(AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS, policy =>
@@ -333,7 +356,7 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
     services.AddSingleton<IAuthenticationContext, AuthenticationContext>();
 }
 
-void AddInputModelValidators(IServiceCollection services)
+static void AddInputModelValidators(IServiceCollection services)
 {
     ValidatorOptions.Global.LanguageManager.Enabled = false;
     services.AddValidatorsFromAssemblyWithDuplicateCheck(typeof(Program).Assembly);
