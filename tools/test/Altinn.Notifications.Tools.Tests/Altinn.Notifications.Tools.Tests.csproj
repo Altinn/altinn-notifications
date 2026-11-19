@@ -35,6 +35,7 @@
 		<ProjectReference Include="..\..\..\components\email-service\src\Altinn.Notifications.Email.Integrations\Altinn.Notifications.Email.Integrations.csproj" />
 		<ProjectReference Include="..\..\..\components\sms-service\src\Altinn.Notifications.Sms.Integrations\Altinn.Notifications.Sms.Integrations.csproj" />
 		<ProjectReference Include="..\..\..\components\shared\test\Altinn.Notifications.Shared.TestInfrastructure\Altinn.Notifications.Shared.TestInfrastructure.csproj" />
+		<ProjectReference Include="..\..\src\Altinn.Notifications.Aspire.Hosting\Altinn.Notifications.Aspire.Hosting.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.AcsMock\Altinn.Notifications.Tools.AcsMock.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.DlqManager\Altinn.Notifications.Tools.DlqManager.csproj" />
 		<ProjectReference Include="..\..\src\Altinn.Notifications.Tools.LinkMobilityProxy\Altinn.Notifications.Tools.LinkMobilityProxy.csproj" />

@@ -141,8 +141,7 @@ A smoke run of every test:
 ### Notes
 
 * Use one iteration per test for a smoke run. Most tests create their orders, with their idempotency ids, in `setup()`, so later iterations get `200 OK` for the same order instead of `201 Created` and fail their checks. That is the same in every environment.
-* The API only creates and processes orders. Nothing calls the trigger endpoints locally, so SMS and email wait until you call `POST /notifications/api/v1/trigger/sendsmsanytime`, `sendsms` or `sendemail`. See the [Aspire README](../../../../tools/aspire/README.md#platform-mocks).
-* Without `Altinn.ApiClients.Maskinporten` with configurable endpoints ([Altinn/altinn-apiclient-maskinporten#92](https://github.com/Altinn/altinn-apiclient-maskinporten/pull/92)), the API cannot get a token for condition checks and sends orders with a false condition anyway, so the condition check in `orders-email.js` fails.
+* The `testharness-controlpanel` resource calls the trigger endpoints every 15 seconds, so SMS and email go out shortly after their send time. With `Triggers:Enabled` set to `false` they wait until you run a trigger from the dashboard or the control panel's Triggers tab. See [Triggers](../../../../tools/aspire/README.md#triggers) in the Aspire README.
 
 ---
 
