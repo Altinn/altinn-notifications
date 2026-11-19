@@ -112,9 +112,9 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
 
             services.Configure<HealthCheckServiceOptions>(options =>
             {
-                // The Wolverine runtime is removed above, so its listener check cannot be resolved.
+                // The Wolverine runtime and the Service Bus transport are removed above, so their checks cannot run.
                 options.Registrations
-                    .Where(r => r.Name == "notifications_service_bus_health_check")
+                    .Where(r => r.Name is "notifications_wolverine_health_check" or "notifications_service_bus_health_check")
                     .ToList()
                     .ForEach(r => options.Registrations.Remove(r));
             });

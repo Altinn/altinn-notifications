@@ -231,8 +231,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddHealthChecks()
         .AddCheck<HealthCheck>("notifications_health_check", tags: [HealthCheckTags.Live])
-        .AddCheck<StartupHealthCheck>("notifications_startup_health_check", tags: [HealthCheckTags.Startup, HealthCheckTags.Ready, HealthCheckTags.Lifecycle])
-        .AddCheck<ShutdownHealthCheck>("notifications_shutdown_health_check", tags: [HealthCheckTags.Ready, HealthCheckTags.Lifecycle]);
+        .AddCheck<ShutdownHealthCheck>("notifications_shutdown_health_check", tags: [HealthCheckTags.Ready, HealthCheckTags.Lifecycle])
+        .AddCheck<StartupHealthCheck>("notifications_startup_health_check", tags: [HealthCheckTags.Startup, HealthCheckTags.Ready, HealthCheckTags.Lifecycle]);
 
     // Finish in-flight work before the default Kubernetes terminationGracePeriodSeconds (30s) sends SIGKILL.
     services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(25));

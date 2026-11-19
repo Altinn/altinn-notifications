@@ -1,33 +1,36 @@
 namespace Altinn.Notifications.Core.Shared;
 
 /// <summary>
-/// Tags used to group health checks into liveness and readiness probes.
+/// Tags that assign health checks to the endpoints they are evaluated by and to the health check metric.
+/// A check can carry several tags.
 /// </summary>
 public static class HealthCheckTags
 {
     /// <summary>
-    /// Checks that only verify the process is alive and must not depend on external resources.
+    /// Identifies a check of an external dependency that the application can operate without.
+    /// The result is reported in the health check metric and on <c>/health</c>, but does not affect <c>/health/ready</c>.
     /// </summary>
-    public const string Live = "live";
+    public const string Dependency = "dependency";
 
     /// <summary>
-    /// Checks verifying that the application has finished starting up.
-    /// </summary>
-    public const string Startup = "startup";
-
-    /// <summary>
-    /// Checks reflecting the application lifecycle (starting up or shutting down) rather than the health of a dependency.
-    /// They gate probes but are excluded from the health check metric.
+    /// Identifies a check of the application's own lifecycle state, such as startup completion or shutdown.
+    /// The result is evaluated by the probe endpoints but is excluded from the health check metric.
     /// </summary>
     public const string Lifecycle = "lifecycle";
 
     /// <summary>
-    /// Checks verifying that hard dependencies are available and the application can serve traffic.
+    /// Identifies a check of the process itself. It is evaluated by <c>/health/live</c> and must not depend on external resources.
+    /// </summary>
+    public const string Live = "live";
+
+    /// <summary>
+    /// Identifies a check that must pass before the application can receive traffic.
+    /// It is evaluated by <c>/health/ready</c> and covers required dependencies as well as lifecycle state.
     /// </summary>
     public const string Ready = "ready";
 
     /// <summary>
-    /// Checks for dependencies the application can run degraded without. They are reported in monitoring but must not gate readiness.
+    /// Identifies a check that verifies that application startup has completed. It is evaluated by <c>/health/startup</c>.
     /// </summary>
-    public const string Dependency = "dependency";
+    public const string Startup = "startup";
 }

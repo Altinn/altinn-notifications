@@ -16,12 +16,14 @@ public class StartupHealthCheckTests
     {
         // Arrange
         using var started = new CancellationTokenSource();
+
         var lifetime = new Mock<IHostApplicationLifetime>();
         lifetime.SetupGet(l => l.ApplicationStarted).Returns(started.Token);
-        var sut = new StartupHealthCheck(lifetime.Object);
+
+        var startupHealthCheck = new StartupHealthCheck(lifetime.Object);
 
         // Act
-        var result = await sut.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
+        var result = await startupHealthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
@@ -33,12 +35,14 @@ public class StartupHealthCheckTests
         // Arrange
         using var started = new CancellationTokenSource();
         await started.CancelAsync();
+        
         var lifetime = new Mock<IHostApplicationLifetime>();
         lifetime.SetupGet(l => l.ApplicationStarted).Returns(started.Token);
-        var sut = new StartupHealthCheck(lifetime.Object);
+
+        var startupHealthCheck = new StartupHealthCheck(lifetime.Object);
 
         // Act
-        var result = await sut.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
+        var result = await startupHealthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
