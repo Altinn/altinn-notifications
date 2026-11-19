@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 
 using Altinn.Notifications.Tools.AcsMock.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Configuration;
 
 using Xunit;
 
@@ -15,7 +16,7 @@ namespace Altinn.Notifications.Tools.Tests.Shared;
 public class LogSanitizerTests
 {
     // A type from each tool that links LogSanitizer.cs.
-    private static readonly Type[] _tools = [typeof(AcsMockSettings)];
+    private static readonly Type[] _tools = [typeof(AcsMockSettings), typeof(TestHarnessSettings)];
 
     private static readonly (string? Value, string Expected)[] _cases =
     [

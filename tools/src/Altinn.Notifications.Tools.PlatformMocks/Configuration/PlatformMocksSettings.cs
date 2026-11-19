@@ -20,6 +20,8 @@ public class PlatformMocksSettings
     public MockServerSettings Conditions { get; set; } = new() { Port = 5199 };
 
     public MockServerSettings Maskinporten { get; set; } = new() { Port = 5197 };
+
+    public DialogportenMockSettings Dialogporten { get; set; } = new() { Port = 5171 };
 }
 
 /// <summary>
@@ -74,4 +76,15 @@ public class AuthorizationMockSettings : MockServerSettings
     /// User ids that get <c>Deny</c>, so their registered contact points are filtered out.
     /// </summary>
     public List<int> DeniedUsers { get; set; } = [];
+}
+
+/// <summary>
+/// Settings for the Dialogporten mock, which gives every end user access to every dialog except the ones listed here.
+/// </summary>
+public class DialogportenMockSettings : MockServerSettings
+{
+    /// <summary>
+    /// Dialog ids no end user has access to, so the API answers 403 for their notification log.
+    /// </summary>
+    public List<Guid> DeniedDialogs { get; set; } = [];
 }

@@ -1,0 +1,6 @@
+{
+  "name": "200 Not JSON",
+  "status": 200,
+  "headers": { "Content-Type": "text/plain" },
+  "body": "dette er ikke json {{{"
+}
