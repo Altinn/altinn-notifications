@@ -4,6 +4,7 @@ using Altinn.Notifications.Tools.TestHarness.Triggers;
 
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -224,7 +225,7 @@ public partial class HostingExtensionsTests
     public void Mocks_AreStartedFromTheirProjectsUnderToolsSrc()
     {
         var harness = _builder.AddTestHarness("controlpanel", 5096, intercept: false, timeoutSeconds: 120);
-        IResourceBuilder<ProjectResource>[] mocks =
+        IResourceBuilder<DotnetProjectResource>[] mocks =
         [
             harness,
             _builder.AddMockAuth("mock-auth", 5094, harness),
@@ -241,27 +242,31 @@ public partial class HostingExtensionsTests
     }
 
     [Fact]
-    public void AspireHostingPackage_IsTheVersionOfTheAppHostSdk()
+    public void AspirePackages_HaveOneVersion_AndTheAppHostTakesIt()
     {
         string root = RepositoryRoot();
         string appHost = File.ReadAllText(Path.Combine(root, "tools", "aspire", "apphost.cs"));
         string packages = File.ReadAllText(Path.Combine(root, "Directory.Packages.props"));
 
-        string sdkVersion = AppHostSdkVersion().Match(appHost).Groups[1].Value;
-        string packageVersion = AspireHostingVersion().Match(packages).Groups[1].Value;
+        var versions = AspirePackageVersion().Matches(packages).ToDictionary(m => m.Groups[1].Value, m => m.Groups[2].Value);
+        Assert.Contains("Aspire.Hosting", versions.Keys);
+        Assert.Contains("Aspire.Hosting.AppHost", versions.Keys);
+        Assert.Contains("Aspire.Hosting.Dotnet", versions.Keys);
+        Assert.Single(versions.Values.Distinct());
 
-        Assert.NotEmpty(sdkVersion);
-        Assert.Equal(sdkVersion, packageVersion);
+        // A version on a #:package directive would override the central one.
+        Assert.DoesNotContain("#:package Aspire.Hosting.AppHost@", appHost);
+        Assert.DoesNotContain("#:package Aspire.Hosting.Dotnet@", appHost);
     }
 
-    private IResourceBuilder<ProjectResource> AddService(string name, int port) =>
-        _builder.AddProject(name, Path.Combine(RepositoryRoot(), "components", name, "service.csproj"), launchProfileName: null)
+    private IResourceBuilder<DotnetProjectResource> AddService(string name, int port) =>
+        _builder.AddDotnetProject(name, Path.Combine(RepositoryRoot(), "components", name, "service.csproj"), options => options.ExcludeLaunchProfile = true)
             .WithHttpEndpoint(port: port, targetPort: port, isProxied: false);
 
     /// <summary>
     /// The resource's environment, after giving every endpoint the address the orchestrator would, so references to them resolve.
     /// </summary>
-    private async Task<IReadOnlyDictionary<string, string>> EnvironmentOf(IResourceBuilder<ProjectResource> resource)
+    private async Task<IReadOnlyDictionary<string, string>> EnvironmentOf(IResourceBuilder<DotnetProjectResource> resource)
     {
         foreach (var endpoint in _builder.Resources.SelectMany(r => r.Annotations.OfType<EndpointAnnotation>()).Where(e => e.AllocatedEndpoint is null))
         {
@@ -285,9 +290,6 @@ public partial class HostingExtensionsTests
         return directory?.FullName ?? throw new InvalidOperationException("Directory.Packages.props not found above " + AppContext.BaseDirectory);
     }
 
-    [GeneratedRegex(@"#:sdk Aspire\.AppHost\.Sdk@(\S+)")]
-    private static partial Regex AppHostSdkVersion();
-
-    [GeneratedRegex(@"Include=""Aspire\.Hosting"" Version=""([^""]+)""")]
-    private static partial Regex AspireHostingVersion();
+    [GeneratedRegex(@"Include=""(Aspire\.[^""]+)"" Version=""([^""]+)""")]
+    private static partial Regex AspirePackageVersion();
 }

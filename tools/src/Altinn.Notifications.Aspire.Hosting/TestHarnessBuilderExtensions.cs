@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Altinn.Notifications.Aspire.Hosting;
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,14 +49,14 @@ public static class TestHarnessBuilderExtensions
     /// <param name="port">The localhost port the control panel listens on.</param>
     /// <param name="intercept">Whether the mocks hand requests they do not recognise to the control panel.</param>
     /// <param name="timeoutSeconds">How long the control panel holds a request.</param>
-    public static IResourceBuilder<ProjectResource> AddTestHarness(this IDistributedApplicationBuilder builder, string name, int port, bool intercept, int timeoutSeconds)
+    public static IResourceBuilder<DotnetProjectResource> AddTestHarness(this IDistributedApplicationBuilder builder, string name, int port, bool intercept, int timeoutSeconds)
     {
         string url = Localhost.Url(port);
 
         // The dashboard's own URL, so each held request can link to its trace.
         string dashboardUrl = (builder.Configuration["ASPNETCORE_URLS"] ?? string.Empty).Split(';')[0];
 
-        var harness = builder.AddProject(name, MockProjects.TestHarness, launchProfileName: null)
+        var harness = builder.AddDotnetProject(name, MockProjects.TestHarness, options => options.ExcludeLaunchProfile = true)
             .WithHttpEndpoint(port: port, targetPort: port, isProxied: false)
             .WithUrlForEndpoint("http", u => u.DisplayText = "Control panel")
             .WithUrl(url + "/#triggers", "Triggers")
@@ -107,7 +108,7 @@ public static class TestHarnessBuilderExtensions
     /// <param name="api">The API.</param>
     /// <param name="enabled">Whether the jobs run on their own. Off, they start paused.</param>
     /// <param name="jobs">Overrides of the control panel's defaults, as <c>&lt;job&gt;:Enabled|IntervalSeconds|Hours</c>.</param>
-    public static IResourceBuilder<ProjectResource> WithTriggers(this IResourceBuilder<ProjectResource> testHarness, IResourceBuilder<ProjectResource> api, bool enabled, IConfiguration jobs)
+    public static IResourceBuilder<DotnetProjectResource> WithTriggers(this IResourceBuilder<DotnetProjectResource> testHarness, IResourceBuilder<DotnetProjectResource> api, bool enabled, IConfiguration jobs)
     {
         testHarness.WithEnvironment("TriggerSettings__Enabled", enabled.ToString())
             .WithEnvironment("TriggerSettings__ApiBaseUrl", api.GetEndpoint("http"));
@@ -164,7 +165,7 @@ public static class TestHarnessBuilderExtensions
     /// <param name="testHarness">The control panel.</param>
     /// <param name="api">The API.</param>
     /// <param name="auth">The mock token issuer from <see cref="MockAuthBuilderExtensions.AddMockAuth"/>.</param>
-    public static IResourceBuilder<ProjectResource> WithTestMessageCommands(this IResourceBuilder<ProjectResource> testHarness, IResourceBuilder<ProjectResource> api, IResourceBuilder<ProjectResource> auth)
+    public static IResourceBuilder<DotnetProjectResource> WithTestMessageCommands(this IResourceBuilder<DotnetProjectResource> testHarness, IResourceBuilder<DotnetProjectResource> api, IResourceBuilder<DotnetProjectResource> auth)
     {
         var sender = new TestMessageSender(api.GetEndpoint("http"), auth.GetEndpoint("http"));
 

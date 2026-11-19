@@ -337,9 +337,9 @@ Use **Rebuild**, not **Restart**, to pick up a change. **Restart** starts the se
 
 ## Hosting extensions
 
-The mocks are wired up by the extensions in [Altinn.Notifications.Aspire.Hosting](../src/Altinn.Notifications.Aspire.Hosting/README.md), e.g. `builder.AddAcsMock(...)` and `email.WithAcsMock(acs)`, so `apphost.cs` only reads the settings and connects the resources. The app host references the library with `#:project` and sets `TreatProjectReferencesAsResources=false`, so Aspire compiles against it instead of starting it as a resource.
+The mocks are wired up by the extensions in [Altinn.Notifications.Aspire.Hosting](../src/Altinn.Notifications.Aspire.Hosting/README.md), e.g. `builder.AddAcsMock(...)` and `email.WithAcsMock(acs)`, so `apphost.cs` only reads the settings and connects the resources. The app host references the library with `#:project`. Aspire compiles against it and does not start it, since only `AddDotnetProject` makes a project a resource.
 
-`Aspire.Hosting` in `Directory.Packages.props` has to be the version of `Aspire.AppHost.Sdk` in `apphost.cs`. A test in the tools tests fails when they differ, so bump both together.
+The Aspire packages in `Directory.Packages.props` (`Aspire.Hosting`, `Aspire.Hosting.AppHost` and `Aspire.Hosting.Dotnet`) have to be at the same version, and the `#:package` directives in `apphost.cs` take theirs from there. A test in the tools tests fails when they differ, so bump them together.
 
 ### Why not WireMock.Net.Aspire or Mailpit
 

@@ -4,6 +4,7 @@ using System.Text.Json;
 using Altinn.Notifications.Aspire.Hosting;
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 using Microsoft.Extensions.Configuration;
 
@@ -35,7 +36,7 @@ public static class PlatformMocksBuilderExtensions
     /// <param name="name">The resource name.</param>
     /// <param name="testHarness">The control panel from <see cref="TestHarnessBuilderExtensions.AddTestHarness"/>.</param>
     /// <param name="settings">The systems' settings, e.g. the app host's <c>Mocks</c> section.</param>
-    public static IResourceBuilder<ProjectResource> AddPlatformMocks(this IDistributedApplicationBuilder builder, string name, IResourceBuilder<ProjectResource> testHarness, IConfiguration settings)
+    public static IResourceBuilder<DotnetProjectResource> AddPlatformMocks(this IDistributedApplicationBuilder builder, string name, IResourceBuilder<DotnetProjectResource> testHarness, IConfiguration settings)
     {
         var systems = _systems.Select(s => new PlatformMock(
             s.Name,
@@ -44,7 +45,7 @@ public static class PlatformMocksBuilderExtensions
             s.ApiSetting,
             s.ApiPath)).ToList();
 
-        var mocks = builder.AddProject(name, MockProjects.PlatformMocks, launchProfileName: null)
+        var mocks = builder.AddDotnetProject(name, MockProjects.PlatformMocks, options => options.ExcludeLaunchProfile = true)
             .WithAnnotation(new PlatformMocksAnnotation(systems))
             .WithTestHarness(testHarness, "PlatformMocksSettings", mirror: false);
 
@@ -73,7 +74,7 @@ public static class PlatformMocksBuilderExtensions
     /// </summary>
     /// <param name="api">The API.</param>
     /// <param name="mocks">The platform mocks.</param>
-    public static IResourceBuilder<ProjectResource> WithPlatformMocks(this IResourceBuilder<ProjectResource> api, IResourceBuilder<ProjectResource> mocks)
+    public static IResourceBuilder<DotnetProjectResource> WithPlatformMocks(this IResourceBuilder<DotnetProjectResource> api, IResourceBuilder<DotnetProjectResource> mocks)
     {
         if (!mocks.Resource.TryGetLastAnnotation<PlatformMocksAnnotation>(out var annotation))
         {

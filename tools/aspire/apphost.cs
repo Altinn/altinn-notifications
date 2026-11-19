@@ -1,7 +1,6 @@
 #:package Aspire.Hosting.AppHost
 #:package Aspire.Hosting.Dotnet
 #:property AspireUseCliBundle=true
-#:property TreatProjectReferencesAsResources=false
 #:project ../src/Altinn.Notifications.Aspire.Hosting/Altinn.Notifications.Aspire.Hosting.csproj
 
 using System.ComponentModel;

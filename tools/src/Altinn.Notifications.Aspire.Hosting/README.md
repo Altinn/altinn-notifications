@@ -6,11 +6,11 @@ It is a library, not a tool, so it has no menu, settings or secrets of its own.
 
 ## Use
 
-Reference it from a file-based app host. `TreatProjectReferencesAsResources=false` makes Aspire compile against the library instead of treating the reference as a project to start:
+Reference it from a file-based app host. Aspire compiles against the library and does not start it, since only `AddDotnetProject` makes a project a resource:
 
 ```csharp
-#:sdk Aspire.AppHost.Sdk@13.6.4
-#:property TreatProjectReferencesAsResources=false
+#:package Aspire.Hosting.AppHost
+#:package Aspire.Hosting.Dotnet
 #:project ../src/Altinn.Notifications.Aspire.Hosting/Altinn.Notifications.Aspire.Hosting.csproj
 
 var controlPanel = builder.AddTestHarness("testharness-controlpanel", 5096, intercept: false, timeoutSeconds: 120)
@@ -25,7 +25,7 @@ sms.WithLinkMobilityMock(builder.AddLinkMobilityMock("wiremock-linkmobility", 50
 api.WithPlatformMocks(builder.AddPlatformMocks("wiremock-platform", controlPanel, builder.Configuration.GetSection("Mocks")));
 ```
 
-`Aspire.Hosting` in `Directory.Packages.props` has to be the version of `Aspire.AppHost.Sdk` in the app host.
+The extensions add the mocks with `AddDotnetProject` and return `IResourceBuilder<DotnetProjectResource>`, so the services they connect to have to be added with `AddDotnetProject` too. `Aspire.Hosting`, `Aspire.Hosting.AppHost` and `Aspire.Hosting.Dotnet` in `Directory.Packages.props` have to be at the same version.
 
 ## What it adds
 

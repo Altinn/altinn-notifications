@@ -1,6 +1,7 @@
 using Altinn.Notifications.Aspire.Hosting;
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace Aspire.Hosting;
 
@@ -29,11 +30,11 @@ public static class LinkMobilityMockBuilderExtensions
     /// <param name="target">A LinkMobility gateway to forward to, or empty to answer as a stub.</param>
     /// <param name="interactive">Whether every send is held in the control panel.</param>
     /// <param name="deliveryReportDelaySeconds">How long the stub waits before it posts a delivery report.</param>
-    public static IResourceBuilder<ProjectResource> AddLinkMobilityMock(
+    public static IResourceBuilder<DotnetProjectResource> AddLinkMobilityMock(
         this IDistributedApplicationBuilder builder,
         string name,
         int port,
-        IResourceBuilder<ProjectResource> testHarness,
+        IResourceBuilder<DotnetProjectResource> testHarness,
         string target = "",
         bool interactive = false,
         int deliveryReportDelaySeconds = 2)
@@ -44,7 +45,7 @@ public static class LinkMobilityMockBuilderExtensions
             throw new InvalidOperationException("LinkMobility:Interactive needs TestHarness:Intercept.");
         }
 
-        return builder.AddProject(name, MockProjects.LinkMobilityProxy, launchProfileName: null)
+        return builder.AddDotnetProject(name, MockProjects.LinkMobilityProxy, options => options.ExcludeLaunchProfile = true)
             .WithEnvironment("LinkMobilityProxySettings__Port", port.ToString())
             .WithEnvironment("LinkMobilityProxySettings__Target", target)
             .WithEnvironment("LinkMobilityProxySettings__Interactive", interactive.ToString())
@@ -61,7 +62,7 @@ public static class LinkMobilityMockBuilderExtensions
     /// </summary>
     /// <param name="sms">The SMS service.</param>
     /// <param name="linkMobility">The LinkMobility proxy.</param>
-    public static IResourceBuilder<ProjectResource> WithLinkMobilityMock(this IResourceBuilder<ProjectResource> sms, IResourceBuilder<ProjectResource> linkMobility)
+    public static IResourceBuilder<DotnetProjectResource> WithLinkMobilityMock(this IResourceBuilder<DotnetProjectResource> sms, IResourceBuilder<DotnetProjectResource> linkMobility)
     {
         if (!linkMobility.Resource.TryGetLastAnnotation<LinkMobilityMockAnnotation>(out var mock))
         {

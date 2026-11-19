@@ -1,6 +1,7 @@
 using Altinn.Notifications.Aspire.Hosting;
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace Aspire.Hosting;
 
@@ -23,9 +24,9 @@ public static class AcsMockBuilderExtensions
     /// <param name="name">The resource name.</param>
     /// <param name="port">The localhost port the mock listens on.</param>
     /// <param name="testHarness">The control panel from <see cref="TestHarnessBuilderExtensions.AddTestHarness"/>.</param>
-    public static IResourceBuilder<ProjectResource> AddAcsMock(this IDistributedApplicationBuilder builder, string name, int port, IResourceBuilder<ProjectResource> testHarness)
+    public static IResourceBuilder<DotnetProjectResource> AddAcsMock(this IDistributedApplicationBuilder builder, string name, int port, IResourceBuilder<DotnetProjectResource> testHarness)
     {
-        return builder.AddProject(name, MockProjects.AcsMock, launchProfileName: null)
+        return builder.AddDotnetProject(name, MockProjects.AcsMock, options => options.ExcludeLaunchProfile = true)
             .WithHttpEndpoint(port: port, targetPort: port, isProxied: false)
             .WithUrlForEndpoint("http", u => u.DisplayLocation = UrlDisplayLocation.DetailsOnly)
             .WithEnvironment("AcsMockSettings__Port", port.ToString())
@@ -38,7 +39,7 @@ public static class AcsMockBuilderExtensions
     /// </summary>
     /// <param name="email">The email service.</param>
     /// <param name="acs">The ACS mock.</param>
-    public static IResourceBuilder<ProjectResource> WithAcsMock(this IResourceBuilder<ProjectResource> email, IResourceBuilder<ProjectResource> acs)
+    public static IResourceBuilder<DotnetProjectResource> WithAcsMock(this IResourceBuilder<DotnetProjectResource> email, IResourceBuilder<DotnetProjectResource> acs)
     {
         return email.WithEnvironment("CommunicationServicesSettings__ConnectionString", ReferenceExpression.Create($"endpoint={acs.GetEndpoint("http")}/;accesskey={AccessKey}"))
             .WaitFor(acs);

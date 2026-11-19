@@ -1,5 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace Altinn.Notifications.Aspire.Hosting;
 
@@ -8,7 +9,7 @@ namespace Altinn.Notifications.Aspire.Hosting;
 /// </summary>
 internal sealed record TestHarnessAnnotation(string Url, bool Intercept, int TimeoutSeconds) : IResourceAnnotation
 {
-    public static TestHarnessAnnotation Of(IResourceBuilder<ProjectResource> testHarness) =>
+    public static TestHarnessAnnotation Of(IResourceBuilder<DotnetProjectResource> testHarness) =>
         testHarness.Resource.TryGetLastAnnotation<TestHarnessAnnotation>(out var annotation)
             ? annotation
             : throw new ArgumentException($"{testHarness.Resource.Name} is not a test harness. Add it with AddTestHarness.", nameof(testHarness));
@@ -28,7 +29,7 @@ internal static class TestHarnessLinks
     /// <param name="testHarness">The control panel from <see cref="TestHarnessBuilderExtensions.AddTestHarness"/>.</param>
     /// <param name="settingsSection">The mock's settings section, e.g. <c>AcsMockSettings</c>.</param>
     /// <param name="mirror">Whether the mock takes a <c>MirrorUrl</c>.</param>
-    public static IResourceBuilder<ProjectResource> WithTestHarness(this IResourceBuilder<ProjectResource> mock, IResourceBuilder<ProjectResource> testHarness, string settingsSection, bool mirror)
+    public static IResourceBuilder<DotnetProjectResource> WithTestHarness(this IResourceBuilder<DotnetProjectResource> mock, IResourceBuilder<DotnetProjectResource> testHarness, string settingsSection, bool mirror)
     {
         var harness = TestHarnessAnnotation.Of(testHarness);
         mock.WithParentRelationship(testHarness)

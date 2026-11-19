@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Altinn.Notifications.Aspire.Hosting;
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace Aspire.Hosting;
 
@@ -21,9 +22,9 @@ public static class MockAuthBuilderExtensions
     /// <param name="name">The resource name.</param>
     /// <param name="port">The localhost port the issuer listens on.</param>
     /// <param name="testHarness">The control panel from <see cref="TestHarnessBuilderExtensions.AddTestHarness"/>.</param>
-    public static IResourceBuilder<ProjectResource> AddMockAuth(this IDistributedApplicationBuilder builder, string name, int port, IResourceBuilder<ProjectResource> testHarness)
+    public static IResourceBuilder<DotnetProjectResource> AddMockAuth(this IDistributedApplicationBuilder builder, string name, int port, IResourceBuilder<DotnetProjectResource> testHarness)
     {
-        return builder.AddProject(name, MockProjects.MockAuth, launchProfileName: null)
+        return builder.AddDotnetProject(name, MockProjects.MockAuth, options => options.ExcludeLaunchProfile = true)
             .WithHttpEndpoint(port: port, targetPort: port, isProxied: false)
             .WithUrlForEndpoint("http", u => u.DisplayLocation = UrlDisplayLocation.DetailsOnly)
             .WithUrl(Localhost.Url(port) + _openIdPath + ".well-known/openid-configuration", "OpenID configuration")
@@ -37,7 +38,7 @@ public static class MockAuthBuilderExtensions
     /// </summary>
     /// <param name="service">A service that validates Altinn tokens with <c>GeneralSettings:OpenIdWellKnownEndpoint</c>.</param>
     /// <param name="auth">The mock token issuer.</param>
-    public static IResourceBuilder<ProjectResource> WithMockAuth(this IResourceBuilder<ProjectResource> service, IResourceBuilder<ProjectResource> auth)
+    public static IResourceBuilder<DotnetProjectResource> WithMockAuth(this IResourceBuilder<DotnetProjectResource> service, IResourceBuilder<DotnetProjectResource> auth)
     {
         return service.WithEnvironment("GeneralSettings__OpenIdWellKnownEndpoint", ReferenceExpression.Create($"{auth.GetEndpoint("http")}{_openIdPath}"))
             .WaitFor(auth);
