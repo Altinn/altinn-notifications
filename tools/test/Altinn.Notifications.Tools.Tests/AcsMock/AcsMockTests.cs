@@ -7,12 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Tools.AcsMock;
+using Altinn.Notifications.Tools.AcsMock.Configuration;
 
 using Azure;
 using Azure.Communication.Email;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +37,17 @@ public class AcsMockTests(AcsMockFactory factory) : IClassFixture<AcsMockFactory
         Assert.True(Guid.TryParse(operation.Id, out _));
         Assert.True(operation.HasCompleted);
         Assert.Equal(EmailSendStatus.Succeeded, operation.Value.Status);
+    }
+
+    [Fact]
+    public void Start_WithoutAccessKey_Fails()
+    {
+        using var mock = new WebApplicationFactory<AcsMockSettings>();
+
+        var error = Record.Exception(() => mock.CreateClient());
+
+        Assert.NotNull(error);
+        Assert.Contains("AcsMockSettings:AccessKey", error.ToString());
     }
 
     [Fact]

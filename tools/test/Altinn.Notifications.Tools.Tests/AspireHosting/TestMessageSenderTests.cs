@@ -19,6 +19,7 @@ namespace Altinn.Notifications.Tools.Tests.AspireHosting;
 public sealed class TestMessageSenderTests : IDisposable
 {
     private const string TokenPath = "/api/GetEnterpriseToken";
+    private const string TokenPassword = "generated-for-the-checkout";
 
     private readonly WireMockServer _server = WireMockServer.Start();
     private readonly HttpClient _client = new();
@@ -40,6 +41,8 @@ public sealed class TestMessageSenderTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         Assert.Equal("Ordered, shipment 5f2c. It shows up in the Phone tab when sent.", result.Message);
+        var tokenRequest = Assert.Single(_server.LogEntries, e => e.RequestMessage?.Path == TokenPath);
+        Assert.Equal("Basic " + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"mock:{TokenPassword}")), tokenRequest.RequestMessage!.Headers!["Authorization"].Single());
         var order = Assert.Single(_server.LogEntries, e => e.RequestMessage?.Path?.EndsWith("/sms") == true);
         Assert.Equal("Bearer token-from-mock-auth", order.RequestMessage!.Headers!["Authorization"].Single());
         Assert.Contains("4799999999", order.RequestMessage!.BodyData?.BodyAsString);
@@ -104,7 +107,8 @@ public sealed class TestMessageSenderTests : IDisposable
             endpoint.AllocatedEndpoint = new AllocatedEndpoint(endpoint, "localhost", port);
         }
 
-        return new TestMessageSender(api.GetEndpoint("http"), auth.GetEndpoint("http"));
+        var password = builder.AddParameter("mock-auth-password", TokenPassword, secret: true);
+        return new TestMessageSender(api.GetEndpoint("http"), auth.GetEndpoint("http"), new MockAuthCredentials("mock", password.Resource));
     }
 
     private static int FreePort()

@@ -70,8 +70,13 @@ The [Aspire app host](../../aspire/README.md#sms-through-the-linkmobility-proxy)
 
 ## Run on its own
 
+With delivery reports on, the proxy needs the user and password the SMS service checks them with, its `SmsDeliveryReportSettings:UserSettings` (`username` and `password` in its `appsettings.json`):
+
 ```bash
-LinkMobilityProxySettings__DeliveryReportUrl=http://localhost:5092/notifications/sms/api/v1/reports dotnet run --project tools/src/Altinn.Notifications.Tools.LinkMobilityProxy
+LinkMobilityProxySettings__DeliveryReportUrl=http://localhost:5092/notifications/sms/api/v1/reports \
+LinkMobilityProxySettings__DeliveryReportUsername=username \
+LinkMobilityProxySettings__DeliveryReportPassword=password \
+dotnet run --project tools/src/Altinn.Notifications.Tools.LinkMobilityProxy
 ```
 
 Then start the SMS service with its gateway endpoint pointing at the proxy:
@@ -80,7 +85,6 @@ Then start the SMS service with its gateway endpoint pointing at the proxy:
 SmsGatewaySettings__Endpoint=http://localhost:5093 dotnet run --project components/sms-service/src/Altinn.Notifications.Sms
 ```
 
-The default delivery report user and password, `username` and `password`, match the SMS service's `appsettings.json`.
 
 ## Settings
 
@@ -91,8 +95,8 @@ The default delivery report user and password, `username` and `password`, match 
 | `LinkMobilityProxySettings:Interactive` | `false` | Sends every send to `FallbackUrl` instead of answering it. Needs `FallbackUrl`. |
 | `LinkMobilityProxySettings:FallbackUrl` | empty | Where unknown requests go, as `{FallbackUrl}linkmobility/{path}`, e.g. `http://localhost:5096/intercept/` for the test harness control panel |
 | `LinkMobilityProxySettings:DeliveryReportUrl` | empty | The SMS service's delivery report endpoint. Empty turns delivery reports off. |
-| `LinkMobilityProxySettings:DeliveryReportUsername` | `username` | Basic auth user, the SMS service's `SmsDeliveryReportSettings:UserSettings:Username` |
-| `LinkMobilityProxySettings:DeliveryReportPassword` | `password` | Basic auth password, the SMS service's `SmsDeliveryReportSettings:UserSettings:Password` |
+| `LinkMobilityProxySettings:DeliveryReportUsername` | empty, required with `DeliveryReportUrl` | Basic auth user, the SMS service's `SmsDeliveryReportSettings:UserSettings:Username` |
+| `LinkMobilityProxySettings:DeliveryReportPassword` | empty, required with `DeliveryReportUrl` | Basic auth password, the SMS service's `SmsDeliveryReportSettings:UserSettings:Password`. The Aspire app host generates one for the checkout and gives it to both, see [Generated credentials](../../aspire/README.md#generated-credentials). |
 | `LinkMobilityProxySettings:DeliveryReportDelaySeconds` | `2` | Delay between an accepted send and its delivery report |
 | `LinkMobilityProxySettings:MirrorUrl` | empty | Where [copies](#copies-to-the-control-panel) of sends and delivery states go, e.g. `http://localhost:5096/mirror/`. Empty means none. |
 

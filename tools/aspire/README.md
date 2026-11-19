@@ -105,26 +105,42 @@ Aspire builds the API, Email and SMS projects in one coordinated build before it
 
 ## Authentication
 
-By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `mock-auth` resource instead of at23, so you need no at23 account or token generator credentials. To get a token in Bruno, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use it. Or fetch one yourself:
+By default (`Auth:Mode` = `mock`) the API trusts tokens from the local `mock-auth` resource instead of at23, so you need no at23 account or token generator credentials. To get a token in Bruno, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use it. Or fetch one yourself, from `tools/aspire`, with the [generated password](#generated-credentials):
 
 ```bash
-curl -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create"
+curl -u "mock:$(aspire secret get Parameters:mock-auth-password)" "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create"
 ```
 
 The issuer also makes the tokens for composed email, the support dashboard and the end user notification log, and the `dashboard` and `enduser` folders in Bruno fetch theirs from it. See [tokens the API accepts](../src/Altinn.Notifications.Tools.MockAuth/README.md#tokens-the-api-accepts).
 
 Set `Auth:Mode` to `at23` to keep the API's own settings and use tokens from the Altinn test token generator, e.g. with the `v2 local` environment in Bruno.
 
+## Generated credentials
+
+The mocks and the services share three secrets. The app host generates them the first time it runs from a checkout and keeps them in its Aspire secrets, so they stay the same between runs and nothing is committed:
+
+| Parameter | Used by |
+| :--- | :--- |
+| `mock-auth-password` | `mock-auth`'s basic auth, with the user `mock`. Bruno, k6 and the **Send test SMS** and **Send test email** commands get it from the app host. |
+| `mock-acs-access-key` | `mock-acs`, and the `accesskey` in `email`'s connection string |
+| `wiremock-linkmobility-delivery-report-password` | `wiremock-linkmobility`'s delivery reports to `sms`, with the user `linkmobility-mock` |
+
+* They show as parameters under their mock in the dashboard.
+* From `tools/aspire`, `aspire secret list` shows them and `aspire secret get Parameters:<name>` prints one.
+* Delete one with `aspire secret delete Parameters:<name>`, and the next run generates a new one.
+* The secrets belong to the app host's path, so another checkout or worktree gets its own.
+* On every start the app host writes the token issuer's credentials for [Bruno](#bruno) (`.env.v2 aspire`) and [k6](#k6) (`.secrets.aspire`). Both files are ignored by git.
+
 ## Email through the ACS mock
 
-By default (`Acs:Mode` = `mock`) `email` sends to the local `mock-acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with a test access key, and the mock rejects requests that are not signed with it.
+By default (`Acs:Mode` = `mock`) `email` sends to the local `mock-acs` resource instead of Azure Communication Services, so no ACS connection string is needed and nothing leaves the machine. The app host gives `email` a connection string with the [generated](#generated-credentials) `mock-acs-access-key`, and the mock rejects requests that are not signed with it.
 
 The mock answers the send and the status polls, and then puts a delivery report on the emulator's `altinn.notifications.email.deliveryreports` queue, so an email ends as `Email_Delivered` like in Azure. The recipient address picks other outcomes, e.g. `bounce@example.com` ends as `Email_Failed_Bounced`. See the [scenarios](../src/Altinn.Notifications.Tools.AcsMock/README.md#scenarios).
 
 To try it, fetch a token and send an instant email:
 
 ```bash
-TOKEN=$(curl -s -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create")
+TOKEN=$(curl -s -u "mock:$(aspire secret get Parameters:mock-auth-password)" "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create")
 curl -X POST http://localhost:5090/notifications/api/v1/future/orders/instant/email   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"   -d '{"idempotencyId":"acs-1","sendersReference":"acs-test","recipientEmail":{"emailAddress":"ola.nordmann@example.com","emailSettings":{"subject":"Test","body":"Test","contentType":"Plain","senderEmailAddress":"noreply@altinn.no"}}}'
 ```
 
@@ -229,7 +245,7 @@ By default it is a stub, so nothing leaves the machine and no credentials are ne
 To try it, fetch a token, order an SMS and, once the API has processed the order and the SMS shows as `SMS_New` under `GET /notifications/api/v1/future/shipment/{shipmentId}`, send what is waiting:
 
 ```bash
-TOKEN=$(curl -s -u mock:mock "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create")
+TOKEN=$(curl -s -u "mock:$(aspire secret get Parameters:mock-auth-password)" "http://localhost:5094/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create")
 curl -X POST http://localhost:5090/notifications/api/v1/future/orders -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"idempotencyId":"sms-1","sendersReference":"sms-test","recipient":{"recipientSms":{"phoneNumber":"+4799999901","smsSettings":{"body":"Test","sendingTimePolicy":"Anytime"}}}}'
 curl -X POST http://localhost:5090/notifications/api/v1/trigger/sendsmsanytime
 ```
@@ -259,7 +275,7 @@ To send real SMS through LinkMobility's test gateway, set the target in `appsett
 
 ## Bruno and k6
 
-Both run against the stack with the default `Auth:Mode` = `mock` (the `mock-auth` resource) and the platform mocks (`wiremock-platform`) on. No at23 account, token generator credentials or secrets are needed.
+Both run against the stack with the default `Auth:Mode` = `mock` (the `mock-auth` resource) and the platform mocks (`wiremock-platform`) on. No at23 account or token generator credentials are needed: the app host writes the [generated](#generated-credentials) password for `mock-auth` where Bruno and k6 read it.
 
 ### Bruno
 
@@ -268,11 +284,11 @@ Both run against the stack with the default `Auth:Mode` = `mock` (the `mock-auth
 On every start the app host also writes `.env.v2 aspire` next to it: the values from `aspire.env`, the condition URLs on the configured `Mocks:Conditions:Port` and, with `Auth:Mode` = `mock`, `TOKEN_GENERATOR_URL`, `TOKEN_BASIC_AUTH_USER` and `TOKEN_BASIC_AUTH_PW` for `mock-auth`. It is ignored by git and overwritten on the next start, so change `aspire.env` or the app host settings instead.
 
 * **Bruno app with environment specific .env files** (`.env.<environment name>`): open the collection in the checkout the app host runs from and select the `v2 aspire` environment. Bruno takes the `process.env` values from `.env.v2 aspire` over your own `.env`, so nothing needs copying. Run `test-util/new auth token`, and the other requests then use the token.
-* **Bruno app** (`Bruno.exe`) without them: copy `aspire.env` to `.env` in the collection folder, open the collection, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use the token.
+* **Bruno app** (`Bruno.exe`) without them: copy `.env.v2 aspire` to `.env` in the collection folder after the app host has started, open the collection, select the `v2 aspire` environment and run `test-util/new auth token`. The other requests then use the token. Copy it again if you delete `mock-auth-password`.
 * **Bruno CLI in Docker**: mount the collection read-only, or the CLI writes the token into `environments/v2 aspire.bru`, and point it at the host:
 
   ```bash
-  docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<repo>/components/api/test/bruno/aspire.env"     usebruno/cli:latest run "test-util/new-auth-token.bru" "instant-demo" "v2 (future)" -r     --env "v2 aspire" --env-var host=http://host.docker.internal:5090 --env-var token_generator_url=http://host.docker.internal:5094
+  docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<repo>/components/api/test/bruno/.env.v2 aspire"     usebruno/cli:latest run "test-util/new-auth-token.bru" "instant-demo" "v2 (future)" -r     --env "v2 aspire" --env-var host=http://host.docker.internal:5090 --env-var token_generator_url=http://host.docker.internal:5094
   ```
 
   The CLI warns that it cannot save the token to the read-only environment file. That is expected: it keeps the token for the rest of the run.
@@ -287,7 +303,7 @@ Instant SMS and email, future orders to phone numbers, email addresses, persons 
 
 ### k6
 
-Run the tests with `-e altinn_env=local`, see [Running against the local Aspire stack](../../components/api/test/k6/ReadMe.md#running-against-the-local-aspire-stack) in the k6 README.
+On every start the app host writes `.secrets.aspire` in `components/api/test/k6`, a k6 secret source with `mock-auth`'s user and generated password. Run the tests with `-e altinn_env=local --secret-source=file=.secrets.aspire`, see [Running against the local Aspire stack](../../components/api/test/k6/ReadMe.md#running-against-the-local-aspire-stack) in the k6 README.
 
 ## Dashboard actions
 

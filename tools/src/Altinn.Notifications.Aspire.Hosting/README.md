@@ -36,9 +36,11 @@ The extensions add the mocks with `AddDotnetProject` and return `IResourceBuilde
 | `WithTestMessageCommands` | **Send test SMS** and **Send test email**, which order an instant message from the API with a token from the mock token issuer. |
 | `WithActiveSettings` | Shows settings and their values as properties of a resource in the dashboard. |
 | `AddMockAuth` / `WithMockAuth` | The mock token issuer, and makes a service trust its tokens. |
-| `AddAcsMock` / `WithAcsMock` | The ACS mock, and makes the email service send to it with the mock's test key. |
+| `AddAcsMock` / `WithAcsMock` | The ACS mock, and makes the email service send to it with the mock's access key. |
 | `AddLinkMobilityMock` / `WithLinkMobilityMock` | The LinkMobility proxy, and connects it and the SMS service both ways: sends one way, delivery reports the other. |
 | `AddPlatformMocks` / `WithPlatformMocks` | The Profile, Register, Authorization, Dialogporten, Maskinporten and condition mocks, and points the API's calls to the enabled ones. |
+
+The shared secrets (`mock-auth`'s password, the ACS mock's access key and the LinkMobility delivery report password) are secret parameters, generated on the app host's first run and kept in its Aspire secrets, so they stay the same between runs. `GetMockAuthCredentials` gives the token issuer's, for clients outside Aspire. See [Generated credentials](../../aspire/README.md#generated-credentials).
 
 Every mock is a child of the control panel in the dashboard. With intercept on, the mocks hand requests they do not recognise to the control panel and wait for it to start.
 

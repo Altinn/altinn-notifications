@@ -14,7 +14,12 @@ builder.Configuration
     .AddUserSecrets<MockAuthSettings>(optional: true)
     .AddEnvironmentVariables();
 
-builder.Services.Configure<MockAuthSettings>(builder.Configuration.GetSection(nameof(MockAuthSettings)));
+builder.Services.AddOptions<MockAuthSettings>()
+    .Bind(builder.Configuration.GetSection(nameof(MockAuthSettings)))
+    .Validate(
+        settings => settings.Username.Length > 0 && settings.Password.Length > 0,
+        "Set MockAuthSettings:Username and MockAuthSettings:Password. The Aspire app host sets them; see the README to run the issuer on its own.")
+    .ValidateOnStart();
 builder.Services.AddSingleton<MockTokenIssuer>();
 
 var port = builder.Configuration.GetValue("MockAuthSettings:Port", 5094);

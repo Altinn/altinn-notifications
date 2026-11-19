@@ -36,13 +36,15 @@ public class LinkMobilityProxySettings
 
     /// <summary>
     /// The basic auth user the SMS service expects on delivery reports, its <c>SmsDeliveryReportSettings:UserSettings:Username</c>.
+    /// Required with <see cref="DeliveryReportUrl"/>.
     /// </summary>
-    public string DeliveryReportUsername { get; set; } = "username";
+    public string DeliveryReportUsername { get; set; } = string.Empty;
 
     /// <summary>
     /// The basic auth password the SMS service expects on delivery reports, its <c>SmsDeliveryReportSettings:UserSettings:Password</c>.
+    /// Required with <see cref="DeliveryReportUrl"/>. The Aspire app host generates one for the checkout and gives it to both.
     /// </summary>
-    public string DeliveryReportPassword { get; set; } = "password";
+    public string DeliveryReportPassword { get; set; } = string.Empty;
 
     /// <summary>
     /// How long after an accepted send the delivery report is sent.

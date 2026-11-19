@@ -11,7 +11,12 @@ builder.Configuration
     .AddUserSecrets<AcsMockSettings>(optional: true)
     .AddEnvironmentVariables();
 
-builder.Services.Configure<AcsMockSettings>(builder.Configuration.GetSection(nameof(AcsMockSettings)));
+builder.Services.AddOptions<AcsMockSettings>()
+    .Bind(builder.Configuration.GetSection(nameof(AcsMockSettings)))
+    .Validate(
+        settings => settings.AccessKey.Length > 0,
+        "Set AcsMockSettings:AccessKey to a base64 key, the accesskey in the email service's connection string. The Aspire app host sets it.")
+    .ValidateOnStart();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<EmailOperationStore>();
 builder.Services.AddSingleton<IDeliveryReportSender, ServiceBusDeliveryReportSender>();

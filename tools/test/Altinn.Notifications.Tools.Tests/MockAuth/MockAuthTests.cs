@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Altinn.Notifications.Tools.Tests.MockAuth;
 
-public class MockAuthTests(WebApplicationFactory<MockAuthSettings> factory) : IClassFixture<WebApplicationFactory<MockAuthSettings>>
+public class MockAuthTests(MockAuthFactory factory) : IClassFixture<MockAuthFactory>
 {
     private const string TokenPath = "/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create";
     private const string BothCreateScopesPath = "/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create,altinn:serviceowner/notifications.composedemail.create";
@@ -41,13 +41,24 @@ public class MockAuthTests(WebApplicationFactory<MockAuthSettings> factory) : IC
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public void Start_WithoutBasicAuthCredentials_Fails()
+    {
+        using var issuer = new WebApplicationFactory<MockAuthSettings>();
+
+        var error = Record.Exception(() => issuer.CreateClient());
+
+        Assert.NotNull(error);
+        Assert.Contains("MockAuthSettings:Password", error.ToString());
+    }
+
     [Theory]
     [InlineData(TokenPath)]
     [InlineData(PersonalTokenPath)]
     public async Task TokenEndpoints_WithWrongPassword_ReturnUnauthorized(string path)
     {
         using var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = Basic("mock", "wrong");
+        client.DefaultRequestHeaders.Authorization = Basic(MockAuthFactory.Username, "wrong");
 
         using var response = await client.GetAsync(path, TestContext.Current.CancellationToken);
 
@@ -135,7 +146,7 @@ public class MockAuthTests(WebApplicationFactory<MockAuthSettings> factory) : IC
     private HttpClient AuthenticatedClient()
     {
         var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = Basic("mock", "mock");
+        client.DefaultRequestHeaders.Authorization = Basic(MockAuthFactory.Username, MockAuthFactory.Password);
         return client;
     }
 
@@ -177,7 +188,7 @@ public class MockAuthTests(WebApplicationFactory<MockAuthSettings> factory) : IC
     public async Task GetEnterpriseToken_WithCommaSeparatedScopes_ReturnsSpaceSeparatedScopeClaim()
     {
         using var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = Basic("mock", "mock");
+        client.DefaultRequestHeaders.Authorization = Basic(MockAuthFactory.Username, MockAuthFactory.Password);
 
         string token = await client.GetStringAsync(
             "/api/GetEnterpriseToken?org=ttd&scopes=altinn:serviceowner/notifications.create,altinn:serviceowner/notifications.composedemail.create",
@@ -191,7 +202,7 @@ public class MockAuthTests(WebApplicationFactory<MockAuthSettings> factory) : IC
     public async Task GetEnterpriseToken_WithoutOrg_IsForTtd()
     {
         using var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = Basic("mock", "mock");
+        client.DefaultRequestHeaders.Authorization = Basic(MockAuthFactory.Username, MockAuthFactory.Password);
 
         string token = await client.GetStringAsync("/api/GetEnterpriseToken?orgNumber=123456789&scopes=altinn:serviceowner/notifications.create", TestContext.Current.CancellationToken);
 

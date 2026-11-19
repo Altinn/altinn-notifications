@@ -40,7 +40,7 @@ Alternatively, it is possible to run the tests directly on your machine as well.
 | `mpClientId` | The client-ID of the integration set up in Maskinporten | For running in envs [tt02, prod] |
 | `subscriptionKey` | An APIM subscription key with access to the automated tests product | For running `orders-email.js` |
 
-None of these are needed for the `local` environment, see [Running against the local Aspire stack](#running-against-the-local-aspire-stack).
+For the `local` environment the Aspire app host writes `tokenGeneratorUserName` and `tokenGeneratorUserPwd` to `.secrets.aspire`, and the rest are not needed. See [Running against the local Aspire stack](#running-against-the-local-aspire-stack).
 
 
 ## Running tests
@@ -103,7 +103,7 @@ With `altinn_env=local` the tests run against the [Aspire app host](../../../../
 | :--- | :--- | :--- |
 | API | `https://platform.<env>` | `http://localhost:5090`, or `-e base_url=...` |
 | Tokens | Altinn test token generator or Maskinporten | The mock token issuer, the `mock-auth` resource, on `http://localhost:5094`, or `-e token_generator_url=...` |
-| Secrets | From `--secret-source` | Not needed. The token issuer takes `mock` / `mock`, and nothing checks `subscriptionKey`. A secret source still wins when you give one. |
+| Secrets | From `--secret-source` | `--secret-source=file=.secrets.aspire`. The app host writes the file on every start, with the token issuer's user and the password it generated for the checkout. Nothing checks `subscriptionKey`. |
 | `emailRecipient`, `smsRecipient` | Required | Default to `aspire@example.com` and `+4799999999` |
 | Condition endpoints | `/notifications/api/v1/tests/sendcondition` | The condition mock on `http://local.altinn.cloud:5199/condition/{true,false}`. The API only accepts condition URLs with a top-level domain, and `local.altinn.cloud` resolves to 127.0.0.1. |
 
@@ -113,15 +113,17 @@ Run k6 directly, from the `k6` folder:
 
 ```bash
 k6 run src/tests/orders-v2.js \
+    --secret-source=file=.secrets.aspire \
     -e altinn_env=local \
     -e ninRecipient=12345678901 \
     --vus=1 --iterations=1
 ```
 
-In a container, `localhost` is the container itself, so point k6 at the host:
+In a container, `localhost` is the container itself, so point k6 at the host, and mount the secret source:
 
 ```bash
-docker compose run k6 run /src/tests/orders-sms.js \
+docker compose run -v ./.secrets.aspire:/.secrets.aspire:ro k6 run /src/tests/orders-sms.js \
+    --secret-source=file=/.secrets.aspire \
     -e altinn_env=local \
     -e base_url=http://host.docker.internal:5090 \
     -e token_generator_url=http://host.docker.internal:5094

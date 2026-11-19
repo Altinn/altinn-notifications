@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,19 +22,20 @@ namespace Altinn.Notifications.Tools.Tests.AcsMock;
 /// </summary>
 public class AcsMockFactory : WebApplicationFactory<AcsMockSettings>
 {
-    public const string AccessKey = "YWx0aW5uLW5vdGlmaWNhdGlvbnMtYWNzLW1vY2stdGVzdC1rZXk=";
+    // A key for the test run, like the one the app host generates.
+    public static readonly string AccessKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
     public CapturingDeliveryReportSender DeliveryReports { get; } = new();
 
     /// <summary>
-    /// An SDK client that talks to the in-memory server, signed with <paramref name="accessKey"/>.
+    /// An SDK client that talks to the in-memory server, signed with <paramref name="accessKey"/>, or the mock's key when it is <c>null</c>.
     /// Retries are off, so a 429 or 401 reaches the test as it was sent.
     /// </summary>
-    public EmailClient CreateEmailClient(string accessKey = AccessKey)
+    public EmailClient CreateEmailClient(string? accessKey = null)
     {
         var options = new EmailClientOptions { Transport = new HttpClientTransport(Server.CreateHandler()) };
         options.Retry.MaxRetries = 0;
-        return new EmailClient($"endpoint=http://localhost/;accesskey={accessKey}", options);
+        return new EmailClient($"endpoint=http://localhost/;accesskey={accessKey ?? AccessKey}", options);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
