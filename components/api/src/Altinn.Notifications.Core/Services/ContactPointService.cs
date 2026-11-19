@@ -449,14 +449,16 @@ public class ContactPointService(
         var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        recipient.AddressInfo = [.. recipient.AddressInfo
+        recipient.AddressInfo = [
+            .. recipient.AddressInfo
             .Where(x => x switch
             {
                 // HashSet.Add returns false for values already seen, so only the first occurrence is kept.
                 EmailAddressPoint email => seenEmails.Add(email.EmailAddress),
                 SmsAddressPoint sms => seenMobiles.Add(sms.MobileNumber),
                 _ => true
-            })];
+            })
+        ];
     }
 
     private static void ApplyExternalIdentityContactPoints(
@@ -486,9 +488,12 @@ public class ContactPointService(
     /// </returns>
     private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients, bool useStaleContactInfo)
     {
-        List<string> nationalIdentityNumbers = [.. recipients
+        List<string> nationalIdentityNumbers = 
+        [
+            .. recipients
                 .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
-                .Select(e => e.NationalIdentityNumber!)];
+                .Select(e => e.NationalIdentityNumber!)
+        ];
 
         if (nationalIdentityNumbers.Count == 0)
         {
@@ -529,9 +534,12 @@ public class ContactPointService(
     /// </returns>
     private async Task<List<ExternalIdentityContactPoints>> LookupExternalIdentityContactPoints(List<Recipient> recipients)
     {
-        List<string> externalIdentities = [.. recipients
+        List<string> externalIdentities =
+        [
+            .. recipients
                 .Where(e => !string.IsNullOrWhiteSpace(e.ExternalIdentity))
-                .Select(e => e.ExternalIdentity!)];
+                .Select(e => e.ExternalIdentity!)
+        ];
 
         if (externalIdentities.Count == 0)
         {
@@ -542,13 +550,16 @@ public class ContactPointService(
         {
             List<ExternalIdentityContactPoints> contactPoints = await _profileClient.GetExternalIdentityContactPoints(externalIdentities);
 
-            return [.. contactPoints.Select(contactPoint =>
-            {
-                var normalizedMobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
-                var validMobileNumber = MobileNumberHelper.IsValidMobileNumber(normalizedMobileNumber) ? normalizedMobileNumber : string.Empty;
+            return 
+            [
+                .. contactPoints.Select(contactPoint =>
+                {
+                    var normalizedMobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+                    var validMobileNumber = MobileNumberHelper.IsValidMobileNumber(normalizedMobileNumber) ? normalizedMobileNumber : string.Empty;
 
-                return contactPoint with { MobileNumber = validMobileNumber };
-            })];
+                    return contactPoint with { MobileNumber = validMobileNumber };
+                })
+            ];
         }
         catch (Exception ex) when (ex is not PlatformDependencyException)
         {
@@ -581,9 +592,12 @@ public class ContactPointService(
     /// </returns>
     private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId, OrderLifecycleStage orderLifecycleStage, string? resourceAction = null)
     {
-        List<string> organizationNumbers = [.. recipients
+        List<string> organizationNumbers =
+        [
+            .. recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
-            .Select(e => e.OrganizationNumber!)];
+            .Select(e => e.OrganizationNumber!)
+        ];
 
         if (organizationNumbers.Count == 0)
         {
@@ -721,22 +735,30 @@ public class ContactPointService(
         contactPoints.ForEach(contactPoint =>
         {
             // Keep only unique and valid mobile numbers.
-            contactPoint.MobileNumberList = [..
+            contactPoint.MobileNumberList =
+            [
+                ..
                 contactPoint.MobileNumberList
                 .Where(e => MobileNumberHelper.IsValidMobileNumber(e))
-                .Distinct(StringComparer.OrdinalIgnoreCase)];
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+            ];
 
             // Keep only unique email addresses.
-            contactPoint.EmailList = [..
+            contactPoint.EmailList =
+            [
+                ..
                 contactPoint.EmailList
                 .Where(e => !string.IsNullOrWhiteSpace(e))
-                .Distinct(StringComparer.OrdinalIgnoreCase)];
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+            ];
 
             // Keep only user contact points with valid contact details.
-            contactPoint.UserContactPoints = [..
+            contactPoint.UserContactPoints =
+            [
+                ..
                 NormalizeUserMobileNumbers(contactPoint.UserContactPoints)
                 .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || MobileNumberHelper.IsValidMobileNumber(userContact.MobileNumber))
-                ];
+            ];
         });
     }
 
@@ -778,13 +800,15 @@ public class ContactPointService(
     private async Task<List<string>> FindSireOrganizationsLackingContactPoints(List<string> organizationNumbers, List<OrganizationContactPoints> contactPoints)
     {
         List<string> organizationNumbersMissingContactPoints =
-            [..organizationNumbers
+            [
+                ..organizationNumbers
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Where(orgNo =>
                        !contactPoints.Exists(
                              contactPoint => string.Equals(contactPoint.OrganizationNumber, orgNo, StringComparison.OrdinalIgnoreCase) &&
                             (contactPoint.EmailList.Exists(email => !string.IsNullOrWhiteSpace(email)) ||
-                             contactPoint.MobileNumberList.Exists(MobileNumberHelper.IsValidMobileNumber))))];
+                             contactPoint.MobileNumberList.Exists(MobileNumberHelper.IsValidMobileNumber))))
+            ];
 
         if (organizationNumbersMissingContactPoints.Count == 0)
         {
@@ -795,9 +819,12 @@ public class ContactPointService(
         {
             List<PartyDetails> partyDetails = await _registerClient.QueryOrganizationSources(organizationNumbersMissingContactPoints);
 
-            return [.. partyDetails
+            return
+            [
+                .. partyDetails
                 .Where(e => e.RegistrySource == OrganizationRegistrySource.RegisteredWithSkatteetaten && !string.IsNullOrWhiteSpace(e.OrganizationNumber))
-                .Select(e => e.OrganizationNumber!)];
+                .Select(e => e.OrganizationNumber!)
+            ];
         }
         catch (Exception ex) when (ex is not PlatformDependencyException)
         {

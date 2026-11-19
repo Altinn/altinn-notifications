@@ -45,6 +45,8 @@ using OpenTelemetry.Trace;
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
+using RequestFilterProcessor = Altinn.Notifications.Telemetry.RequestFilterProcessor;
+
 ILogger logger;
 
 var builder = WebApplication.CreateBuilder(args);

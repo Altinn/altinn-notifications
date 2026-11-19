@@ -25,30 +25,30 @@ namespace Altinn.Notifications.Telemetry
         /// command parameter tags removed. Hash and duration data are transferred through baggage to the root server
         /// activity, while parameter text is stored in its non-propagating custom properties. Totals and averages are
         /// written to a database statistics tag, then temporary baggage and custom properties are cleared.</remarks>
-        /// <param name="activity">The completed activity to inspect, update, and optionally enrich with aggregated database telemetry.</param>
-        public override void OnEnd(Activity activity)
+        /// <param name="data">The completed activity to inspect, update, and optionally enrich with aggregated database telemetry.</param>
+        public override void OnEnd(Activity data)
         {
             // Suppress Npgsql activities with short duration if it's not the first time we see this trace
-            if (IsNpgsqlActivity(activity))
+            if (IsNpgsqlActivity(data))
             {
                 var minimumTotalDuration = TimeSpan.FromMilliseconds(postgreSqlSettings.TelemetryMinDurationMs);
-                bool isFirstHash = activity.GetCustomProperty("firsthash") is bool firstHash && firstHash;
-                if (activity.Duration < minimumTotalDuration && !isFirstHash)
+                bool isFirstHash = data.GetCustomProperty("firsthash") is bool firstHash && firstHash;
+                if (data.Duration < minimumTotalDuration && !isFirstHash)
                 {
                     // Suppress export
-                    activity.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
+                    data.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
                 }
 
-                activity.SetCustomProperty("firsthash", null);
+                data.SetCustomProperty("firsthash", null);
 
-                if (activity.Duration < minimumTotalDuration && !postgreSqlSettings.TelemetryAlwaysLogSqlText && !postgreSqlSettings.TelemetryAlwaysLogSqlParameters)
+                if (data.Duration < minimumTotalDuration && !postgreSqlSettings.TelemetryAlwaysLogSqlText && !postgreSqlSettings.TelemetryAlwaysLogSqlParameters)
                 {
                     // Remove logged parameters
-                    activity.SetTag("db.command.parameters", null);
-                    activity.SetTag("Parameters", null);
+                    data.SetTag("db.command.parameters", null);
+                    data.SetTag("Parameters", null);
                 }
 
-                Activity? parent = activity.Parent;
+                Activity? parent = data.Parent;
                 while (parent != null && !IsRequestDbOwner(parent))
                 {
                     parent = parent.Parent;
@@ -57,33 +57,33 @@ namespace Altinn.Notifications.Telemetry
                 // Transfer state to the root request activity
                 if (parent != null)
                 {
-                    string? dbHash = activity.GetTagItem("db.hash")?.ToString();
+                    string? dbHash = data.GetTagItem("db.hash")?.ToString();
                     if (!string.IsNullOrEmpty(dbHash))
                     {
                         Guid id = Guid.CreateVersion7();
                         string key = $"{DbStatsBaggagePrefix}{id}";
-                        if (postgreSqlSettings.TelemetryAlwaysLogSqlParameters && activity.GetTagItem("Parameters") is string parameters)
+                        if (postgreSqlSettings.TelemetryAlwaysLogSqlParameters && data.GetTagItem("Parameters") is string parameters)
                         {
                             parent.SetCustomProperty(key, parameters);
                         }
 
-                        parent.SetBaggage(key, $"{dbHash}:{activity.Duration.TotalMilliseconds:F0}");
+                        parent.SetBaggage(key, $"{dbHash}:{data.Duration.TotalMilliseconds:F0}");
                     }
                 }
             }
 
             // Process root request activity: aggregate DB time and add as tag, along with individual DB command hashes and durations
-            if (IsRequestDbOwner(activity))
+            if (IsRequestDbOwner(data))
             {
                 StringBuilder sb = new();
                 long totalDbDuration = 0;
                 int dbActivityCount = 0;
                 List<string> baggageKeys = [];
-                activity.Baggage.Where(b => b.Key.StartsWith(DbStatsBaggagePrefix, StringComparison.OrdinalIgnoreCase)).OrderBy(b => b.Key).ToList().ForEach(b =>
+                data.Baggage.Where(b => b.Key.StartsWith(DbStatsBaggagePrefix, StringComparison.OrdinalIgnoreCase)).OrderBy(b => b.Key).ToList().ForEach(b =>
                 {
                     baggageKeys.Add(b.Key);
                     sb.Append($";{b.Value}");
-                    if (postgreSqlSettings.TelemetryAlwaysLogSqlParameters && activity.GetCustomProperty(b.Key) is string parameters)
+                    if (postgreSqlSettings.TelemetryAlwaysLogSqlParameters && data.GetCustomProperty(b.Key) is string parameters)
                     {
                         sb.Append('#').Append(parameters);
                     }
@@ -99,15 +99,16 @@ namespace Altinn.Notifications.Telemetry
                 // Clear temporary stats and parameter state after aggregation.
                 foreach (var key in baggageKeys)
                 {
-                    activity.SetBaggage(key, null);
-                    activity.SetCustomProperty(key, null);
+                    data.SetBaggage(key, null);
+                    data.SetCustomProperty(key, null);
                 }
 
                 if (dbActivityCount > 0)
                 {
                     string value = $"Count: {dbActivityCount}, tot dur: {totalDbDuration:N0}ms, avg dur: {totalDbDuration / dbActivityCount:N0}ms," +
-                        $" hashes:duration:{(postgreSqlSettings.TelemetryAlwaysLogSqlParameters ? "#params" : null)} {sb.Remove(0, 1)}";
-                    activity.SetTag("db.stats", value);
+                                   $" hashes:duration:{(postgreSqlSettings.TelemetryAlwaysLogSqlParameters ? "#params" : null)} {sb.Remove(0, 1)}";
+
+                    data.SetTag("db.stats", value);
                 }
             }
         }
