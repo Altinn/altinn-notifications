@@ -94,6 +94,25 @@ public partial class HostingExtensionsTests
     }
 
     [Fact]
+    public void WithAcsMock_WithoutTheAcsMock_Throws()
+    {
+        var email = AddService("email", 5091);
+        var other = AddService("other", 5098);
+
+        var error = Assert.Throws<ArgumentException>(() => email.WithAcsMock(other));
+        Assert.Contains("AddAcsMock", error.Message);
+    }
+
+    [Fact]
+    public void GetMockAuthCredentials_WithoutTheIssuer_Throws()
+    {
+        var other = AddService("other", 5098);
+
+        var error = Assert.Throws<ArgumentException>(() => other.GetMockAuthCredentials());
+        Assert.Contains("AddMockAuth", error.Message);
+    }
+
+    [Fact]
     public void LinkMobilityMock_Interactive_NeedsIntercept()
     {
         var harness = _builder.AddTestHarness("controlpanel", 5096, intercept: false, timeoutSeconds: 120);

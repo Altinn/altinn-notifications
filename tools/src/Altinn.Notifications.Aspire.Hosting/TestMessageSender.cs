@@ -56,7 +56,7 @@ internal sealed class TestMessageSender(EndpointReference api, EndpointReference
         try
         {
             using var tokenRequest = new HttpRequestMessage(HttpMethod.Get, $"{auth.Url}/api/GetEnterpriseToken?org=ttd&scopes={Uri.EscapeDataString(_scopes)}");
-            string password = await credentials.Password.GetValueAsync(cancellationToken) ?? string.Empty;
+            string? password = await credentials.Password.GetValueAsync(cancellationToken);
             tokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{credentials.Username}:{password}")));
             using var tokenResponse = await client.SendAsync(tokenRequest, cancellationToken);
             if (!tokenResponse.IsSuccessStatusCode)

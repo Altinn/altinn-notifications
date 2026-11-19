@@ -57,4 +57,10 @@ public class LinkMobilityProxySettings
     /// holds up or fails a send.
     /// </summary>
     public string MirrorUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether delivery reports can be sent: they are off, or there is a user and password for them.
+    /// </summary>
+    public bool HasDeliveryReportCredentials() =>
+        DeliveryReportUrl.Length == 0 || (DeliveryReportUsername.Length > 0 && DeliveryReportPassword.Length > 0);
 }
