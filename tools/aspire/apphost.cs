@@ -4,6 +4,8 @@
 
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Aspire.Hosting.Dotnet;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,6 +56,35 @@ if (postgresPort != 5432)
         .WithEnvironment("PostgreSQLSettings__ConnectionString", string.Format(connectionString, "platform_notifications"));
 }
 
+// Values for the Bruno collection that follow from these settings, on top of the test data in aspire.env. See WriteBrunoEnvironment.
+Dictionary<string, string> brunoVariables = [];
+
+// mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
+var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
+if (authMode == "mock")
+{
+    var authPort = builder.Configuration.GetValue("Auth:Port", 5094);
+    string authUrl = "http://localhost:" + authPort;
+
+    // The signing key is made for this run, so tokens stay valid when only mock-auth is restarted.
+    var auth = builder.AddDotnetProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", options => options.ExcludeLaunchProfile = true)
+        .WithEnvironment("MockAuthSettings__Port", authPort.ToString())
+        .WithEnvironment("MockAuthSettings__SigningKey", CreateTokenSigningKey())
+        .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration");
+
+    api.WithEnvironment("GeneralSettings__OpenIdWellKnownEndpoint", authUrl + "/authentication/api/v1/openid/")
+        .WaitFor(auth);
+
+    // With at23 these are left out, so Bruno keeps the Altinn test token generator from the user's own .env.
+    brunoVariables["TOKEN_GENERATOR_URL"] = authUrl;
+    brunoVariables["TOKEN_BASIC_AUTH_USER"] = "mock";
+    brunoVariables["TOKEN_BASIC_AUTH_PW"] = "mock";
+}
+else if (authMode != "at23")
+{
+    throw new InvalidOperationException($"Auth:Mode must be 'mock' or 'at23', not '{authMode}'.");
+}
+
 // The services only use AMQP on 5672. The emulator's HTTP port is just for the health check, so it can move if 5300 is taken.
 var serviceBusHealthPort = builder.Configuration.GetValue("ServiceBus:HealthPort", 5300);
 StartContainer("../asb-emulator", ["compose", "up", "-d"], new() { ["EMULATOR_HOST_HTTP_PORT"] = serviceBusHealthPort.ToString() });
@@ -65,9 +96,101 @@ api.WaitFor(serviceBus);
 email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
+// With Simulator:Enabled the mocks hand requests they do not recognise to the simulator, where an operator answers them.
+string simulatorFallbackUrl = builder.Configuration.GetValue("Simulator:Enabled", false) ? "http://localhost:5096/intercept/" : string.Empty;
+
+// mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts
+// delivery reports on the emulator's queue. real: the email service uses the connection string from its own settings.
+var acsMode = builder.Configuration["Acs:Mode"] ?? "mock";
+if (acsMode == "mock")
+{
+    // A test-only key. The email service signs with it, and the mock rejects requests that are not signed with it.
+    const string acsAccessKey = "YWx0aW5uLW5vdGlmaWNhdGlvbnMtYWNzLW1vY2stdGVzdC1rZXk=";
+    var acsPort = builder.Configuration.GetValue("Acs:Port", 5095);
+    var acs = builder.AddDotnetProject("mock-acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", options => options.ExcludeLaunchProfile = true)
+        .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
+        .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
+        .WithEnvironment("AcsMockSettings__FallbackUrl", simulatorFallbackUrl)
+        .WaitFor(serviceBus);
+
+    email.WithEnvironment("CommunicationServicesSettings__ConnectionString", "endpoint=http://localhost:" + acsPort + "/;accesskey=" + acsAccessKey)
+        .WaitFor(acs);
+}
+else if (acsMode != "real")
+{
+    throw new InvalidOperationException($"Acs:Mode must be 'mock' or 'real', not '{acsMode}'.");
+}
+
+// The API's calls to Profile, Register, Authorization, Maskinporten and condition endpoints go to local mocks. A system that is
+// turned off keeps the endpoint from the API's own settings, e.g. a local altinn-profile on 5030.
+(string Name, int Port, string ApiSetting, string ApiPath)[] platformMocks =
+[
+    ("Profile", 5131, "PlatformSettings__ApiProfileEndpoint", "/profile/api/v1/"),
+    ("Register", 5121, "PlatformSettings__ApiRegisterEndpoint", "/register/api/v1/"),
+    ("Authorization", 5151, "PlatformSettings__ApiAuthorizationEndpoint", "/authorization/api/v1/"),
+    ("Conditions", 5199, string.Empty, string.Empty), // Orders point to these themselves.
+    ("Maskinporten", 5197, string.Empty, string.Empty), // See below.
+];
+
+if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m => builder.Configuration.GetValue($"Mocks:{m.Name}:Enabled", true)))
+{
+    var mocks = builder.AddDotnetProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", options => options.ExcludeLaunchProfile = true)
+        .WithEnvironment("PlatformMocksSettings__FallbackUrl", simulatorFallbackUrl);
+
+    foreach (var (name, defaultPort, apiSetting, apiPath) in platformMocks)
+    {
+        bool enabled = builder.Configuration.GetValue($"Mocks:{name}:Enabled", true);
+        int port = builder.Configuration.GetValue($"Mocks:{name}:Port", defaultPort);
+        mocks.WithEnvironment($"PlatformMocksSettings__{name}__Enabled", enabled.ToString())
+            .WithEnvironment($"PlatformMocksSettings__{name}__Port", port.ToString());
+
+        if (enabled && apiSetting.Length > 0)
+        {
+            api.WithEnvironment(apiSetting, "http://localhost:" + port + apiPath);
+        }
+    }
+
+    // Since #1948 the names for $recipientName$ come from Register's v2 party query, which has its own base address.
+    if (builder.Configuration.GetValue("Mocks:Register:Enabled", true))
+    {
+        api.WithEnvironment("RegisterSettings__ApiEndpoint", "http://localhost:" + builder.Configuration.GetValue("Mocks:Register:Port", 5121) + "/register/api/");
+    }
+
+    if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
+    {
+        int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
+
+        // The API only accepts condition URLs with a top-level domain, so the URLs to put in orders use local.altinn.cloud, which resolves to 127.0.0.1.
+        foreach (string condition in new[] { "true", "false", "corrupt", "error" })
+        {
+            string conditionUrl = "http://local.altinn.cloud:" + conditionsPort + "/condition/" + condition;
+            mocks.WithUrl(conditionUrl, "Condition " + condition);
+            brunoVariables["TESTDATA_URL_CONDITION_" + condition.ToUpperInvariant()] = conditionUrl;
+        }
+    }
+
+    // The condition client gets its token from the Maskinporten mock instead of test.maskinporten.no. The grant still has to be
+    // signed, so each run makes a key of its own. The mock does not check it.
+    if (builder.Configuration.GetValue("Mocks:Maskinporten:Enabled", true))
+    {
+        string maskinportenUrl = "http://localhost:" + builder.Configuration.GetValue("Mocks:Maskinporten:Port", 5197);
+        api.WithEnvironment("SendConditionClient__MaskinportenSettings__TokenEndpoint", maskinportenUrl + "/token")
+            .WithEnvironment("SendConditionClient__MaskinportenSettings__AssertionAudience", maskinportenUrl + "/")
+            .WithEnvironment("SendConditionClient__MaskinportenSettings__ClientId", "altinn-notifications-local")
+            .WithEnvironment("SendConditionClient__MaskinportenSettings__EncodedJwk", CreateSigningKey());
+    }
+
+    api.WaitFor(mocks);
+}
+
 AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
 AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
 AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
+
+if (builder.ExecutionContext.IsRunMode)
+{
+    WriteBrunoEnvironment(brunoVariables);
+}
 
 var app = builder.Build();
 
@@ -85,6 +208,67 @@ app.Run();
 foreach (var watcher in watchers)
 {
     watcher.Dispose();
+}
+
+// A throwaway RSA key as a base64-encoded PKCS#8 private key, the format MockAuthSettings:SigningKey takes.
+static string CreateTokenSigningKey()
+{
+    using var rsa = RSA.Create(2048);
+    return Convert.ToBase64String(rsa.ExportPkcs8PrivateKey());
+}
+
+// A throwaway RSA key as a base64-encoded JWK, the format MaskinportenSettings:EncodedJwk takes.
+static string CreateSigningKey()
+{
+    using var rsa = RSA.Create(2048);
+    var key = rsa.ExportParameters(includePrivateParameters: true);
+    var jwk = new Dictionary<string, string>
+    {
+        ["kty"] = "RSA",
+        ["kid"] = "altinn-notifications-local",
+        ["alg"] = "RS256",
+        ["use"] = "sig",
+        ["e"] = Base64Url(key.Exponent),
+        ["n"] = Base64Url(key.Modulus),
+        ["d"] = Base64Url(key.D),
+        ["p"] = Base64Url(key.P),
+        ["q"] = Base64Url(key.Q),
+        ["dp"] = Base64Url(key.DP),
+        ["dq"] = Base64Url(key.DQ),
+        ["qi"] = Base64Url(key.InverseQ),
+    };
+
+    return Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(jwk));
+
+    static string Base64Url(byte[]? bytes) => Convert.ToBase64String(bytes!).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+}
+
+// Writes ".env.v2 aspire" in the Bruno collection: the test data in aspire.env with the values that follow from these settings.
+// Bruno builds that read .env.<environment name> files use it while "v2 aspire" is selected, over every other .env file.
+// It is written again on every start, so it always matches the stack that runs from this checkout.
+void WriteBrunoEnvironment(Dictionary<string, string> variables)
+{
+    string collection = Path.Combine(builder.AppHostDirectory, Components, "api", "test", "bruno");
+    Dictionary<string, string> remaining = new(variables);
+    List<string> lines =
+    [
+        "# Written by tools/aspire/apphost.cs on every start, from aspire.env and the app host settings. Edits here are lost.",
+    ];
+
+    foreach (string line in File.ReadAllLines(Path.Combine(collection, "aspire.env")))
+    {
+        int separator = line.IndexOf('=');
+        if (line.StartsWith('#') || separator < 1)
+        {
+            continue;
+        }
+
+        string key = line[..separator];
+        lines.Add(remaining.Remove(key, out string? value) ? key + "=" + value : line);
+    }
+
+    lines.AddRange(remaining.Select(variable => variable.Key + "=" + variable.Value));
+    File.WriteAllLines(Path.Combine(collection, ".env.v2 aspire"), lines);
 }
 
 void StartContainer(string workingDirectory, string[] runtimeArgs, Dictionary<string, string>? environment = null)
