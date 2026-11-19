@@ -178,7 +178,7 @@ public class PlatformMocksServiceTests
     {
         await using var mocks = await StartAsync();
 
-        var result = await ConditionClient().CheckSendCondition(new Uri(mocks.Urls["conditions"] + path), TestContext.Current.CancellationToken);
+        var result = await ConditionClient().CheckSendCondition(new Uri(mocks.Urls["conditions"] + path));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(expected, result.Match(sendNotification => sendNotification, _ => !expected));
@@ -191,7 +191,7 @@ public class PlatformMocksServiceTests
     {
         await using var mocks = await StartAsync();
 
-        var result = await ConditionClient().CheckSendCondition(new Uri(mocks.Urls["conditions"] + path), TestContext.Current.CancellationToken);
+        var result = await ConditionClient().CheckSendCondition(new Uri(mocks.Urls["conditions"] + path));
 
         Assert.True(result.IsError);
         Assert.Equal(expectedStatusCode, result.Match(_ => -1, error => error.StatusCode));
@@ -395,7 +395,7 @@ public class PlatformMocksServiceTests
             InnerHandler = conditionRequests,
         };
 
-        var result = await new SendConditionClient(new HttpClient(tokenHandler)).CheckSendCondition(new Uri(mocks.Urls["conditions"] + "/condition/true"), TestContext.Current.CancellationToken);
+        var result = await new SendConditionClient(new HttpClient(tokenHandler)).CheckSendCondition(new Uri(mocks.Urls["conditions"] + "/condition/true"));
 
         Assert.True(result.IsSuccess);
         var authorization = Assert.Single(conditionRequests.Authorizations);
