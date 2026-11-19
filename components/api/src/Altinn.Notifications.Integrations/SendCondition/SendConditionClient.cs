@@ -26,14 +26,14 @@ namespace Altinn.Notifications.Integrations.SendCondition
         {
             try
             {
-                using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                return await ProcessHttpResponse(response, cancellationToken);
+                using var response = await _client.GetAsync(url, cancellationToken);
+                return await ProcessHttpResponse(response);
             }
             catch (HttpRequestException ex)
             {
                 return new ConditionClientError { Message = $"HTTP request failed: {ex.Message}" };
             }
-            catch (OperationCanceledException ex)
+            catch (TaskCanceledException ex)
             {
                 return new ConditionClientError { Message = $"Request timed out: {ex.Message}" };
             }
@@ -79,17 +79,16 @@ namespace Altinn.Notifications.Integrations.SendCondition
         /// Processes the HTTP response and extracts the send condition result.
         /// </summary>
         /// <param name="response">The HTTP response to process</param>
-        /// <param name="cancellationToken">Cancels reading of the response body</param>
         /// <returns>A boolean with the send condition result or a <see cref="ConditionClientError"/></returns>
-        private static async Task<Result<bool, ConditionClientError>> ProcessHttpResponse(HttpResponseMessage response, CancellationToken cancellationToken)
+        private static async Task<Result<bool, ConditionClientError>> ProcessHttpResponse(HttpResponseMessage response)
         {
             string responseString;
 
             try
             {
-                responseString = await response.Content.ReadAsStringAsync(cancellationToken);
+                responseString = await response.Content.ReadAsStringAsync();
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex)
             {
                 return new ConditionClientError
                 {
