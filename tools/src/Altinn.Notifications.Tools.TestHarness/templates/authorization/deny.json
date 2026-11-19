@@ -1,0 +1,10 @@
+{
+  "name": "200 Deny (one decision, no attributes)",
+  "status": 200,
+  "headers": { "Content-Type": "application/json" },
+  "body": {
+    "Response": [
+      { "Decision": "Deny", "Status": { "StatusCode": { "Value": "urn:oasis:names:tc:xacml:1.0:status:ok" } } }
+    ]
+  }
+}

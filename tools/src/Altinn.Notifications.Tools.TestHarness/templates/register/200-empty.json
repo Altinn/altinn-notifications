@@ -1,0 +1,6 @@
+{
+  "name": "200 No party names",
+  "status": 200,
+  "headers": { "Content-Type": "application/json" },
+  "body": { "partyNames": [] }
+}

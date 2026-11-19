@@ -1,0 +1,6 @@
+{
+  "name": "401 Denied (wrong access key)",
+  "status": 401,
+  "headers": { "Content-Type": "application/json" },
+  "body": { "error": { "code": "Denied", "message": "Denied by the resource provider." } }
+}

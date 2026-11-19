@@ -77,10 +77,10 @@ namespace Altinn.Notifications.Telemetry
         /// <summary>
         /// Determine whether to skip a request
         /// </summary>
-        public override void OnStart(Activity activity)
+        public override void OnStart(Activity data)
         {
             bool skip = false;
-            if (activity.OperationName == RequestKind)
+            if (data.OperationName == RequestKind)
             {
                 var path = _httpContextAccessor.HttpContext?.Request.Path.Value;
                 if (path != null)
@@ -88,35 +88,35 @@ namespace Altinn.Notifications.Telemetry
                     skip = ExcludeRequest(path);
                 }
             }
-            else if (!(activity.Parent?.ActivityTraceFlags.HasFlag(ActivityTraceFlags.Recorded) ?? true))
+            else if (!(data.Parent?.ActivityTraceFlags.HasFlag(ActivityTraceFlags.Recorded) ?? true))
             {
                 skip = true;
             }
 
             if (skip)
             {
-                activity.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
+                data.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
             }
         }
 
         /// <summary>
         /// No action on end
         /// </summary>
-        /// <param name="activity">xx</param>
-        public override void OnEnd(Activity activity)
+        /// <param name="data">xx</param>
+        public override void OnEnd(Activity data)
         {
-            if (activity.OperationName == RequestKind && _httpContextAccessor.HttpContext is not null)
+            if (data.OperationName == RequestKind && _httpContextAccessor.HttpContext is not null)
             {
                 if (_httpContextAccessor.HttpContext.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues ipAddress))
                 {
-                    activity.SetTag("ipAddress", ipAddress.FirstOrDefault());
+                    data.SetTag("ipAddress", ipAddress.FirstOrDefault());
                 }
 
                 foreach (var claim in _httpContextAccessor.HttpContext.User.Claims)
                 {
                     if (_claimActions.TryGetValue(claim.Type, out var action))
                     {
-                        action(claim, activity);
+                        action(claim, data);
                     }
                 }
             }

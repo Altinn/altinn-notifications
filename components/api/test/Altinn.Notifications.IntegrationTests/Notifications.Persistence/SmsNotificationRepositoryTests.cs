@@ -21,6 +21,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
+[Collection(GlobalStateSerialCollection.Name)]
 public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 {
     private static readonly UnitOfWorkRepository _unitOfWorkRepository = new(ServiceUtil.GetSharedDataSource());

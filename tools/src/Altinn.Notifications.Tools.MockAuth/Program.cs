@@ -1,0 +1,95 @@
+using System.Text;
+
+using Altinn.Notifications.Tools.MockAuth;
+using Altinn.Notifications.Tools.MockAuth.Configuration;
+
+using Microsoft.Extensions.Options;
+
+const string OpenIdPath = "/authentication/api/v1/openid";
+
+// appsettings.json is in the output folder, so it is found whichever folder the issuer is started from.
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, ContentRootPath = AppContext.BaseDirectory });
+
+builder.Configuration
+    .AddUserSecrets<MockAuthSettings>(optional: true)
+    .AddEnvironmentVariables();
+
+builder.Services.AddOptions<MockAuthSettings>()
+    .Bind(builder.Configuration.GetSection(nameof(MockAuthSettings)))
+    .Validate(
+        settings => settings.Username.Length > 0 && settings.Password.Length > 0,
+        "Set MockAuthSettings:Username and MockAuthSettings:Password. The Aspire app host sets them; see the README to run the issuer on its own.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<MockTokenIssuer>();
+
+var port = builder.Configuration.GetValue("MockAuthSettings:Port", 5094);
+builder.WebHost.UseUrls($"http://localhost:{port}");
+
+var app = builder.Build();
+
+// Same shape as the Altinn test token generator, so the Bruno request "test-util/new auth token" works unchanged.
+app.MapGet("/api/GetEnterpriseToken", (HttpContext context, MockTokenIssuer issuer, IOptions<MockAuthSettings> settings, string? org, string? orgNumber, string? scopes) =>
+{
+    if (!HasBasicAuth(context, settings.Value))
+    {
+        context.Response.Headers.WWWAuthenticate = "Basic";
+        return Results.Unauthorized();
+    }
+
+    return Results.Text(issuer.CreateEnterpriseToken(BaseUrl(context), org ?? "ttd", orgNumber ?? "991825827", scopes));
+});
+
+// An end user token, like the test token generator's personal token. Bruno's "test-util/end user dialog token" asks for one
+// with the scopes the end user notification log and Dialogporten need.
+app.MapGet("/api/GetPersonalToken", (HttpContext context, MockTokenIssuer issuer, IOptions<MockAuthSettings> settings, [AsParameters] PersonalTokenQuery query) =>
+{
+    if (!HasBasicAuth(context, settings.Value))
+    {
+        context.Response.Headers.WWWAuthenticate = "Basic";
+        return Results.Unauthorized();
+    }
+
+    return Results.Text(issuer.CreatePersonalToken(BaseUrl(context), query.UserId ?? 20000000, query.PartyId ?? 50000000, query.Pid ?? "12345678901", query.AuthLvl ?? 3, query.Scopes));
+});
+
+string[] signingAlgorithms = ["RS256"];
+string[] subjectTypes = ["public"];
+string[] responseTypes = ["code"];
+
+app.MapGet($"{OpenIdPath}/.well-known/openid-configuration", (HttpContext context) =>
+{
+    string baseUrl = BaseUrl(context);
+    return Results.Json(new
+    {
+        issuer = baseUrl,
+        jwks_uri = $"{baseUrl}{OpenIdPath}/jwks",
+        id_token_signing_alg_values_supported = signingAlgorithms,
+        subject_types_supported = subjectTypes,
+        response_types_supported = responseTypes,
+    });
+});
+
+app.MapGet($"{OpenIdPath}/jwks", (MockTokenIssuer issuer) => Results.Json(issuer.GetJwks()));
+
+await app.RunAsync();
+
+static string BaseUrl(HttpContext context) => $"{context.Request.Scheme}://{context.Request.Host}";
+
+static bool HasBasicAuth(HttpContext context, MockAuthSettings settings)
+{
+    string? header = context.Request.Headers.Authorization;
+    if (header is null || !header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+    {
+        return false;
+    }
+
+    try
+    {
+        string credentials = Encoding.UTF8.GetString(Convert.FromBase64String(header["Basic ".Length..].Trim()));
+        return credentials == $"{settings.Username}:{settings.Password}";
+    }
+    catch (FormatException)
+    {
+        return false;
+    }
+}

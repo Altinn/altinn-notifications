@@ -373,4 +373,9 @@ public class IntegrationTestContainersFixture : IAsyncLifetime
 /// <summary>
 /// PostgreSQL settings loaded from appsettings.
 /// </summary>
+/// <param name="Database">The database name.</param>
+/// <param name="Username">The admin user name.</param>
+/// <param name="Password">The admin password.</param>
+/// <param name="AppRoleName">The application role name.</param>
+/// <param name="AppRolePassword">The application role password.</param>
 internal record PostgreSqlSettings(string Database, string Username, string Password, string AppRoleName, string AppRolePassword);

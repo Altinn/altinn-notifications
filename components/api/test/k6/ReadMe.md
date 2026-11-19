@@ -40,6 +40,8 @@ Alternatively, it is possible to run the tests directly on your machine as well.
 | `mpClientId` | The client-ID of the integration set up in Maskinporten | For running in envs [tt02, prod] |
 | `subscriptionKey` | An APIM subscription key with access to the automated tests product | For running `orders-email.js` |
 
+For the `local` environment the Aspire app host writes `tokenGeneratorUserName` and `tokenGeneratorUserPwd` to `.secrets.aspire`, and the rest are not needed. See [Running against the local Aspire stack](#running-against-the-local-aspire-stack).
+
 
 ## Running tests
 
@@ -90,6 +92,58 @@ docker compose run k6 run /src/tests/orders-email.js \
    -e ninRecipient=***
    -e runFullTestSet=true
    ```
+
+---
+
+## Running against the local Aspire stack
+
+With `altinn_env=local` the tests run against the [Aspire app host](../../../../tools/aspire/README.md) on your machine instead of an Altinn environment. Start it with `aspire run` in `tools/aspire`, with the default `Auth:Mode` = `mock` and the platform mocks on. The dashboard calls them `mock-auth` and `wiremock-platform`.
+
+| | Altinn environments | `local` |
+| :--- | :--- | :--- |
+| API | `https://platform.<env>` | `http://localhost:5090`, or `-e base_url=...` |
+| Tokens | Altinn test token generator or Maskinporten | The mock token issuer, the `mock-auth` resource, on `http://localhost:5094`, or `-e token_generator_url=...` |
+| Secrets | From `--secret-source` | `--secret-source=file=.secrets.aspire`. The app host writes the file on every start, with the token issuer's user and the password it generated for the checkout. Nothing checks `subscriptionKey`. |
+| `emailRecipient`, `smsRecipient` | Required | Default to `aspire@example.com` and `+4799999999` |
+| Condition endpoints | `/notifications/api/v1/tests/sendcondition` | The condition mock on `http://local.altinn.cloud:5199/condition/{true,false}`. The API only accepts condition URLs with a top-level domain, and `local.altinn.cloud` resolves to 127.0.0.1. |
+
+The platform mocks give any national identity number and organisation number contact points, so `ninRecipient` and `orgNoRecipient` can be any 11 and 9 digits. The values below match the Bruno test data in `components/api/test/bruno/aspire.env`. See the [platform mocks](../../../../tools/src/Altinn.Notifications.Tools.PlatformMocks/README.md) for the few numbers that behave differently, e.g. a reserved person.
+
+Run k6 directly, from the `k6` folder:
+
+```bash
+k6 run src/tests/orders-v2.js \
+    --secret-source=file=.secrets.aspire \
+    -e altinn_env=local \
+    -e ninRecipient=12345678901 \
+    --vus=1 --iterations=1
+```
+
+In a container, `localhost` is the container itself, so point k6 at the host, and mount the secret source:
+
+```bash
+docker compose run -v ./.secrets.aspire:/.secrets.aspire:ro k6 run /src/tests/orders-sms.js \
+    --secret-source=file=/.secrets.aspire \
+    -e altinn_env=local \
+    -e base_url=http://host.docker.internal:5090 \
+    -e token_generator_url=http://host.docker.internal:5094
+```
+
+The condition URLs stay on `local.altinn.cloud`, since the API calls them, not k6.
+
+A smoke run of every test:
+
+| Test | Extra parameters |
+| :--- | :--- |
+| `orders-sms.js`, `orders-v2.js`, `orders-composed-email-v2.js` | |
+| `orders-email.js` | `-e ninRecipient=12345678901`. With `runFullTestSet=true` it waits a minute for the order with a false condition to end as `SendConditionNotMet`. |
+| `orders-org-no.js`, `orders-org-no-v2.js` | `-e orgNoRecipient=310000002 -e resourceId=urn:altinn:resource:altinn-notifications-k6` |
+| `order-with-reminders-*.js` | `-e ninRecipient=12345678901 -e orgNoRecipient=310000002` |
+
+### Notes
+
+* Use one iteration per test for a smoke run. Most tests create their orders, with their idempotency ids, in `setup()`, so later iterations get `200 OK` for the same order instead of `201 Created` and fail their checks. That is the same in every environment.
+* The `testharness-controlpanel` resource calls the trigger endpoints every 15 seconds, so SMS and email go out shortly after their send time. With `Triggers:Enabled` set to `false` they wait until you run a trigger from the dashboard or the control panel's Triggers tab. See [Triggers](../../../../tools/aspire/README.md#triggers) in the Aspire README.
 
 ---
 

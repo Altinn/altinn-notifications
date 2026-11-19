@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Threading;
-using System.Threading.Tasks;
+
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Status;
@@ -32,26 +29,28 @@ public class StatusFeedServiceTests
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
         statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new StatusFeed()
-            {
-                SequenceNumber = 1,
-                OrderStatus = new OrderStatus
+            .ReturnsAsync(
+            [
+                new StatusFeed()
                 {
-                    LastUpdated = DateTime.UtcNow,
-                    SendersReference = "ref123",
-                    ShipmentId = Guid.NewGuid(),
-                    Recipients = new List<Recipient>
+                    SequenceNumber = 1,
+                    OrderStatus = new OrderStatus
                     {
-                        new()
+                        LastUpdated = DateTime.UtcNow,
+                        SendersReference = "ref123",
+                        ShipmentId = Guid.NewGuid(),
+                        Recipients = new List<Recipient>
                         {
-                            Destination = "noreply@altinn.no",
-                            Status = ProcessingLifecycle.Order_Completed,
-                            LastUpdate = DateTime.UtcNow
-                        }
-                    }.ToImmutableList(),
+                            new()
+                            {
+                                Destination = "noreply@altinn.no",
+                                Status = ProcessingLifecycle.Order_Completed,
+                                LastUpdate = DateTime.UtcNow
+                            }
+                        }.ToImmutableList(),
+                    }
                 }
-            }
-                ]);
+            ]);
 
         var sut = new StatusFeedService(statusFeedRepository.Object, _options);
         long seq = 1;
