@@ -74,7 +74,7 @@
 		<PackageVersion Include="libphonenumber-csharp" Version="9.0.43" />
 		<PackageVersion Include="Parquet.Net" Version="6.1.0" />
 		<PackageVersion Include="RandomString4Net" Version="1.10.0" />
-		<PackageVersion Include="System.IO.Hashing" Version="10.0.15" />
+		<PackageVersion Include="System.IO.Hashing" Version="11.0.0" />
 		<PackageVersion Include="System.Memory.Data" Version="10.0.15" />
 		<PackageVersion Include="Testcontainers" Version="4.16.0" />
 		<PackageVersion Include="WireMock.Net" Version="2.19.0" />
