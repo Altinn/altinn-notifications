@@ -5,7 +5,7 @@ Runs the whole Notifications stack locally from one command, with logs, traces a
 ## Prerequisites
 
 * [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-* [Aspire CLI](https://aspire.dev/get-started/install-cli/)
+* [Aspire CLI](https://aspire.dev/get-started/install-cli/) 17 or later. The app host gets the dashboard and the orchestrator from the CLI, so an older CLI cannot run it. Update with `aspire update --self`.
 * Docker or [Podman](https://podman.io/). The app host uses whichever is running (see [Settings](#settings))
 * A container named `notifications-db` with the database and roles from [Database Setup](../../getting-started.md#3-database-setup-postgresql), or a local PostgreSQL (see [Settings](#settings)). For example (replace `podman` with `docker` if you use Docker):
 
@@ -70,7 +70,7 @@ For example, a separate database on 5442 and localtest running:
 }
 ```
 
-Before the dashboard starts, the app host builds the API, Email and SMS projects one by one. Starting them all at once makes their builds of the shared project collide.
+Aspire builds the API, Email and SMS projects in one coordinated build before it starts them, so their builds of the shared project do not collide.
 
 ## What it starts
 
@@ -185,9 +185,11 @@ Each service has a **Run tests** action. It runs `dotnet test` on that component
 
 ### Change alert
 
-When a `.cs`, `.csproj` or `.json` file changes under a service's `src` folder, the dashboard shows a yellow notification with a **Restart** button. A change under `components/shared/src` alerts for all three services.
+When a `.cs`, `.csproj` or `.json` file changes under a service's `src` folder, the dashboard shows a yellow notification with a **Rebuild** button. A change under `components/shared/src` alerts for all three services.
 
-`.sql` files are ignored, because the API build regenerates one on every run. Restart `api` yourself after changing migration scripts.
+Use **Rebuild**, not **Restart**, to pick up a change. **Restart** starts the service again from the output it already built.
+
+`.sql` files are ignored, because the API build regenerates one on every run. Rebuild `api` yourself after changing migration scripts.
 
 ### Use cluster / Use local
 
