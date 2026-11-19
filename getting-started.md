@@ -121,7 +121,7 @@ Stopping Aspire stops the services, but the containers keep running.
 
 The `notifications-db` container must already exist with the database and roles from [Database Setup](#3-database-setup-postgresql).
 
-See [tools/aspire/README.md](tools/aspire/README.md) for the dashboard actions (running tests, restart alerts, switching a service to the cluster) and troubleshooting.
+See the [Aspire how-to](tools/aspire/how-to.md) for common tasks, and [tools/aspire/README.md](tools/aspire/README.md) for the dashboard actions (running tests, restart alerts, switching a service to the cluster) and troubleshooting.
 
 ---
 
