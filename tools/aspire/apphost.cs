@@ -1,14 +1,13 @@
-#:sdk Aspire.AppHost.Sdk@13.6.5
+#:package Aspire.Hosting.AppHost
+#:package Aspire.Hosting.Dotnet
 #:property AspireUseCliBundle=true
-#:package Azure.Messaging.ServiceBus
+#:project ../src/Altinn.Notifications.Aspire.Hosting/Altinn.Notifications.Aspire.Hosting.csproj
 
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Text.Json;
-using Azure.Messaging.ServiceBus.Administration;
+using Aspire.Hosting.Dotnet;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -23,17 +22,7 @@ string[] projects =
     $"{Components}/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj",
 ];
 
-// Parallel dotnet run builds of the shared project collide, so build one by one first.
-foreach (var project in projects)
-{
-    using var build = Process.Start("dotnet", ["build", Path.Combine(builder.AppHostDirectory, project)]);
-    build.WaitForExit();
-    if (build.ExitCode != 0)
-    {
-        throw new InvalidOperationException($"Build failed for {project}");
-    }
-}
-
+// AddDotnetProject builds the services in one coordinated build before they start, so their builds of the shared project do not collide.
 // The dashboard lists resources in the order they are added.
 var api = AddService("api", projects[0], 5090, "swagger", "altinn-notifications");
 var email = AddService("email", projects[1], 5091, "swagger", "altinn-notifications-email");
@@ -66,21 +55,130 @@ if (postgresPort != 5432)
         .WithEnvironment("PostgreSQLSettings__ConnectionString", string.Format(connectionString, "platform_notifications"));
 }
 
+// The test harness control panel always starts, and the mocks are its children in the dashboard so they fold together under it.
+// With TestHarness:Intercept the mocks also hand requests they do not recognise to it, where an operator answers them. With
+// Triggers:Enabled it calls the API's trigger endpoints on an interval, like the cron jobs in the cluster, so orders are sent without
+// anyone calling /trigger/send* by hand. Off, the jobs start paused and can still be run from its Triggers tab or the dashboard.
+// The mocks are wired up by the extensions in tools/src/Altinn.Notifications.Aspire.Hosting.
+if (builder.Configuration.GetSection("Simulator").Exists())
+{
+    throw new InvalidOperationException("The Simulator settings are now TestHarness: Simulator:Enabled is TestHarness:Intercept, and Port and TimeoutSeconds moved as they are. See tools/aspire/README.md.");
+}
+
+bool interceptEnabled = builder.Configuration.GetValue("TestHarness:Intercept", false);
+bool triggersEnabled = builder.Configuration.GetValue("Triggers:Enabled", true);
+var controlPanel = builder.AddTestHarness(
+        "testharness-controlpanel",
+        builder.Configuration.GetValue("TestHarness:Port", 5096),
+        interceptEnabled,
+        builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120))
+    .WithTriggers(api, triggersEnabled, builder.Configuration.GetSection("Triggers:Jobs"));
+
+// Values for the Bruno collection that follow from these settings, on top of the test data in aspire.env. See WriteBrunoEnvironment.
+Dictionary<string, string> brunoVariables = [];
+
+// The mock token issuer's Basic auth, for Bruno and k6. Its password is generated for the checkout, see WriteClientSecretsAsync.
+MockAuthCredentials? tokenCredentials = null;
+
+// mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
+var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
+if (authMode == "mock")
+{
+    var auth = builder.AddMockAuth("mock-auth", builder.Configuration.GetValue("Auth:Port", 5094), controlPanel);
+    api.WithMockAuth(auth);
+    controlPanel.WithTestMessageCommands(api, auth);
+    tokenCredentials = auth.GetMockAuthCredentials();
+
+    // With at23 these are left out, so Bruno keeps the Altinn test token generator from the user's own .env.
+    brunoVariables["TOKEN_GENERATOR_URL"] = "http://localhost:" + builder.Configuration.GetValue("Auth:Port", 5094);
+    brunoVariables["TOKEN_BASIC_AUTH_USER"] = tokenCredentials.Username;
+}
+else if (authMode != "at23")
+{
+    throw new InvalidOperationException($"Auth:Mode must be 'mock' or 'at23', not '{authMode}'.");
+}
+
 // The services only use AMQP on 5672. The emulator's HTTP port is just for the health check, so it can move if 5300 is taken.
 var serviceBusHealthPort = builder.Configuration.GetValue("ServiceBus:HealthPort", 5300);
 StartContainer("../asb-emulator", ["compose", "up", "-d"], new() { ["EMULATOR_HOST_HTTP_PORT"] = serviceBusHealthPort.ToString() });
 var serviceBus = builder.AddExecutable("servicebus", containerRuntime, ".", "logs", "-f", "servicebus-emulator")
     .WithHttpEndpoint(port: serviceBusHealthPort, targetPort: serviceBusHealthPort, name: "management", isProxied: false)
-    .WithHttpHealthCheck("/health", endpointName: "management");
-AddQueueStatusCommand(serviceBus, serviceBusHealthPort);
+    .WithHttpHealthCheck("/health", endpointName: "management")
+    .WithQueueStatusCommand(Path.Combine(builder.AppHostDirectory, "../asb-emulator/config.json"), serviceBusHealthPort);
 
 api.WaitFor(serviceBus);
 email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
+// mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts
+// delivery reports on the emulator's queue. It sends a copy of each email and its outcome to the control panel's Inbox tab. real: the email service uses the connection string from its own settings.
+var acsMode = builder.Configuration["Acs:Mode"] ?? "mock";
+if (acsMode == "mock")
+{
+    var acs = builder.AddAcsMock("mock-acs", builder.Configuration.GetValue("Acs:Port", 5095), controlPanel)
+        .WaitFor(serviceBus);
+    email.WithAcsMock(acs);
+}
+else if (acsMode != "real")
+{
+    throw new InvalidOperationException($"Acs:Mode must be 'mock' or 'real', not '{acsMode}'.");
+}
+
+// SMS goes to a local LinkMobility mock that logs the payloads with the password, recipient numbers and message texts masked.
+// Without LinkMobility:Target it is a stub that answers by recipient number and posts delivery reports to sms, so nothing leaves the
+// machine and no credentials are needed. With LinkMobility:Interactive every send is held in the control panel until an operator answers.
+// It sends a copy of each SMS and its delivery state to the control panel's Phone tab. The copy never holds up the send.
+string linkMobilityTarget = builder.Configuration["LinkMobility:Target"] ?? string.Empty;
+bool linkMobilityInteractive = builder.Configuration.GetValue("LinkMobility:Interactive", false);
+var linkMobility = builder.AddLinkMobilityMock(
+    "wiremock-linkmobility",
+    builder.Configuration.GetValue("LinkMobility:Port", 5093),
+    controlPanel,
+    linkMobilityTarget,
+    linkMobilityInteractive,
+    builder.Configuration.GetValue("LinkMobility:DeliveryReportDelaySeconds", 2));
+sms.WithLinkMobilityMock(linkMobility);
+
+// The API's calls to Profile, Register, Authorization, Dialogporten, Maskinporten and condition endpoints go to local mocks.
+// Mocks:<system>:Enabled|Port turn a system off or move it.
+bool mocksEnabled = builder.Configuration.GetValue("Mocks:Enabled", true);
+if (mocksEnabled)
+{
+    var mocks = builder.AddPlatformMocks("wiremock-platform", controlPanel, builder.Configuration.GetSection("Mocks"));
+    api.WithPlatformMocks(mocks);
+
+    // The condition URLs to put in orders, as the platform mocks list them in the dashboard.
+    if (builder.Configuration.GetValue("Mocks:Conditions:Enabled", true))
+    {
+        int conditionsPort = builder.Configuration.GetValue("Mocks:Conditions:Port", 5199);
+        foreach (string condition in new[] { "true", "false", "corrupt", "error" })
+        {
+            brunoVariables["TESTDATA_URL_CONDITION_" + condition.ToUpperInvariant()] = "http://local.altinn.cloud:" + conditionsPort + "/condition/" + condition;
+        }
+    }
+}
+
+// What the settings above started, in the control panel's details in the dashboard.
+controlPanel.WithActiveSettings(new Dictionary<string, string>
+{
+    ["Auth:Mode"] = authMode,
+    ["Acs:Mode"] = acsMode,
+    ["LinkMobility:Target"] = linkMobilityTarget.Length > 0 ? linkMobilityTarget : "(stub)",
+    ["LinkMobility:Interactive"] = linkMobilityInteractive.ToString(),
+    ["Mocks:Enabled"] = mocksEnabled.ToString(),
+    ["TestHarness:Intercept"] = interceptEnabled.ToString(),
+    ["Triggers:Enabled"] = triggersEnabled.ToString(),
+});
+
 AddTests("api-tests", api, "api/Altinn.Notifications.API.slnx");
 AddTests("email-tests", email, "email-service/Altinn.Notifications.Email.slnx");
 AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
+
+if (builder.ExecutionContext.IsRunMode)
+{
+    // Generated parameters only have a value once the app host runs.
+    builder.Eventing.Subscribe<BeforeStartEvent>((_, cancellationToken) => WriteClientSecretsAsync(cancellationToken));
+}
 
 var app = builder.Build();
 
@@ -98,6 +196,50 @@ app.Run();
 foreach (var watcher in watchers)
 {
     watcher.Dispose();
+}
+
+// Writes the files Bruno and k6 read the mock token issuer's credentials from. Both are git-ignored and written on every start.
+async Task WriteClientSecretsAsync(CancellationToken cancellationToken)
+{
+    if (tokenCredentials is not null)
+    {
+        string password = await tokenCredentials.Password.GetValueAsync(cancellationToken) ?? string.Empty;
+        brunoVariables["TOKEN_BASIC_AUTH_PW"] = password;
+
+        // A k6 secret source for altinn_env=local: k6 run ... --secret-source=file=.secrets.aspire
+        string k6 = Path.Combine(builder.AppHostDirectory, Components, "api", "test", "k6", ".secrets.aspire");
+        await File.WriteAllLinesAsync(k6, ["tokenGeneratorUserName=" + tokenCredentials.Username, "tokenGeneratorUserPwd=" + password], cancellationToken);
+    }
+
+    WriteBrunoEnvironment(brunoVariables);
+}
+
+// Writes ".env.v2 aspire" in the Bruno collection: the test data in aspire.env with the values that follow from these settings.
+// Bruno builds that read .env.<environment name> files use it while "v2 aspire" is selected, over every other .env file.
+// It is written again on every start, so it always matches the stack that runs from this checkout.
+void WriteBrunoEnvironment(Dictionary<string, string> variables)
+{
+    string collection = Path.Combine(builder.AppHostDirectory, Components, "api", "test", "bruno");
+    Dictionary<string, string> remaining = new(variables);
+    List<string> lines =
+    [
+        "# Written by tools/aspire/apphost.cs on every start, from aspire.env and the app host settings. Edits here are lost.",
+    ];
+
+    foreach (string line in File.ReadAllLines(Path.Combine(collection, "aspire.env")))
+    {
+        int separator = line.IndexOf('=');
+        if (line.StartsWith('#') || separator < 1)
+        {
+            continue;
+        }
+
+        string key = line[..separator];
+        lines.Add(remaining.Remove(key, out string? value) ? key + "=" + value : line);
+    }
+
+    lines.AddRange(remaining.Select(variable => variable.Key + "=" + variable.Value));
+    File.WriteAllLines(Path.Combine(collection, ".env.v2 aspire"), lines);
 }
 
 void StartContainer(string workingDirectory, string[] runtimeArgs, Dictionary<string, string>? environment = null)
@@ -173,11 +315,11 @@ static bool IsRunning(string runtime)
 
 // No launch profiles: email and sms hardcode ASPNETCORE_URLS, which collides with Aspire's.
 // Fixed, unproxied ports because the services call each other on hardcoded localhost URLs.
-IResourceBuilder<ProjectResource> AddService(string name, string projectPath, int port, string swaggerPath, string clusterService)
+IResourceBuilder<DotnetProjectResource> AddService(string name, string projectPath, int port, string swaggerPath, string clusterService)
 {
     string swaggerUrl = $"http://localhost:{port}/{swaggerPath}";
 
-    var service = builder.AddProject(name, projectPath, launchProfileName: null)
+    var service = builder.AddDotnetProject(name, projectPath, options => options.ExcludeLaunchProfile = true)
         .WithHttpEndpoint(port: port, targetPort: port, isProxied: false)
         .WithUrl(swaggerUrl, "Swagger")
         .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
@@ -186,7 +328,7 @@ IResourceBuilder<ProjectResource> AddService(string name, string projectPath, in
     return service;
 }
 
-void AddClusterSwitch(IResourceBuilder<ProjectResource> service, string clusterService, int port)
+void AddClusterSwitch(IResourceBuilder<DotnetProjectResource> service, string clusterService, int port)
 {
     Process? forward = null;
 
@@ -253,50 +395,7 @@ static Process StartPortForward(string clusterService, int port, ILogger logger)
     return process;
 }
 
-// Suspends a queue like https://learn.microsoft.com/azure/service-bus-messaging/entity-suspend.
-// The emulator takes admin client calls on its HTTP port, and resets every queue to Active when it restarts.
-void AddQueueStatusCommand(IResourceBuilder<ExecutableResource> serviceBus, int managementPort)
-{
-    using var config = JsonDocument.Parse(File.ReadAllText(Path.Combine(builder.AppHostDirectory, "../asb-emulator/config.json")));
-    var queues = config.RootElement.GetProperty("UserConfig").GetProperty("Namespaces")[0].GetProperty("Queues")
-        .EnumerateArray()
-        .Select(queue => queue.GetProperty("Name").GetString()!)
-        .Select(queue => KeyValuePair.Create(queue, queue))
-        .ToList();
-
-    var statuses = new[] { EntityStatus.Active, EntityStatus.ReceiveDisabled, EntityStatus.SendDisabled, EntityStatus.Disabled }
-        .Select(status => KeyValuePair.Create(status.ToString(), status.ToString()))
-        .ToList();
-
-    var admin = new ServiceBusAdministrationClient(
-        $"Endpoint=sb://localhost:{managementPort};SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
-
-    serviceBus.WithCommand(
-        "set-queue-status",
-        "Set queue status",
-        async context =>
-        {
-            string queue = context.Arguments["queue"].Value!;
-            var properties = (await admin.GetQueueAsync(queue, context.CancellationToken)).Value;
-            var previous = properties.Status;
-            properties.Status = new EntityStatus(context.Arguments["status"].Value!);
-            await admin.UpdateQueueAsync(properties, context.CancellationToken);
-            return CommandResults.Success($"{queue}: {previous} → {properties.Status}");
-        },
-        new CommandOptions
-        {
-            Description = "Disable send, receive or both on a queue, to see how the services handle a suspended queue",
-            IconName = "Pause",
-            Arguments =
-            [
-                new InteractionInput { Name = "queue", Label = "Queue", InputType = InputType.Choice, Required = true, Options = queues },
-                new InteractionInput { Name = "status", Label = "Status", InputType = InputType.Choice, Required = true, Options = statuses, Value = statuses[1].Key },
-            ],
-            UpdateState = context => context.ResourceSnapshot.HealthStatus == HealthStatus.Healthy ? ResourceCommandState.Enabled : ResourceCommandState.Disabled,
-        });
-}
-
-void AddTests(string name, IResourceBuilder<ProjectResource> service, string solution)
+void AddTests(string name, IResourceBuilder<DotnetProjectResource> service, string solution)
 {
     var tests = builder.AddExecutable(name, "dotnet", ".", "test", $"{Components}/{solution}")
         .WithExplicitStart()
@@ -323,7 +422,7 @@ void AddTests(string name, IResourceBuilder<ProjectResource> service, string sol
 }
 
 // .sql is left out because the API build regenerates a .sql file under src on every run.
-FileSystemWatcher WatchSource(IServiceProvider services, string folder, params IResourceBuilder<ProjectResource>[] affected)
+FileSystemWatcher WatchSource(IServiceProvider services, string folder, params IResourceBuilder<DotnetProjectResource>[] affected)
 {
     string[] extensions = [".cs", ".csproj", ".json"];
     var watcher = new FileSystemWatcher(Path.Combine(builder.AppHostDirectory, Components, folder)) { IncludeSubdirectories = true };
@@ -350,7 +449,7 @@ FileSystemWatcher WatchSource(IServiceProvider services, string folder, params I
     return watcher;
 }
 
-async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service)
+async Task NotifyChangedAsync(IServiceProvider services, DotnetProjectResource service)
 {
     lock (pendingRestarts)
     {
@@ -364,8 +463,8 @@ async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service
 
     var result = await services.GetRequiredService<IInteractionService>().PromptNotificationAsync(
         $"{service.Name} has changed",
-        "Restart it to pick up the changes.",
-        new NotificationInteractionOptions { Intent = MessageIntent.Warning, PrimaryButtonText = "Restart" });
+        "Rebuild it to pick up the changes.",
+        new NotificationInteractionOptions { Intent = MessageIntent.Warning, PrimaryButtonText = "Rebuild" });
 
     lock (pendingRestarts)
     {
@@ -374,7 +473,7 @@ async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service
 
     if (!result.Canceled && result.Data)
     {
-        await services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service, KnownResourceCommands.RestartCommand);
+        await services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service, KnownResourceCommands.RebuildCommand);
     }
 }
 

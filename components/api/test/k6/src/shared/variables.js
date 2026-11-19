@@ -1,4 +1,5 @@
 export const yt01Environment = "yt01";
+export const localEnvironment = "local";
 export const resourceId = __ENV.resourceId ?? null;
 export const scopes = "altinn:serviceowner/notifications.create";
 export const composedEmailScope = "altinn:serviceowner/notifications.composedemail.create";

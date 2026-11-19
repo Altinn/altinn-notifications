@@ -44,4 +44,24 @@ public class PostgreSqlSettings
     /// Boolean indicating if connection to db should be in debug mode
     /// </summary>
     public bool EnableDebug { get; set; } = false;
+
+    /// <summary>
+    /// Minimum duration, in milliseconds, for an operation to be recorded in telemetry.
+    /// </summary>
+    public int TelemetryMinDurationMs { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets whether SQL text is always included in telemetry logs.
+    /// </summary>
+    public bool TelemetryAlwaysLogSqlText { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether SQL parameters are always logged in telemetry.
+    /// </summary>
+    public bool TelemetryAlwaysLogSqlParameters { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the alternate database provider name reported by telemetry.
+    /// </summary>
+    public string? TelemetryAlternateDbProviderName { get; set; } = null;
 }

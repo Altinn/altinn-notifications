@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
@@ -777,11 +777,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>(chainLinkSql));
         Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>(emailTextSql));
 
-        Assert.Equal(2, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{mainOrderId}'"));
-        Assert.Equal(1, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}'"));
-        Assert.Equal(2, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT emailsendingtimepolicy FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}'"));
+        Assert.Equal(2, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT (notificationorder ->> 'EmailSendingTimePolicy')::int FROM notifications.orders WHERE alternateid = '{mainOrderId}'"));
+        Assert.Equal(1, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT (notificationorder ->> 'EmailSendingTimePolicy')::int FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}'"));
+        Assert.Equal(2, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT (notificationorder ->> 'EmailSendingTimePolicy')::int FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}'"));
 
-        Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT count(*) FROM notifications.orders WHERE alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND smssendingtimepolicy IS NULL"));
+        Assert.Equal(3, await PostgreUtil.RunSqlReturnOutput<int>($"SELECT count(*) FROM notifications.orders WHERE alternateid IN ('{mainOrderId}', '{firstReminderOrderId}', '{secondReminderOrderId}') AND notificationorder ->> 'sendingTimePolicy' IS NULL"));
     }
 
     [Fact]
