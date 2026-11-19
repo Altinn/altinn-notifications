@@ -30,6 +30,8 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -121,6 +123,21 @@ app.MapControllers();
 
 app.MapHealthChecks("/health");
 
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(HealthCheckTags.Live)
+});
+
+app.MapHealthChecks("/health/startup", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(HealthCheckTags.Startup)
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(HealthCheckTags.Ready)
+});
+
 app.UseOrgExtractor();
 
 await app.RunAsync();
@@ -172,6 +189,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "System.Net.Http",
                 DeliveryReportMetrics.MeterName,
                 BacklogMetrics.MeterName,
+                HealthCheckMetricsPublisher.MeterName,
                 DeprecatedEndpointAttribute.MeterName);
         })
         .WithTracing(tracing =>
@@ -213,7 +231,23 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     });
     services.AddControllersWithViews();
 
-    services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
+    services.AddHealthChecks()
+        .AddCheck<HealthCheck>("notifications_health_check", tags: [HealthCheckTags.Live])
+        .AddCheck<ShutdownHealthCheck>("notifications_shutdown_health_check", tags: [HealthCheckTags.Ready, HealthCheckTags.Lifecycle])
+        .AddCheck<StartupHealthCheck>("notifications_startup_health_check", tags: [HealthCheckTags.Startup, HealthCheckTags.Ready, HealthCheckTags.Lifecycle]);
+
+    // Finish in-flight work before the default Kubernetes terminationGracePeriodSeconds (30s) sends SIGKILL.
+    services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(25));
+    services.AddSingleton<IHealthCheckPublisher, HealthCheckMetricsPublisher>();
+    services.Configure<HealthCheckPublisherOptions>(options =>
+    {
+        options.Delay = TimeSpan.FromSeconds(5);
+        options.Period = TimeSpan.FromSeconds(30);
+
+        // Lifecycle checks flip during every rollout and would otherwise look like dependency failures in monitoring.
+        options.Predicate = check => !check.Tags.Contains(HealthCheckTags.Lifecycle);
+    });
+    services.AddPostgresHealthChecks(config);
 
     services.AddSingleton(config);
 

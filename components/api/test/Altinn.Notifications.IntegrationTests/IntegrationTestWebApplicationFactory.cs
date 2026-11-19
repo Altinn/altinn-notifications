@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Integrations;
@@ -11,14 +12,18 @@ using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using AltinnCore.Authentication.JwtCookie;
+
 using FluentValidation;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+
 using Moq;
 
 namespace Altinn.Notifications.IntegrationTests;
@@ -104,6 +109,15 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             {
                 services.Remove(descriptor);
             }
+
+            services.Configure<HealthCheckServiceOptions>(options =>
+            {
+                // The Wolverine runtime and the Service Bus transport are removed above, so their checks cannot run.
+                options.Registrations
+                    .Where(r => r.Name is "notifications_wolverine_health_check" or "notifications_service_bus_health_check")
+                    .ToList()
+                    .ForEach(r => options.Registrations.Remove(r));
+            });
 
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<ISmsCommandPublisher>()));
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<IEmailCommandPublisher>()));
