@@ -36,10 +36,11 @@ RUN set -eu \
     && rm -f /tmp/dotnet-install.sh /tmp/dotnet-sdk.tar.gz \
     && dotnet --info
 
-# The Aspire CLI, at the version tools/aspire/apphost.cs takes its SDK at, for `aspire run` of the whole stack.
-# Installed outside /home/agent, with HOME, NuGet's caches and Aspire's logs in /tmp for the step, since what root
-# leaves in /home/agent locks the agent out of it. The package's files are only for their owner, root, until chmod.
-ARG ASPIRE_CLI_VERSION=13.6.5
+# The Aspire CLI, for `aspire start` of the whole stack in tools/aspire. It needs 17 or later, and should be at the
+# version of the Aspire packages in Directory.Packages.props. Installed outside /home/agent, with HOME, NuGet's caches
+# and Aspire's logs in /tmp for the step, since what root leaves in /home/agent locks the agent out of it. The
+# package's files are only for their owner, root, until chmod.
+ARG ASPIRE_CLI_VERSION=17.0.0
 RUN set -eu \
     && export HOME=/tmp/aspire-home DOTNET_CLI_HOME=/tmp/aspire-home NUGET_PACKAGES=/tmp/nuget-packages \
     && dotnet tool install Aspire.Cli --version "${ASPIRE_CLI_VERSION}" --tool-path /usr/local/lib/aspire-cli \

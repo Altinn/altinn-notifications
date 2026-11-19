@@ -15,11 +15,15 @@ the change that you could not run here, and why, such as the ASB tests on an arm
 
 ## The running service
 
-Record a terminal, as the `recording` skill describes, in which the changed service runs against `notifications-db`
-and the Service Bus emulator, and requests show the change: such as a `curl` to the API's endpoint with the response,
-then the order's status, or the log line of the email or SMS service that handled the message. Start from a service
-that is already up, so the recording stays short. The API's Swagger document is at
-`http://localhost:5090/swagger/v1/swagger.json` when it runs in `Development`.
+Record a terminal, as the `recording` skill describes, in which the changed service runs in the Aspire stack, and
+requests show the change: such as a `curl` to the API's endpoint with the response, then the order's status from
+`GET /notifications/api/v1/future/shipment/{shipmentId}`, or `aspire logs` of the email or SMS service that handled
+the message. Email and SMS go through to the stack's mocks, so an order can be followed to `Email_Delivered` or
+`SMS_Delivered`, or to the failure its recipient picks. Start from a stack that is already up, so the recording stays
+short. The API's Swagger document is at `http://localhost:5090/swagger/v1/swagger.json`.
+
+Get the token inside the command, as `$(aspire secret get Parameters:mock-auth-password)` in the `curl`, so the
+password does not show in the recording.
 
 When a change cannot be seen from outside, such as a refactoring, say so instead and leave the recording out.
 
