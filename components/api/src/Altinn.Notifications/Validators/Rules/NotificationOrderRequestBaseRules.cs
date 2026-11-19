@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Extensions;
+﻿using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 
 using FluentValidation;
@@ -45,8 +44,8 @@ public static class NotificationOrderRequestBaseRules
                     })
                     .WithMessage((order, _) =>
                         string.IsNullOrWhiteSpace(order.ResourceId)
-                        ? "ResourceAction cannot be specified without a ResourceId."
-                        : "ResourceAction cannot be blank or whitespace.");
+                            ? "ResourceAction cannot be specified without a ResourceId."
+                            : "ResourceAction cannot be blank or whitespace.");
             });
     }
 }

@@ -45,12 +45,15 @@ namespace Altinn.Notifications.Mappers
                 return ImmutableList<StatusFeedRecipientExt>.Empty;
             }
 
-            return [.. recipients.Select(r => new StatusFeedRecipientExt
-            {
-               Destination = r.Destination,
-               Status = NotificationDeliveryManifestMapper.MapProcessingLifecycle(r.Status),
-               LastUpdate = r.LastUpdate
-            })];
+            return 
+            [
+                .. recipients.Select(r => new StatusFeedRecipientExt
+                {
+                   Destination = r.Destination,
+                   Status = NotificationDeliveryManifestMapper.MapProcessingLifecycle(r.Status),
+                   LastUpdate = r.LastUpdate
+                })
+            ];
         }
     }
 }

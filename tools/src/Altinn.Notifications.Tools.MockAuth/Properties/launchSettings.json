@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Altinn.Notifications.Tools.MockAuth": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:58462;http://localhost:58466"
+    }
+  }
+}

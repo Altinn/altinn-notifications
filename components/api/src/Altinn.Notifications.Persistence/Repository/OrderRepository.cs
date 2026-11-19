@@ -31,8 +31,8 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// Initializes a new instance of the <see cref="OrderRepository"/> class.
 /// </remarks>
 /// <param name="dataSource">The npgsql data source.</param>
-/// <param name="config">The notification config</param>
 /// <param name="logger">The logger associated with this implementation of the IOrderRepository</param>
+/// <param name="config">The notification config</param>
 [ExcludeFromCodeCoverage]
 public class OrderRepository(NpgsqlDataSource dataSource, ILogger<OrderRepository> logger, IOptions<NotificationConfig> config) : IOrderRepository
 {

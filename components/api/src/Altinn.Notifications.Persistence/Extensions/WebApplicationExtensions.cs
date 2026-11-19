@@ -31,9 +31,9 @@ public static class WebApplicationExtensions
 
             string connectionString = string.Format(settings.AdminConnectionString, settings.NotificationsDbAdminPwd);
 
-            string fullWorkspacePath = isDevelopment ?
-                Path.Combine(Directory.GetParent(Environment.CurrentDirectory)!.FullName, settings.MigrationScriptPath) :
-                Path.Combine(Environment.CurrentDirectory, settings.MigrationScriptPath);
+            string fullWorkspacePath = isDevelopment
+                ? Path.Combine(Directory.GetParent(Environment.CurrentDirectory)!.FullName, settings.MigrationScriptPath)
+                : Path.Combine(Environment.CurrentDirectory, settings.MigrationScriptPath);
 
             app.UseYuniql(
                 new PostgreSqlDataService(traceService),
