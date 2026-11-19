@@ -23,34 +23,34 @@ namespace Altinn.Notifications.Sms.Telemetry
         /// <summary>
         /// Determine whether to skip a request
         /// </summary>
-        public override void OnStart(Activity activity)
+        public override void OnStart(Activity data)
         {
             bool skip = false;
-            if (activity.OperationName == RequestKind)
+            if (data.OperationName == RequestKind)
             {
                 skip = ExcludeRequest(_httpContextAccessor?.HttpContext?.Request?.Path.Value);
             }
-            else if (!(activity.Parent?.ActivityTraceFlags.HasFlag(ActivityTraceFlags.Recorded) ?? true))
+            else if (!(data.Parent?.ActivityTraceFlags.HasFlag(ActivityTraceFlags.Recorded) ?? true))
             {
                 skip = true;
             }
 
             if (skip)
             {
-                activity.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
+                data.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
             }
         }
 
         /// <summary>
         /// Captures the X-Forwarded-For IP address as an activity tag on inbound HTTP requests.
         /// </summary>
-        /// <param name="activity">The activity that has ended.</param>
-        public override void OnEnd(Activity activity)
+        /// <param name="data">The activity that has ended.</param>
+        public override void OnEnd(Activity data)
         {
-            if (activity.OperationName == RequestKind && _httpContextAccessor.HttpContext is not null && 
+            if (data.OperationName == RequestKind && _httpContextAccessor.HttpContext is not null && 
                 _httpContextAccessor.HttpContext.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues ipAddress))
             {
-                activity.SetTag("ipAddress", ipAddress.FirstOrDefault());
+                data.SetTag("ipAddress", ipAddress.FirstOrDefault());
             }
         }
 

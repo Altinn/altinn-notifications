@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Orders;
@@ -11,6 +6,7 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -35,9 +31,9 @@ public class PreferredChannelProcessingServiceTests
             Recipients =
             [
                 new Recipient { NationalIdentityNumber = "19100047414" },
-                    new Recipient { NationalIdentityNumber = "22012047278" },
-                    new Recipient { NationalIdentityNumber = "15075848827" },
-                    new Recipient { NationalIdentityNumber = "30060136196" }
+                new Recipient { NationalIdentityNumber = "22012047278" },
+                new Recipient { NationalIdentityNumber = "15075848827" },
+                new Recipient { NationalIdentityNumber = "30060136196" }
             ]
         };
 

@@ -10,24 +10,24 @@ namespace Altinn.Notifications.Shared.Telemetry;
 public sealed class WolverineActivityNameProcessor : BaseProcessor<Activity>
 {
     /// <inheritdoc/>
-    public override void OnEnd(Activity activity)
+    public override void OnEnd(Activity data)
     {
-        if (activity.Kind is not (ActivityKind.Consumer or ActivityKind.Producer))
+        if (data.Kind is not (ActivityKind.Consumer or ActivityKind.Producer))
         {
             return;
         }
 
-        string? messageType = GetDestinationName(activity)
-            ?? GetTagValue(activity, "messaging.message_type")
-            ?? GetTagValue(activity, "message_type")
-            ?? GetTagValue(activity, "wolverine.message_type");
+        string? messageType = GetDestinationName(data)
+            ?? GetTagValue(data, "messaging.message_type")
+            ?? GetTagValue(data, "message_type")
+            ?? GetTagValue(data, "wolverine.message_type");
 
         if (string.IsNullOrWhiteSpace(messageType))
         {
             return;
         }
 
-        string currentName = activity.DisplayName;
+        string currentName = data.DisplayName;
         if (string.IsNullOrWhiteSpace(currentName))
         {
             return;
@@ -44,7 +44,7 @@ public sealed class WolverineActivityNameProcessor : BaseProcessor<Activity>
             return;
         }
 
-        activity.DisplayName = $"{currentName} {messageType}";
+        data.DisplayName = $"{currentName} {messageType}";
     }
 
     private static string? GetDestinationName(Activity activity)

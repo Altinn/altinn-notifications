@@ -54,68 +54,89 @@ public class ProcessItemsBackgroundService(
         {
             try
             {
-                Task[] emailDaytimeNotificationTasks = [.. Enumerable.Range(0, _config.EmailDaytimeNotificationsProcessLoopConfig.TaskCount)
+                Task[] emailDaytimeNotificationTasks =
+                [
+                    .. Enumerable.Range(0, _config.EmailDaytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manyEmailDaytimeNotificationsLately,
                         ct => emailSendingService.SendNotification(SendingTimePolicy.Daytime, ct),
                         notificationScheduleService.CanSendEmailNow,
                         isFirstInstance: i == 0,
                         _config.EmailDaytimeNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        stoppingToken))
+                ];
 
-                Task[] emailAnytimeNotificationTasks = [.. Enumerable.Range(0, _config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount)
+                Task[] emailAnytimeNotificationTasks =
+                [
+                    .. Enumerable.Range(0, _config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manyEmailAnytimeNotificationsLately,
                         ct => emailSendingService.SendNotification(SendingTimePolicy.Anytime, ct),
                         null,
                         isFirstInstance: i == 0,
                         _config.EmailAnytimeNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        stoppingToken))
+                ];
 
-                Task[] composedEmailNotificationTask = [.. Enumerable.Range(0, _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount)
+                Task[] composedEmailNotificationTask =
+                [
+                    .. Enumerable.Range(0, _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manyComposedEmailNotificationsLately,
                         emailSendingService.SendComposedNotification,
                         null,
                         isFirstInstance: i == 0,
                         _config.ComposedEmailNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        stoppingToken))
+                ];
 
-                Task[] smsDaytimeNotificationTasks = [.. Enumerable.Range(0, _config.SmsDaytimeNotificationsProcessLoopConfig.TaskCount)
+                Task[] smsDaytimeNotificationTasks =
+                [
+                    .. Enumerable.Range(0, _config.SmsDaytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manySmsDaytimeNotificationsLately,
                         ct => smsSendingService.SendNotification(SendingTimePolicy.Daytime, ct),
                         notificationScheduleService.CanSendSmsNow,
                         isFirstInstance: i == 0,
                         _config.SmsDaytimeNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        stoppingToken))
+                ];
 
-                Task[] smsAnytimeNotificationTasks = [.. Enumerable.Range(0, _config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount)
+                Task[] smsAnytimeNotificationTasks =
+                [
+                    .. Enumerable.Range(0, _config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manySmsAnytimeNotificationsLately,
                         ct => smsSendingService.SendNotification(SendingTimePolicy.Anytime, ct),
                         null,
                         isFirstInstance: i == 0,
                         _config.SmsAnytimeNotificationsProcessLoopConfig,
-                        stoppingToken))];
+                        stoppingToken))
+                ];
 
-                Task[] pastDueOrdersTasks = [.. Enumerable.Range(0, _config.PastDueOrdersProcessLoopConfig.TaskCount)
+                Task[] pastDueOrdersTasks =
+                [
+                    .. Enumerable.Range(0, _config.PastDueOrdersProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manyPastDueOrdersLately,
                         ct => orderProcessingService.TryProcessOrder(processRetry:false, ct),
                         null,
                         isFirstInstance: i == 0,
                         _config.PastDueOrdersProcessLoopConfig,
-                        stoppingToken))];
+                        stoppingToken))
+                ];
 
-                Task[] retryOrdersTasks = [.. Enumerable.Range(0, _config.RetryOrdersProcessLoopConfig.TaskCount)
+                Task[] retryOrdersTasks =
+                [
+                    .. Enumerable.Range(0, _config.RetryOrdersProcessLoopConfig.TaskCount)
                     .Select(i => RunProcessItemLoop(
                         _manyRetryOrdersLately,
                         ct => orderProcessingService.TryProcessOrder(processRetry: true, ct),
                         null,
                         isFirstInstance: i == 0,
                         _config.RetryOrdersProcessLoopConfig,
-                        stoppingToken))];
+                        stoppingToken))
+                ];
 
                 await Task.WhenAll(emailDaytimeNotificationTasks
                     .Concat(emailAnytimeNotificationTasks)

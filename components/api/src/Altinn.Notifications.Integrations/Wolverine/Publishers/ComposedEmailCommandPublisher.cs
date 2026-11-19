@@ -41,13 +41,16 @@ public class ComposedEmailCommandPublisher(IWolverinePublisher wolverinePublishe
             FromAddress = email.FromAddress,
             NotificationId = email.NotificationId,
             ContentType = email.ContentType.ToString(),
-            Attachments = [.. email.Attachments
+            Attachments =
+            [
+                .. email.Attachments
                 .Select(a => new SasFileAttachment
                 {
                     Filename = a.Filename,
                     MimeType = a.MimeType,
                     SasUrl = a.SasUrl.ToString()
-                })]
+                })
+            ]
         };
     }
 }

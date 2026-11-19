@@ -34,7 +34,8 @@ public class NotificationOrderChainResponseMapperTests
                 ShipmentId = mainShipmentId,
                 SendersReference = mainSendersReference,
                 Reminders =
-                [.. expectedReminders.Select(e => new NotificationOrderChainShipment
+                [
+                    .. expectedReminders.Select(e => new NotificationOrderChainShipment
                     {
                         ShipmentId = e.ShipmentId,
                         SendersReference = e.SendersReference,

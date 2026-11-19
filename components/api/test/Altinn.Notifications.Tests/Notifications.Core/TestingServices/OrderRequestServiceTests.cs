@@ -1219,7 +1219,7 @@ public class OrderRequestServiceTests
             Recipients = [
                 new Recipient() { NationalIdentityNumber = "16069412345" },
                 new Recipient() { NationalIdentityNumber = "14029112345" }
-                ],
+            ],
             Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" } }
         };
 
@@ -1231,7 +1231,7 @@ public class OrderRequestServiceTests
             Recipients = [
                 new Recipient() { NationalIdentityNumber = "16069412345" },
                 new Recipient() { NationalIdentityNumber = "14029112345" }
-                ],
+            ],
             RequestedSendTime = sendTime,
             Templates = { new SmsTemplate { Body = "sms-body" } }
         };
@@ -1359,9 +1359,11 @@ public class OrderRequestServiceTests
             Recipients = [new Recipient() { NationalIdentityNumber = "1" }],
             SendersReference = "senders-reference",
             RequestedSendTime = sendTime,
-            Templates = [
-                    new SmsTemplate { Body = "sms-body" },
-                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }]
+            Templates =
+            [
+                new SmsTemplate { Body = "sms-body" },
+                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }
+            ]
         };
 
         Mock<IOrderRepository> repoMock = new();
@@ -1398,11 +1400,13 @@ public class OrderRequestServiceTests
                 new Recipient() { NationalIdentityNumber = "3" },
                 new Recipient() { NationalIdentityNumber = "4" }
 
-                ],
+            ],
             RequestedSendTime = sendTime,
-            Templates = [
+            Templates =
+            [
                 new SmsTemplate { Body = "sms-body" },
-                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }]
+                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }
+            ]
         };
 
         Mock<IOrderRepository> repoMock = new();
@@ -1466,13 +1470,15 @@ public class OrderRequestServiceTests
 
             NotificationChannel = NotificationChannel.SmsPreferred,
             Recipients = [
-               new Recipient() { NationalIdentityNumber = "1" },
+                new Recipient() { NationalIdentityNumber = "1" },
                 new Recipient() { NationalIdentityNumber = "2" }
-               ],
+            ],
             RequestedSendTime = sendTime,
-            Templates = [
-                   new SmsTemplate { Body = "sms-body" },
-                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }]
+            Templates =
+            [
+                new SmsTemplate { Body = "sms-body" },
+                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }
+            ]
         };
 
         Mock<IOrderRepository> repoMock = new();
