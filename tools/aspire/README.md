@@ -50,6 +50,8 @@ Override `appsettings.json` in a git-ignored `appsettings.Local.json`.
 | `Postgres:ContainerName` | `notifications-db` | The Postgres container to start |
 | `Postgres:Port` | `5432` | Points the API at another port, e.g. to keep a separate database next to the one you use for development |
 | `ServiceBus:HealthPort` | `5300` | Host port for the emulator's health endpoint. Change it if 5300 is taken, e.g. by Altinn localtest. The services only use 5672. |
+| `ServiceBus:ConnectionString` | empty | Uses another broker instead of the emulator, see [Another Service Bus broker](#another-service-bus-broker). Empty starts the emulator. |
+| `ServiceBus:HealthUrl` | empty | With `ServiceBus:ConnectionString`: a health endpoint of that broker, e.g. `http://localhost:5300/health`. The services wait until it answers. Empty means they do not wait. |
 | `Auth:Mode` | `mock` | `mock` or `at23`, see [Authentication](#authentication) |
 | `Auth:Port` | `5094` | Port of the `mock-auth` resource |
 | `Acs:Mode` | `mock` | `mock` or `real`, see [Email through the ACS mock](#email-through-the-acs-mock) |
@@ -98,7 +100,7 @@ Aspire builds the API, Email and SMS projects in one coordinated build before it
 | `wiremock-platform` | The [platform mocks](#platform-mocks) for Profile, Register, Authorization, Dialogporten, Maskinporten and condition endpoints. Not started when `Mocks:Enabled` is `false`. | 5131, 5121, 5151, 5171, 5199, 5197 |
 | `testharness-controlpanel` | The [test harness control panel](#test-harness-control-panel). Always started. Calls the [trigger endpoints](#triggers) on a schedule, and the mocks are grouped under it in the dashboard. | 5096 |
 | `postgres` | Starts the `notifications-db` container and shows its logs | 5432 |
-| `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs | 5672 |
+| `servicebus` | Starts the Service Bus emulator from `tools/asb-emulator` and shows its logs. With `ServiceBus:ConnectionString` it is the other broker's health check instead, or left out when `ServiceBus:HealthUrl` is empty. | 5672 |
 
 * The services run with `ASPNETCORE_ENVIRONMENT=Development` on fixed ports, so the URLs in `appsettings*.json` keep working.
 * Each service has a **Swagger** link in the URLs column.
@@ -151,6 +153,42 @@ The `mock-acs` log shows each request and response with recipient addresses, sub
 Set `Acs:Mode` to `real` to keep the email service's own `CommunicationServicesSettings:ConnectionString`, e.g. from its user secrets. **Use cluster** on `email` bypasses the mock, since the cluster's email service uses its own ACS.
 
 With `TestHarness:Intercept`, requests the mock does not recognise go to the [control panel](#test-harness-control-panel) on port 5096 instead of getting a 404.
+
+## Another Service Bus broker
+
+By default the services and `mock-acs` use the Microsoft Service Bus emulator from `tools/asb-emulator`. Set `ServiceBus:ConnectionString` to use another broker instead, for example:
+
+* A Service Bus namespace in Azure, to share one with others or to look at the messages in the Azure portal.
+* [OpenServiceBus](https://github.com/mauritsarissen/OpenServiceBus), an open source emulator that reads the same `config.json` and does not throttle. The Microsoft emulator holds a namespace to about 100 messages a second, which stalls a load test, see [Limits](#limits-of-the-emulator).
+
+```json
+{
+  "ServiceBus": {
+    "ConnectionString": "Endpoint=sb://localhost:5682;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;",
+    "HealthUrl": "http://localhost:5310/health"
+  }
+}
+```
+
+With it set:
+
+* The app host does not start the emulator, and leaves it running if it already is.
+* `api`, `email` and `sms` get it as `WolverineSettings__ServiceBusConnectionString`, and `mock-acs` as `AcsMockSettings__ServiceBusConnectionString`, so delivery reports go to the same broker.
+* It is a secret parameter, `servicebus-connection-string`, so the dashboard masks it. To keep a real key out of files, set it with `aspire secret set ServiceBus:ConnectionString` instead, which asks for the value.
+* `ServiceBus:HealthUrl` gives the `servicebus` resource a health check, and the services and `mock-acs` wait for it. A namespace in Azure has no health endpoint, so leave it empty there.
+
+The emulator, OpenServiceBus and a local port need `UseDevelopmentEmulator=true` and the port in the endpoint, e.g. `sb://localhost:5682`. A namespace in Azure takes its connection string as it is.
+
+The services run with `ASPNETCORE_ENVIRONMENT=Development`, and there Wolverine neither creates queues nor uses its system queues, and it **purges the application queues** when a service starts. So:
+
+* The broker must have the queues from [`tools/asb-emulator/config.json`](../asb-emulator/config.json). OpenServiceBus reads that file with `OPENSERVICEBUS_CONFIG` or `--config`. In Azure, create them yourself.
+* Every start of the stack empties those queues. Use a namespace of your own, not one that others or a cluster environment read from.
+
+Tools that are started by hand, such as the [DLQ manager](../src/Altinn.Notifications.Tools.DlqManager), still point at the emulator in their own `appsettings.json`. Give them the same connection string, e.g. `AsbSettings__ConnectionString` for the DLQ manager.
+
+### Limits of the emulator
+
+The Microsoft emulator throttles each namespace to about 100 messages a second, with a burst of about 1,000, and answers `ServiceBusy` (50002) above that. The Service Bus SDK then pauses for 10 seconds. The limit cannot be configured, and the emulator's documentation says it is meant for sequential tests. Each email takes four messages (send, status check, result and delivery report), so a load test stalls at about 25 emails a second. Use another broker when you measure throughput.
 
 ## Platform mocks
 
@@ -371,3 +409,4 @@ Both come up as ready-made alternatives to the mocks here. Neither is used, for 
 * **`MSB4166: Child node exited prematurely` when a service starts**: an MSBuild worker crashed. Restart the service.
 * **`no container with name or ID "notifications-db"`**: create the container as shown in [Prerequisites](#prerequisites).
 * **Services start before the emulator is ready**: they wait for `servicebus` to be healthy. If it never becomes healthy, check its log and that nothing else is using ports 5672 or 5300.
+* **Messages stall for 10 seconds at a time under load**: the emulator throttles. See [Limits of the emulator](#limits-of-the-emulator).
