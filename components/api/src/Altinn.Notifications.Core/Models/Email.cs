@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
 
@@ -39,15 +38,6 @@ public class Email
     /// Gets or sets the content type of the email.
     /// </summary>
     public EmailContentType ContentType { get; set; }
-
-    /// <summary>
-    /// Gets or sets the send condition endpoint of the order the email belongs to, if any.
-    /// </summary>
-    /// <remarks>
-    /// Used to evaluate the send condition at send time. Not part of the published email payload.
-    /// </remarks>
-    [JsonIgnore]
-    public Uri? ConditionEndpoint { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Email"/> class.

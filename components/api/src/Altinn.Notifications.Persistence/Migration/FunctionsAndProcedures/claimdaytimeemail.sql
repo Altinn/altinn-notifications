@@ -1,5 +1,5 @@
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_email_v2()
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text, conditionendpoint text)
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_email()
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -19,8 +19,7 @@ BEGIN
                NULL::text AS body,
                NULL::text AS fromaddress,
                NULL::text AS toaddress,
-               NULL::text AS contenttype,
-               NULL::text AS conditionendpoint
+               NULL::text AS contenttype
         WHERE FALSE;
         RETURN;
     END IF;
@@ -69,17 +68,15 @@ BEGIN
         COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
-        txt.contenttype,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint
+        txt.contenttype
     FROM updated_rows updated
-    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
-    JOIN notifications.orders o ON o._id = updated._orderid;
+    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_daytime_email_v2()
+ALTER FUNCTION notifications.claim_daytime_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_daytime_email_v2()
+COMMENT ON FUNCTION notifications.claim_daytime_email()
     IS 'Claims and returns a single email notification with sending time policy Daytime (sendingtimepolicy = 2), excluding Composed orders (iscomposed = true).
-Anytime notifications (sendingtimepolicy = 1) are claimed by claim_anytime_email_v2.';
+Anytime notifications (sendingtimepolicy = 1) are claimed by claim_anytime_email.';

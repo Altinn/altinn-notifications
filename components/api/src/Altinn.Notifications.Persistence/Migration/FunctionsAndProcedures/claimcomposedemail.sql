@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_composed_email()
     RETURNS TABLE(
         alternateid  uuid,
         subject      text,
@@ -6,8 +6,7 @@ CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v2()
         fromaddress  text,
         toaddress    text,
         contenttype  text,
-        attachments  jsonb,
-        conditionendpoint text
+        attachments  jsonb
     )
     LANGUAGE 'plpgsql'
 AS $BODY$
@@ -68,17 +67,16 @@ BEGIN
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype,
-        COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint
+        COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments
     FROM updated_rows updated
     JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
     JOIN notifications.orders o       ON o._id = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_composed_email_v2()
+ALTER FUNCTION notifications.claim_composed_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_composed_email_v2()
+COMMENT ON FUNCTION notifications.claim_composed_email()
     IS 'Claims and returns a single email notification for Composed orders (iscomposed = true).
 Returns an empty JSON array when no attachments are present.';

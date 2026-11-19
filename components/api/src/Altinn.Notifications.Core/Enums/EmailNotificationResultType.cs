@@ -91,10 +91,5 @@ public enum EmailNotificationResultType
     /// <summary>
     /// Indicates that the email send operation failed because the message is too large to be queued for sending.
     /// </summary>
-    Failed_ContentTooLarge,
-
-    /// <summary>
-    /// The email was not sent because the send condition of the order was not met at send time.
-    /// </summary>
-    SendConditionNotMet
+    Failed_ContentTooLarge
 }

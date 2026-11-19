@@ -22,11 +22,11 @@ namespace Altinn.Notifications.Integrations.SendCondition
         }
 
         /// <inheritdoc/>
-        public async Task<Result<bool, ConditionClientError>> CheckSendCondition(Uri url, CancellationToken cancellationToken)
+        public async Task<Result<bool, ConditionClientError>> CheckSendCondition(Uri url)
         {
             try
             {
-                using var response = await _client.GetAsync(url, cancellationToken);
+                using var response = await _client.GetAsync(url);
                 return await ProcessHttpResponse(response);
             }
             catch (HttpRequestException ex)

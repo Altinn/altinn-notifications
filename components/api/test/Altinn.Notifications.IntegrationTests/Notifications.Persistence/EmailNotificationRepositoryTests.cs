@@ -1479,10 +1479,8 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         return null;
     }
 
-    [Theory]
-    [InlineData(EmailNotificationResultType.Failed_ContentTooLarge)]
-    [InlineData(EmailNotificationResultType.SendConditionNotMet)]
-    public async Task UpdateSendStatusAsync_OnClaimedRowInSameUnitOfWork_SetsResultAndCompletesOrder(EmailNotificationResultType finalResult)
+    [Fact]
+    public async Task UpdateSendStatusAsync_OnClaimedRowInSameUnitOfWork_SetsResultAndCompletesOrder()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
@@ -1494,7 +1492,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Act
         Email? claimed = await ExecuteClaimUntilMatchInUnitOfWork(
-            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, emailNotification.Id, finalResult, cancellationToken),
+            (unitOfWork, cancellationToken) => ClaimAndSetContentTooLarge(repo, unitOfWork, emailNotification.Id, cancellationToken),
             email => email.NotificationId == emailNotification.Id,
             TestContext.Current.CancellationToken,
             commitOnMatch: true,
@@ -1502,46 +1500,13 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.NotNull(claimed);
-        Assert.Equal(finalResult.ToString(), await SelectEmailNotificationStatus(emailNotification.Id));
+        Assert.Equal(EmailNotificationResultType.Failed_ContentTooLarge.ToString(), await SelectEmailNotificationStatus(emailNotification.Id));
 
         string processedStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
         Assert.Equal(OrderProcessingStatus.Completed.ToString(), processedStatus);
 
         int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, statusFeedCount);
-
-        int notificationLogCount = await PostgreUtil.SelectNotificationLogEntryCount(order.Id);
-        Assert.Equal(1, notificationLogCount);
-    }
-
-    [Fact]
-    public async Task GetNewNotificationAsync_ReturnsConditionEndpointFromOrder()
-    {
-        // Arrange
-        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
-        _orderIdsToDelete.Add(order.Id);
-
-        Uri conditionEndpoint = new("https://condition.example/check?id=1");
-        await PostgreUtil.RunSql($@"
-            UPDATE notifications.orders
-            SET notificationorder = jsonb_set(notificationorder::jsonb, '{{ConditionEndpoint}}', '""{conditionEndpoint}""'::jsonb)
-            WHERE alternateid = '{order.Id}';");
-
-        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
-            .GetServices([typeof(IEmailNotificationRepository)])
-            .First(i => i.GetType() == typeof(EmailNotificationRepository));
-
-        // Act
-        Email? claimed = await ExecuteClaimUntilMatchInUnitOfWork(
-            (unitOfWork, cancellationToken) => repo.GetNewNotificationAsync(unitOfWork, cancellationToken),
-            email => email.NotificationId == emailNotification.Id,
-            TestContext.Current.CancellationToken,
-            commitOnMatch: false,
-            maxAttempts: 200);
-
-        // Assert
-        Assert.NotNull(claimed);
-        Assert.Equal(conditionEndpoint, claimed.ConditionEndpoint);
     }
 
     [Fact]
@@ -1557,7 +1522,7 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Act
         Email? claimed = await ExecuteClaimUntilMatchInUnitOfWork(
-            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, emailNotification.Id, EmailNotificationResultType.Failed_ContentTooLarge, cancellationToken),
+            (unitOfWork, cancellationToken) => ClaimAndSetContentTooLarge(repo, unitOfWork, emailNotification.Id, cancellationToken),
             email => email.NotificationId == emailNotification.Id,
             TestContext.Current.CancellationToken,
             commitOnMatch: false,
@@ -1715,12 +1680,12 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Null(persistedReport);
     }
 
-    private static async Task<Email?> ClaimAndSetResult(EmailNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, EmailNotificationResultType result, CancellationToken cancellationToken)
+    private static async Task<Email?> ClaimAndSetContentTooLarge(EmailNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken)
     {
         Email? claimed = await repo.GetNewNotificationAsync(unitOfWork, cancellationToken);
         if (claimed?.NotificationId == notificationId)
         {
-            await repo.UpdateSendStatusAsync(unitOfWork, notificationId, result, cancellationToken: cancellationToken);
+            await repo.UpdateSendStatusAsync(unitOfWork, notificationId, EmailNotificationResultType.Failed_ContentTooLarge, cancellationToken: cancellationToken);
         }
 
         return claimed;

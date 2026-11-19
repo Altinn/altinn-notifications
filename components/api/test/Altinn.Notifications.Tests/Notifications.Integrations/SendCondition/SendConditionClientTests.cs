@@ -1,5 +1,8 @@
+﻿using System;
 using System.Net;
+using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -76,7 +79,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         public async Task CheckSendCondition_SendConditionTrue_ReturnsTrue()
         {
             // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=true"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=true"));
 
             // Assert
             result.Match(
@@ -98,7 +101,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         public async Task CheckSendCondition_SendContitionFalse_ReturnsFalse()
         {
             // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=false"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=false"));
 
             // Assert
             result.Match(
@@ -120,7 +123,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         public async Task CheckSendCondition_InvalidJson_ReturnsClientError()
         {
             // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=invalidbody"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=invalidbody"));
 
             // Assert
             result.Match(
@@ -144,7 +147,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         public async Task CheckSendCondition_BadRequestResponse_ReturnsClientError()
         {
             // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=badrequest"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=badrequest"));
 
             // Assert
             result.Match(
@@ -167,7 +170,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         public async Task CheckSendCondition_OkResponseWithoutBody_ReturnsClientError()
         {
             // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=oknobody"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=oknobody"));
 
             // Assert
             result.Match(
@@ -190,7 +193,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         public async Task CheckSendCondition_EmptyResponseBody_ReturnsClientError()
         {
             // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=emptybody"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=emptybody"));
 
             // Assert
             result.Match(
@@ -212,7 +215,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         public async Task CheckSendCondition_NullNotificationValue_ReturnsClientError()
         {
             // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=nullnotification"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=nullnotification"));
 
             // Assert
             result.Match(
@@ -246,7 +249,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             var client = new SendConditionClient(new HttpClient(mockHandler.Object));
 
             // Act
-            Result<bool, ConditionClientError> result = await client.CheckSendCondition(new Uri("http://test.com"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await client.CheckSendCondition(new Uri("http://test.com"));
 
             // Assert
             result.Match(
@@ -278,7 +281,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             var client = new SendConditionClient(new HttpClient(mockHandler.Object));
 
             // Act
-            Result<bool, ConditionClientError> result = await client.CheckSendCondition(new Uri("http://test.com"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await client.CheckSendCondition(new Uri("http://test.com"));
 
             // Assert
             result.Match(
@@ -310,7 +313,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             var client = new SendConditionClient(new HttpClient(mockHandler.Object));
 
             // Act
-            Result<bool, ConditionClientError> result = await client.CheckSendCondition(new Uri("http://test.com"), CancellationToken.None);
+            Result<bool, ConditionClientError> result = await client.CheckSendCondition(new Uri("http://test.com"));
 
             // Assert
             result.Match(
@@ -342,7 +345,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             var client = new SendConditionClient(new HttpClient(handler));
 
             // Act
-            var result = await client.CheckSendCondition(new Uri("http://test.com"), CancellationToken.None);
+            var result = await client.CheckSendCondition(new Uri("http://test.com"));
 
             // Assert
             result.Match(
