@@ -1,9 +1,7 @@
 using System.Diagnostics;
 
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
-using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -14,7 +12,6 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -28,14 +25,9 @@ public class EmailNotificationService(
     IEmailNotificationRepository emailNotificationRepository,
     IComposedEmailCommandPublisher composedEmailCommandPublisher,
     IUnitOfWorkRepository unitOfWorkRepository,
-    ILogger<EmailNotificationService> logger,
-    IConditionClient conditionClient,
-    IOptions<NotificationConfig> config) : IEmailNotificationService
+    ILogger<EmailNotificationService> logger) : IEmailNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
-    private readonly TimeSpan _conditionRetryDelay = TimeSpan.FromSeconds(config.Value.SendConditionRetryDelaySeconds);
-    private readonly IConditionClient _conditionClient = conditionClient;
-    private readonly TimeSpan _conditionTimeout = TimeSpan.FromSeconds(Math.Max(1, config.Value.SendConditionTimeoutSeconds));
     private readonly IGuidService _guidService = guidService;
     private readonly ILogger<EmailNotificationService> _logger = logger;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
@@ -188,35 +180,6 @@ public class EmailNotificationService(
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            bool? isSendConditionMet = await EvaluateSendCondition(claimedNotification, operationName, cancellationToken);
-            if (isSendConditionMet is null)
-            {
-                if (!claimedNotification.IsConditionRetry)
-                {
-                    await _emailNotificationRepository.ScheduleConditionRetryAsync(unitOfWork, claimedNotification.NotificationId, _conditionRetryDelay, cancellationToken);
-                    await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-
-                    _logger.LogInformation(
-                        "// EmailNotificationService // {OperationName} // Condition check was inconclusive for notification '{NotificationId}'. Retry scheduled in {RetryDelaySeconds} seconds.",
-                        operationName,
-                        claimedNotification.NotificationId,
-                        _conditionRetryDelay.TotalSeconds);
-                    return true;
-                }
-
-                _logger.LogWarning(
-                    "// EmailNotificationService // {OperationName} // Condition check was inconclusive again for notification '{NotificationId}'. Sending as if no condition endpoint was configured.",
-                    operationName,
-                    claimedNotification.NotificationId);
-            }
-
-            if (isSendConditionMet == false)
-            {
-                await _emailNotificationRepository.UpdateSendStatusAsync(unitOfWork, claimedNotification.NotificationId, EmailNotificationResultType.SendConditionNotMet, cancellationToken: cancellationToken);
-                await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-                return true;
-            }
-
             await PublishClaimedNotification(unitOfWork, claimedNotification, publishNotification, operationName, cancellationToken);
 
             await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
@@ -241,44 +204,6 @@ public class EmailNotificationService(
 
             return false;
         }
-    }
-
-    /// <summary>
-    /// Evaluates the send condition of the order the notification belongs to.
-    /// </summary>
-    /// <returns><c>true</c> if met or no condition endpoint is configured, <c>false</c> if not met, <c>null</c> if the check was inconclusive.</returns>
-    private async Task<bool?> EvaluateSendCondition(Email email, string operationName, CancellationToken cancellationToken)
-    {
-        if (email.ConditionEndpoint is null)
-        {
-            return true;
-        }
-
-        var result = await _conditionClient.CheckSendConditionWithTimeout(email.ConditionEndpoint, _conditionTimeout, cancellationToken);
-
-        if (result.IsSuccess)
-        {
-            if (!result.Value)
-            {
-                _logger.LogInformation(
-                    "// EmailNotificationService // {OperationName} // Condition check yielded false for notification '{NotificationId}' at endpoint '{Endpoint}'.",
-                    operationName,
-                    email.NotificationId,
-                    email.ConditionEndpoint);
-            }
-
-            return result.Value;
-        }
-
-        _logger.LogWarning(
-            "// EmailNotificationService // {OperationName} // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'.",
-            operationName,
-            email.NotificationId,
-            email.ConditionEndpoint,
-            result.Error!.StatusCode,
-            result.Error.Message ?? "No error message provided");
-
-        return null;
     }
 
     /// <summary>

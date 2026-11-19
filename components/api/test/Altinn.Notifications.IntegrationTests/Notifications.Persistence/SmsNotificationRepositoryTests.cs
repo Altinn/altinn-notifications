@@ -957,149 +957,6 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(0, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
     }
 
-    [Fact]
-    public async Task UpdateSendStatus_SmsSendConditionNotMetAndEmailDelivered_CompletesOrderAndWritesOneStatusFeedEntry()
-    {
-        // Arrange
-        (Guid orderId, EmailNotification email, SmsNotification sms) = await CreateOrderWithPendingEmailAndSmsAsync();
-        SmsNotificationRepository smsRepo = GetSmsRepository();
-        EmailNotificationRepository emailRepo = ServiceUtil
-            .GetServices([typeof(IEmailNotificationRepository)])
-            .OfType<EmailNotificationRepository>()
-            .First();
-
-        // Act
-        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-        await smsRepo.UpdateSendStatusAsync(unitOfWork, sms.Id, SmsNotificationResultType.SendConditionNotMet, cancellationToken: TestContext.Current.CancellationToken);
-        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-
-        string statusAfterSms = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{orderId}'");
-        int feedEntriesAfterSms = await PostgreUtil.SelectStatusFeedEntryCount(orderId);
-
-        unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-        await emailRepo.UpdateSendStatusAsync(unitOfWork, email.Id, EmailNotificationResultType.Delivered, cancellationToken: TestContext.Current.CancellationToken);
-        await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-
-        // Assert
-        Assert.NotEqual(OrderProcessingStatus.Completed.ToString(), statusAfterSms);
-        Assert.Equal(0, feedEntriesAfterSms);
-
-        string finalStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{orderId}'");
-        Assert.Equal(OrderProcessingStatus.Completed.ToString(), finalStatus);
-        Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(orderId));
-        await AssertLoggedAsync(orderId, ("Sms", sms.Recipient.MobileNumber!, "SendConditionNotMet"), ("Email", email.Recipient.ToAddress!, "Delivered"));
-    }
-
-    [Theory]
-    [InlineData(SendingTimePolicy.Anytime, true)]
-    [InlineData(SendingTimePolicy.Daytime, true)]
-    [InlineData(SendingTimePolicy.Anytime, false)]
-    [InlineData(SendingTimePolicy.Daytime, false)]
-    public async Task GetNewNotification_ReturnsConditionEndpointFromOrder(SendingTimePolicy sendingTimePolicy, bool orderHasConditionEndpoint)
-    {
-        // Arrange
-        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
-        _orderIdsToCleanup.Add(order.Id);
-
-        Uri conditionEndpoint = new("https://condition.example/check?id=1");
-        if (orderHasConditionEndpoint)
-        {
-            await PostgreUtil.RunSql($@"
-                UPDATE notifications.orders
-                SET notificationorder = jsonb_set(notificationorder::jsonb, '{{ConditionEndpoint}}', '""{conditionEndpoint}""'::jsonb)
-                WHERE alternateid = '{order.Id}';");
-        }
-
-        SmsNotificationRepository repo = GetSmsRepository();
-
-        // Act
-        Sms? claimed = await ExecuteClaimUntilMatchInUnitOfWorkAsync(
-            (unitOfWork, cancellationToken) => repo.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy),
-            sms => sms.NotificationId == smsNotification.Id,
-            TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.NotNull(claimed);
-        Assert.Equal(orderHasConditionEndpoint ? conditionEndpoint : null, claimed.ConditionEndpoint);
-    }
-
-    [Fact]
-    public async Task ScheduleConditionRetryAsync_AfterSlowWorkInTransaction_MeasuresDelayFromCurrentTime()
-    {
-        // Arrange
-        (NotificationOrder order, SmsNotification sms) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
-        _orderIdsToCleanup.Add(order.Id);
-
-        SmsNotificationRepository repo = GetSmsRepository();
-        UnitOfWork unitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-
-        // Act
-        DateTime beforeScheduling;
-        try
-        {
-            await using (NpgsqlCommand sleep = new("SELECT pg_sleep(1.5)", unitOfWork.Connection, unitOfWork.Transaction))
-            {
-                await sleep.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
-            }
-
-            beforeScheduling = await PostgreUtil.GetDatabaseUtcNow();
-            await repo.ScheduleConditionRetryAsync(unitOfWork, sms.Id, TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken);
-            await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-        }
-        catch
-        {
-            await _unitOfWorkRepository.RollbackUnitOfWork(unitOfWork);
-            throw;
-        }
-
-        // Assert
-        DateTime nextAttempt = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT nextattempt FROM notifications.smsnotifications WHERE alternateid = '{sms.Id}'");
-        DateTime resultTime = await PostgreUtil.RunSqlReturnOutput<DateTime>($"SELECT resulttime FROM notifications.smsnotifications WHERE alternateid = '{sms.Id}'");
-
-        Assert.Equal(SmsNotificationResultType.New.ToString(), await SelectSmsNotificationStatus(sms.Id));
-        Assert.True(resultTime >= beforeScheduling);
-        Assert.True(nextAttempt >= beforeScheduling.AddSeconds(60));
-    }
-
-    [Theory]
-    [InlineData(SendingTimePolicy.Anytime)]
-    [InlineData(SendingTimePolicy.Daytime)]
-    public async Task GetNewNotification_WithScheduledRetry_IsClaimedAsRetryOnlyOnceDue(SendingTimePolicy sendingTimePolicy)
-    {
-        // Arrange
-        (NotificationOrder order, SmsNotification sms) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
-        _orderIdsToCleanup.Add(order.Id);
-
-        SmsNotificationRepository repo = GetSmsRepository();
-
-        async Task<Sms?> Claim()
-        {
-            return await ExecuteClaimUntilMatchInUnitOfWorkAsync(
-                (unitOfWork, cancellationToken) => repo.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy),
-                claimed => claimed.NotificationId == sms.Id,
-                TestContext.Current.CancellationToken);
-        }
-
-        // Act
-        Sms? firstAttempt = await Claim();
-
-        UnitOfWork scheduleUnitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-        await repo.ScheduleConditionRetryAsync(scheduleUnitOfWork, sms.Id, TimeSpan.FromHours(1), TestContext.Current.CancellationToken);
-        await _unitOfWorkRepository.CommitUnitOfWork(scheduleUnitOfWork);
-
-        Sms? whileWaiting = await Claim();
-
-        await PostgreUtil.RunSql($"UPDATE notifications.smsnotifications SET nextattempt = clock_timestamp() - interval '1 second' WHERE alternateid = '{sms.Id}'");
-        Sms? whenDue = await Claim();
-
-        // Assert
-        Assert.NotNull(firstAttempt);
-        Assert.False(firstAttempt.IsConditionRetry);
-        Assert.Null(whileWaiting);
-        Assert.NotNull(whenDue);
-        Assert.True(whenDue.IsConditionRetry);
-    }
-
     private static SmsNotificationRepository GetSmsRepository()
     {
         return ServiceUtil
@@ -1157,10 +1014,8 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(expected.Order().ToList(), logged);
     }
 
-    [Theory]
-    [InlineData(SmsNotificationResultType.Failed_ContentTooLarge)]
-    [InlineData(SmsNotificationResultType.SendConditionNotMet)]
-    public async Task UpdateSendStatusAsync_OnClaimedRowInSameUnitOfWork_SetsResultAndCompletesOrder(SmsNotificationResultType finalResult)
+    [Fact]
+    public async Task UpdateSendStatusAsync_OnClaimedRowInSameUnitOfWork_SetsResultAndCompletesOrder()
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime, simulateConsumers: true, simulateCronJob: true);
@@ -1173,17 +1028,16 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         // Act
         Sms? claimed = await ExecuteClaimUntilMatchInUnitOfWorkAsync(
-            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, smsNotification.Id, finalResult, cancellationToken),
+            (unitOfWork, cancellationToken) => ClaimAndSetContentTooLarge(repo, unitOfWork, smsNotification.Id, cancellationToken),
             sms => sms.NotificationId == smsNotification.Id,
             TestContext.Current.CancellationToken,
             commitOnMatch: true);
 
         // Assert
         Assert.NotNull(claimed);
-        Assert.Equal(finalResult.ToString(), await SelectSmsNotificationStatus(smsNotification.Id));
+        Assert.Equal(SmsNotificationResultType.Failed_ContentTooLarge.ToString(), await SelectSmsNotificationStatus(smsNotification.Id));
         Assert.Equal(1, await SelectOrdersCompletedCount(order));
         Assert.Equal(1, await PostgreUtil.SelectStatusFeedEntryCount(order.Id));
-        Assert.Equal(1, await PostgreUtil.SelectNotificationLogEntryCount(order.Id));
     }
 
     [Fact]
@@ -1200,7 +1054,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
 
         // Act
         Sms? claimed = await ExecuteClaimUntilMatchInUnitOfWorkAsync(
-            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, smsNotification.Id, SmsNotificationResultType.Failed_ContentTooLarge, cancellationToken),
+            (unitOfWork, cancellationToken) => ClaimAndSetContentTooLarge(repo, unitOfWork, smsNotification.Id, cancellationToken),
             sms => sms.NotificationId == smsNotification.Id,
             TestContext.Current.CancellationToken,
             commitOnMatch: false);
@@ -1287,12 +1141,12 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     // Updates the claimed row on the claiming transaction, which holds the row lock. A separate connection would block.
-    private static async Task<Sms?> ClaimAndSetResult(SmsNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, SmsNotificationResultType result, CancellationToken cancellationToken)
+    private static async Task<Sms?> ClaimAndSetContentTooLarge(SmsNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken)
     {
         Sms? claimed = await repo.GetNewNotification(unitOfWork, cancellationToken, SendingTimePolicy.Anytime);
         if (claimed?.NotificationId == notificationId)
         {
-            await repo.UpdateSendStatusAsync(unitOfWork, notificationId, result, cancellationToken: cancellationToken);
+            await repo.UpdateSendStatusAsync(unitOfWork, notificationId, SmsNotificationResultType.Failed_ContentTooLarge, cancellationToken: cancellationToken);
         }
 
         return claimed;

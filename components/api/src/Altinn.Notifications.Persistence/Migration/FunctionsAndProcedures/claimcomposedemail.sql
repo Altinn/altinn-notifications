@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v3()
+CREATE OR REPLACE FUNCTION notifications.claim_composed_email()
     RETURNS TABLE(
         alternateid  uuid,
         subject      text,
@@ -6,9 +6,7 @@ CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v3()
         fromaddress  text,
         toaddress    text,
         contenttype  text,
-        attachments  jsonb,
-        conditionendpoint text,
-        isconditionretry boolean
+        attachments  jsonb
     )
     LANGUAGE 'plpgsql'
 AS $BODY$
@@ -45,7 +43,6 @@ BEGIN
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
             AND email.iscomposed = true
-            AND (email.nextattempt IS NULL OR email.nextattempt <= clock_timestamp())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
@@ -61,8 +58,7 @@ BEGIN
             claimed.customizedsubject,
             claimed.customizedbody,
             claimed.toaddress,
-            claimed._orderid,
-            email.nextattempt
+            claimed._orderid
     )
     SELECT
         updated.alternateid,
@@ -71,18 +67,16 @@ BEGIN
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype,
-        COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint,
-        updated.nextattempt IS NOT NULL AS isconditionretry
+        COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments
     FROM updated_rows updated
     JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
     JOIN notifications.orders o       ON o._id = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_composed_email_v3()
+ALTER FUNCTION notifications.claim_composed_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_composed_email_v3()
+COMMENT ON FUNCTION notifications.claim_composed_email()
     IS 'Claims and returns a single email notification for Composed orders (iscomposed = true).
 Returns an empty JSON array when no attachments are present.';
