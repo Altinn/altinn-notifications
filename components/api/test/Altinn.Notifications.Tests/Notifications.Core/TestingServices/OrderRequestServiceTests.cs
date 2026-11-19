@@ -1164,10 +1164,11 @@ public class OrderRequestServiceTests
 
         Assert.Equal(orderChainId, result.Value.OrderChainId);
         Assert.NotNull(result.Value.OrderChainReceipt.Reminders);
-        Assert.Single(result.Value.OrderChainReceipt.Reminders);
         Assert.Equal(mainOrderId, result.Value.OrderChainReceipt.ShipmentId);
-        Assert.Equal(reminderId, result.Value.OrderChainReceipt.Reminders[0].ShipmentId);
-        Assert.Equal("reminder-ref", result.Value.OrderChainReceipt.Reminders[0].SendersReference);
+
+        var reminder = Assert.Single(result.Value.OrderChainReceipt.Reminders);
+        Assert.Equal(reminderId, reminder.ShipmentId);
+        Assert.Equal("reminder-ref", reminder.SendersReference);
 
         // Verify main order used email lookup
         contactPointServiceMock.Verify(

@@ -219,17 +219,17 @@ public class PreferredChannelProcessingServiceTests
         Assert.NotNull(capturedSmsRecipients);
         Assert.NotNull(capturedEmailRecipients);
 
-        Assert.Single(capturedSmsRecipients);
-        Assert.Single(capturedEmailRecipients);
+        var smsRecipient = Assert.Single(capturedSmsRecipients);
+        var emailRecipient = Assert.Single(capturedEmailRecipients);
 
-        Assert.Single(capturedSmsRecipients[0].AddressInfo);
-        Assert.Single(capturedEmailRecipients[0].AddressInfo);
+        var smsAddress = Assert.Single(smsRecipient.AddressInfo);
+        var emailAddress = Assert.Single(emailRecipient.AddressInfo);
 
-        Assert.Equal("999888788", capturedSmsRecipients[0].OrganizationNumber);
-        Assert.Equal("999888788", capturedEmailRecipients[0].OrganizationNumber);
+        Assert.Equal("999888788", smsRecipient.OrganizationNumber);
+        Assert.Equal("999888788", emailRecipient.OrganizationNumber);
 
-        Assert.Equal(AddressType.Sms, capturedSmsRecipients[0].AddressInfo[0].AddressType);
-        Assert.Equal(AddressType.Email, capturedEmailRecipients[0].AddressInfo[0].AddressType);
+        Assert.Equal(AddressType.Sms, smsAddress.AddressType);
+        Assert.Equal(AddressType.Email, emailAddress.AddressType);
     }
 
     /// <summary>
@@ -354,17 +354,17 @@ public class PreferredChannelProcessingServiceTests
         Assert.NotNull(capturedSmsRecipients);
         Assert.NotNull(capturedEmailRecipients);
 
-        Assert.Single(capturedSmsRecipients);
-        Assert.Single(capturedEmailRecipients);
+        var smsRecipient = Assert.Single(capturedSmsRecipients);
+        var emailRecipient = Assert.Single(capturedEmailRecipients);
 
-        Assert.Single(capturedSmsRecipients[0].AddressInfo);
-        Assert.Single(capturedEmailRecipients[0].AddressInfo);
+        var smsAddress = Assert.Single(smsRecipient.AddressInfo);
+        var emailAddress = Assert.Single(emailRecipient.AddressInfo);
 
-        Assert.Equal("999888777", capturedSmsRecipients[0].OrganizationNumber);
-        Assert.Equal("999888777", capturedEmailRecipients[0].OrganizationNumber);
+        Assert.Equal("999888777", smsRecipient.OrganizationNumber);
+        Assert.Equal("999888777", emailRecipient.OrganizationNumber);
 
-        Assert.Equal(AddressType.Sms, capturedSmsRecipients[0].AddressInfo[0].AddressType);
-        Assert.Equal(AddressType.Email, capturedEmailRecipients[0].AddressInfo[0].AddressType);
+        Assert.Equal(AddressType.Sms, smsAddress.AddressType);
+        Assert.Equal(AddressType.Email, emailAddress.AddressType);
     }
 
     /// <summary>
@@ -550,8 +550,9 @@ public class PreferredChannelProcessingServiceTests
 
         // Assert
         Assert.NotNull(capturedRecipients);
-        Assert.Single(capturedRecipients);
-        Assert.Equal("22012047278", capturedRecipients[0].NationalIdentityNumber);
+
+        var recipient = Assert.Single(capturedRecipients);
+        Assert.Equal("22012047278", recipient.NationalIdentityNumber);
     }
 
     /// <summary>
@@ -596,8 +597,9 @@ public class PreferredChannelProcessingServiceTests
 
         // Assert
         Assert.NotNull(capturedRecipients);
-        Assert.Single(capturedRecipients);
-        Assert.Equal("123456789", capturedRecipients[0].OrganizationNumber);
+
+        var recipient = Assert.Single(capturedRecipients);
+        Assert.Equal("123456789", recipient.OrganizationNumber);
     }
 
     /// <summary>
@@ -642,8 +644,9 @@ public class PreferredChannelProcessingServiceTests
 
         // Assert
         Assert.NotNull(capturedRecipients);
-        Assert.Single(capturedRecipients);
-        Assert.Equal("urn:altinn:person:idporten-email:user@altinn.xyz", capturedRecipients[0].ExternalIdentity);
+
+        var recipient = Assert.Single(capturedRecipients);
+        Assert.Equal("urn:altinn:person:idporten-email:user@altinn.xyz", recipient.ExternalIdentity);
     }
 
     /// <summary>
@@ -736,9 +739,10 @@ public class PreferredChannelProcessingServiceTests
 
         // Assert
         Assert.NotNull(capturedRecipients);
-        Assert.Single(capturedRecipients);
-        Assert.Equal(2, capturedRecipients[0].AddressInfo.Count);
-        Assert.All(capturedRecipients[0].AddressInfo, a => Assert.Equal(AddressType.Email, a.AddressType));
+
+        var recipient = Assert.Single(capturedRecipients);
+        Assert.Equal(2, recipient.AddressInfo.Count);
+        Assert.All(recipient.AddressInfo, a => Assert.Equal(AddressType.Email, a.AddressType));
     }
 
     /// <summary>
@@ -787,9 +791,10 @@ public class PreferredChannelProcessingServiceTests
 
         // Assert
         Assert.NotNull(capturedSmsRecipients);
-        Assert.Single(capturedSmsRecipients);
-        Assert.Equal(2, capturedSmsRecipients[0].AddressInfo.Count);
-        Assert.All(capturedSmsRecipients[0].AddressInfo, a => Assert.Equal(AddressType.Sms, a.AddressType));
+
+        var recipient = Assert.Single(capturedSmsRecipients);
+        Assert.Equal(2, recipient.AddressInfo.Count);
+        Assert.All(recipient.AddressInfo, a => Assert.Equal(AddressType.Sms, a.AddressType));
     }
 
     /// <summary>
@@ -838,9 +843,10 @@ public class PreferredChannelProcessingServiceTests
 
         // Assert
         Assert.NotNull(capturedEmailRecipients);
-        Assert.Single(capturedEmailRecipients);
-        Assert.True(capturedEmailRecipients[0].IsReserved);
-        Assert.Equal("19100047414", capturedEmailRecipients[0].NationalIdentityNumber);
+
+        var recipient = Assert.Single(capturedEmailRecipients);
+        Assert.True(recipient.IsReserved);
+        Assert.Equal("19100047414", recipient.NationalIdentityNumber);
     }
 
     /// <summary>
@@ -981,9 +987,9 @@ public class PreferredChannelProcessingServiceTests
 
         // Assert
         Assert.NotNull(capturedEmailRecipients);
-        Assert.Single(capturedEmailRecipients);
 
-        var emailAddress = capturedEmailRecipients[0].AddressInfo.OfType<EmailAddressPoint>().First();
+        var recipient = Assert.Single(capturedEmailRecipients);
+        var emailAddress = recipient.AddressInfo.OfType<EmailAddressPoint>().First();
         Assert.Equal("second@altinn.xyz", emailAddress.EmailAddress);
     }
 

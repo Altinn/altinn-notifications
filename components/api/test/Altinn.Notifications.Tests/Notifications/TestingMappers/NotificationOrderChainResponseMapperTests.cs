@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Mappers;
 
 using Xunit;
@@ -171,11 +167,10 @@ public class NotificationOrderChainResponseMapperTests
         Assert.NotNull(result.OrderChainReceipt);
         Assert.Null(result.OrderChainReceipt.SendersReference);
         Assert.Equal(shipmentId, result.OrderChainReceipt.ShipmentId);
-
+        
         Assert.NotNull(result.OrderChainReceipt.Reminders);
-        Assert.Single(result.OrderChainReceipt.Reminders);
-
-        var mappedReminder = result.OrderChainReceipt.Reminders[0];
+        
+        var mappedReminder = Assert.Single(result.OrderChainReceipt.Reminders);
         Assert.Null(mappedReminder.SendersReference);
         Assert.Equal(reminderShipmentId, mappedReminder.ShipmentId);
     }
