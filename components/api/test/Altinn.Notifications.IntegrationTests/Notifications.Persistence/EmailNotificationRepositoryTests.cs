@@ -305,11 +305,11 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         }
 
         // Act
-        Email? firstAttempt = await ClaimNew();
-
-        UnitOfWork scheduleUnitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-        await repo.UpdateSendStatusAsync(scheduleUnitOfWork, emailNotification.Id, EmailNotificationResultType.Retrying, cancellationToken: TestContext.Current.CancellationToken);
-        await _unitOfWorkRepository.CommitUnitOfWork(scheduleUnitOfWork);
+        Email? firstAttempt = await ExecuteClaimUntilMatchInUnitOfWork(
+            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, emailNotification.Id, EmailNotificationResultType.Retrying, cancellationToken, sendingTimePolicy),
+            email => email.NotificationId == emailNotification.Id,
+            TestContext.Current.CancellationToken,
+            commitOnMatch: true);
 
         Email? newClaimWhileRetrying = await ClaimNew();
         Email? retryWhileWaiting = await ClaimRetry(includeDaytime: true);
@@ -1803,9 +1803,9 @@ public sealed class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Null(persistedReport);
     }
 
-    private static async Task<Email?> ClaimAndSetResult(EmailNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, EmailNotificationResultType result, CancellationToken cancellationToken)
+    private static async Task<Email?> ClaimAndSetResult(EmailNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, EmailNotificationResultType result, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime)
     {
-        Email? claimed = await repo.GetNewNotificationAsync(unitOfWork, cancellationToken);
+        Email? claimed = await repo.GetNewNotificationAsync(unitOfWork, cancellationToken, sendingTimePolicy);
         if (claimed?.NotificationId == notificationId)
         {
             await repo.UpdateSendStatusAsync(unitOfWork, notificationId, result, cancellationToken: cancellationToken);

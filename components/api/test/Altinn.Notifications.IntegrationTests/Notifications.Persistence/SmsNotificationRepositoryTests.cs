@@ -1027,7 +1027,7 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     public async Task UpdateSendStatus_Retrying_SetsRetryingAndDoesNotCompleteOrder()
     {
         // Arrange
-        (NotificationOrder order, SmsNotification sms) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
+        (NotificationOrder order, SmsNotification sms) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime, simulateConsumers: true, simulateCronJob: true);
         _orderIdsToCleanup.Add(order.Id);
 
         SmsNotificationRepository repo = GetSmsRepository();
@@ -1082,11 +1082,11 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
         }
 
         // Act
-        Sms? firstAttempt = await ClaimNew();
-
-        UnitOfWork scheduleUnitOfWork = await _unitOfWorkRepository.StartUnitOfWork();
-        await repo.UpdateSendStatusAsync(scheduleUnitOfWork, sms.Id, SmsNotificationResultType.Retrying, cancellationToken: TestContext.Current.CancellationToken);
-        await _unitOfWorkRepository.CommitUnitOfWork(scheduleUnitOfWork);
+        Sms? firstAttempt = await ExecuteClaimUntilMatchInUnitOfWorkAsync(
+            (unitOfWork, cancellationToken) => ClaimAndSetResult(repo, unitOfWork, sms.Id, SmsNotificationResultType.Retrying, cancellationToken, sendingTimePolicy),
+            claimed => claimed.NotificationId == sms.Id,
+            TestContext.Current.CancellationToken,
+            commitOnMatch: true);
 
         Sms? newClaimWhileRetrying = await ClaimNew();
         Sms? retryWhileWaiting = await ClaimRetry(includeDaytime: true);
@@ -1298,9 +1298,9 @@ public sealed class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     // Updates the claimed row on the claiming transaction, which holds the row lock. A separate connection would block.
-    private static async Task<Sms?> ClaimAndSetResult(SmsNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, SmsNotificationResultType result, CancellationToken cancellationToken)
+    private static async Task<Sms?> ClaimAndSetResult(SmsNotificationRepository repo, UnitOfWork unitOfWork, Guid notificationId, SmsNotificationResultType result, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime)
     {
-        Sms? claimed = await repo.GetNewNotification(unitOfWork, cancellationToken, SendingTimePolicy.Anytime);
+        Sms? claimed = await repo.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy);
         if (claimed?.NotificationId == notificationId)
         {
             await repo.UpdateSendStatusAsync(unitOfWork, notificationId, result, cancellationToken: cancellationToken);

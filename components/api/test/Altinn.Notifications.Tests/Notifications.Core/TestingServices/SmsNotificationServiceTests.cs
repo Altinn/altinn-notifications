@@ -138,13 +138,25 @@ public class SmsNotificationServiceTests
         unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(() => CreateUnitOfWork());
 
         object? countTag = null;
+        using var parentSource = new ActivitySource("SmsNotificationServiceTests.Parent");
+        string? parentRootId = null;
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == BackgroundActivitySource.Name,
+            ShouldListenTo = source => source.Name == BackgroundActivitySource.Name || source == parentSource,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStopped = activity => countTag = activity.GetTagItem("Count")
+            ActivityStopped = activity =>
+            {
+                if (activity.RootId == parentRootId && activity.Source.Name == BackgroundActivitySource.Name)
+                {
+                    countTag = activity.GetTagItem("Count");
+                }
+            }
         };
         ActivitySource.AddActivityListener(listener);
+
+        using var parentActivity = parentSource.StartActivity("parent");
+        parentRootId = parentActivity?.RootId;
+        Assert.NotNull(parentRootId);
 
         var service = GetService(repository: repo.Object, unitOfWorkRepository: unitOfWorkRepository.Object);
 
@@ -423,6 +435,7 @@ public class SmsNotificationServiceTests
             r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), SmsNotificationResultType.Retrying, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
         unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+        unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
         logger.Verify(
             l => l.Log(LogLevel.Warning, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception?>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Never);
