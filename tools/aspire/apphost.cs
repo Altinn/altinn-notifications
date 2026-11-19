@@ -586,7 +586,7 @@ async Task NotifyChangedAsync(IServiceProvider services, DotnetProjectResource s
 
     var result = await services.GetRequiredService<IInteractionService>().PromptNotificationAsync(
         $"{service.Name} has changed",
-        "Restart it to pick up the changes.",
+        "Rebuild it to pick up the changes.",
         new NotificationInteractionOptions { Intent = MessageIntent.Warning, PrimaryButtonText = "Rebuild" });
 
     lock (pendingRestarts)
