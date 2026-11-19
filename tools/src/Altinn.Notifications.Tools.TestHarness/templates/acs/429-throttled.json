@@ -1,0 +1,6 @@
+{
+  "name": "429 Throttled, Retry-After 10",
+  "status": 429,
+  "headers": { "Content-Type": "application/json", "Retry-After": "10" },
+  "body": { "error": { "code": "TooManyRequests", "message": "Please try again after 10 seconds." } }
+}

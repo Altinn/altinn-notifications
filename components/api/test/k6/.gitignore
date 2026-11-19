@@ -1,2 +1,4 @@
 # Secret-source
 .secrets
+# Written by the Aspire app host (tools/aspire) on every start
+.secrets.aspire

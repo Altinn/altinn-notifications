@@ -1,0 +1,6 @@
+{
+  "name": "200 LOGON FAIL",
+  "status": 200,
+  "headers": { "Content-Type": "text/xml; charset=iso-8859-1" },
+  "body": "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n<SESSION>\n  <LOGON>FAIL</LOGON>\n  <REASON>Invalid username or password</REASON>\n</SESSION>"
+}

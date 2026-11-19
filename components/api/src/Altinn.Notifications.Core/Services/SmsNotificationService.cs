@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
 
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
-using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -14,7 +12,6 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -24,9 +21,6 @@ namespace Altinn.Notifications.Core.Services;
 public class SmsNotificationService : ISmsNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
-    private readonly IConditionClient _conditionClient;
-    private readonly TimeSpan _conditionTimeout;
-    private readonly TimeSpan _conditionRetryDelay;
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly ISmsNotificationRepository _repository;
@@ -45,13 +39,8 @@ public class SmsNotificationService : ISmsNotificationService
         ISmsCommandPublisher smsPublisher,
         IUnitOfWorkRepository unitOfWorkRepository,
         ILogger<SmsNotificationService> logger,
-        ISmsSenderSubstitutionService senderSubstitutionService,
-        IConditionClient conditionClient,
-        IOptions<NotificationConfig> config)
+        ISmsSenderSubstitutionService senderSubstitutionService)
     {
-        _conditionClient = conditionClient;
-        _conditionRetryDelay = TimeSpan.FromSeconds(config.Value.SendConditionRetryDelaySeconds);
-        _conditionTimeout = TimeSpan.FromSeconds(Math.Max(1, config.Value.SendConditionTimeoutSeconds));
         _guidService = guidService;
         _dateTimeService = dateTimeService;
         _repository = repository;
@@ -132,34 +121,6 @@ public class SmsNotificationService : ISmsNotificationService
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-
-            bool? isSendConditionMet = await EvaluateSendCondition(newSmsNotification, cancellationToken);
-            if (isSendConditionMet is null)
-            {
-                if (!newSmsNotification.IsConditionRetry)
-                {
-                    await _repository.ScheduleConditionRetryAsync(unitOfWork, newSmsNotification.NotificationId, _conditionRetryDelay, cancellationToken);
-                    await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-
-                    _logger.LogInformation(
-                        "// SmsNotificationService // SendNotification // Condition check was inconclusive for notification '{NotificationId}'. Retry scheduled in {RetryDelaySeconds} seconds.",
-                        newSmsNotification.NotificationId,
-                        _conditionRetryDelay.TotalSeconds);
-                    return true;
-                }
-
-                _logger.LogWarning(
-                    "// SmsNotificationService // SendNotification // Condition check was inconclusive again for notification '{NotificationId}'. Sending as if no condition endpoint was configured.",
-                    newSmsNotification.NotificationId);
-            }
-
-            if (isSendConditionMet == false)
-            {
-                await _repository.UpdateSendStatusAsync(unitOfWork, newSmsNotification.NotificationId, SmsNotificationResultType.SendConditionNotMet, cancellationToken: cancellationToken);
-                await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-                return true;
-            }
-
             await ApplySenderSubstitution(unitOfWork, newSmsNotification);
 
             await PublishClaimedNotification(unitOfWork, newSmsNotification, cancellationToken);
@@ -222,42 +183,6 @@ public class SmsNotificationService : ISmsNotificationService
         }
 
         await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
-    }
-
-    /// <summary>
-    /// Evaluates the send condition of the order the notification belongs to.
-    /// </summary>
-    /// <returns><c>true</c> if met or no condition endpoint is configured, <c>false</c> if not met, <c>null</c> if the check was inconclusive.</returns>
-    private async Task<bool?> EvaluateSendCondition(Sms sms, CancellationToken cancellationToken)
-    {
-        if (sms.ConditionEndpoint is null)
-        {
-            return true;
-        }
-
-        var result = await _conditionClient.CheckSendConditionWithTimeout(sms.ConditionEndpoint, _conditionTimeout, cancellationToken);
-
-        if (result.IsSuccess)
-        {
-            if (!result.Value)
-            {
-                _logger.LogInformation(
-                    "// SmsNotificationService // EvaluateSendCondition // Condition check yielded false for notification '{NotificationId}' at endpoint '{Endpoint}'.",
-                    sms.NotificationId,
-                    sms.ConditionEndpoint);
-            }
-
-            return result.Value;
-        }
-
-        _logger.LogWarning(
-            "// SmsNotificationService // EvaluateSendCondition // Condition check failed for notification '{NotificationId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'.",
-            sms.NotificationId,
-            sms.ConditionEndpoint,
-            result.Error!.StatusCode,
-            result.Error.Message ?? "No error message provided");
-
-        return null;
     }
 
     /// <summary>

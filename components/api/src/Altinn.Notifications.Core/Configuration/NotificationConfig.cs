@@ -6,12 +6,6 @@ namespace Altinn.Notifications.Core.Configuration;
 public class NotificationConfig
 {
     /// <summary>
-    /// The number of seconds to wait for the send condition endpoint before the http call is cancelled.
-    /// A timed out check is treated as inconclusive.
-    /// </summary>
-    public int SendConditionTimeoutSeconds { get; set; } = 30;
-
-    /// <summary>
     /// Default from address for email notifications
     /// </summary>
     public string DefaultEmailFromAddress { get; set; } = string.Empty;
@@ -82,12 +76,6 @@ public class NotificationConfig
     /// The number of seconds from now to skip while looking for orders to retry
     /// </summary>
     public int RetryOrdersDBDelaySeconds { get; set; } = 60;
-
-    /// <summary>
-    /// The number of seconds to wait before a notification with an inconclusive send condition check can be claimed again.
-    /// An inconclusive check is retried once. If the retry is also inconclusive, the notification is sent as if no condition endpoint was configured.
-    /// </summary>
-    public int SendConditionRetryDelaySeconds { get; set; } = 60;
 
     /// <summary>
     /// The maximum number of retry attempts for a retry order.
