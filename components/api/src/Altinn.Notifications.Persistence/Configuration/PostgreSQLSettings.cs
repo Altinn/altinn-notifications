@@ -59,4 +59,9 @@ public class PostgreSqlSettings
     /// Gets or sets a value indicating whether SQL parameters are always logged in telemetry.
     /// </summary>
     public bool TelemetryAlwaysLogSqlParameters { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the alternate database provider name reported by telemetry.
+    /// </summary>
+    public string? TelemetryAlternateDbProviderName { get; set; } = null;
 }

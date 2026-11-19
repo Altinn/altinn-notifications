@@ -1,10 +1,12 @@
-#:sdk Aspire.AppHost.Sdk@13.6.5
+#:package Aspire.Hosting.AppHost
+#:package Aspire.Hosting.Dotnet
 #:property AspireUseCliBundle=true
 
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Aspire.Hosting.Dotnet;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,17 +23,7 @@ string[] projects =
     $"{Components}/sms-service/src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj",
 ];
 
-// Parallel dotnet run builds of the shared project collide, so build one by one first.
-foreach (var project in projects)
-{
-    using var build = Process.Start("dotnet", ["build", Path.Combine(builder.AppHostDirectory, project)]);
-    build.WaitForExit();
-    if (build.ExitCode != 0)
-    {
-        throw new InvalidOperationException($"Build failed for {project}");
-    }
-}
-
+// AddDotnetProject builds the services in one coordinated build before they start, so their builds of the shared project do not collide.
 // The dashboard lists resources in the order they are added.
 var api = AddService("api", projects[0], 5090, "swagger", "altinn-notifications");
 var email = AddService("email", projects[1], 5091, "swagger", "altinn-notifications-email");
@@ -81,7 +73,7 @@ string interceptUrl = interceptEnabled ? controlPanelUrl + "/intercept/" : strin
 
 // The dashboard's own URL, so each held request can link to its trace.
 string dashboardUrl = (builder.Configuration["ASPNETCORE_URLS"] ?? string.Empty).Split(';')[0];
-var controlPanel = builder.AddProject("testharness-controlpanel", "../src/Altinn.Notifications.Tools.TestHarness/Altinn.Notifications.Tools.TestHarness.csproj", launchProfileName: null)
+var controlPanel = builder.AddDotnetProject("testharness-controlpanel", "../src/Altinn.Notifications.Tools.TestHarness/Altinn.Notifications.Tools.TestHarness.csproj", options => options.ExcludeLaunchProfile = true)
     .WithEnvironment("TestHarnessSettings__Port", controlPanelPort.ToString())
     .WithEnvironment("TestHarnessSettings__Intercept", interceptEnabled.ToString())
     .WithEnvironment("TestHarnessSettings__TimeoutSeconds", builder.Configuration.GetValue("TestHarness:TimeoutSeconds", 120).ToString())
@@ -120,7 +112,7 @@ if (authMode == "mock")
     string authUrl = "http://localhost:" + authPort;
 
     // The signing key is made for this run, so tokens stay valid when only mock-auth is restarted.
-    var auth = builder.AddProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
+    var auth = builder.AddDotnetProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", options => options.ExcludeLaunchProfile = true)
         .WithEnvironment("MockAuthSettings__Port", authPort.ToString())
         .WithEnvironment("MockAuthSettings__SigningKey", CreateTokenSigningKey())
         .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration")
@@ -158,7 +150,7 @@ if (acsMode == "mock")
     // A test-only key. The email service signs with it, and the mock rejects requests that are not signed with it.
     const string acsAccessKey = "YWx0aW5uLW5vdGlmaWNhdGlvbnMtYWNzLW1vY2stdGVzdC1rZXk=";
     var acsPort = builder.Configuration.GetValue("Acs:Port", 5095);
-    var acs = builder.AddProject("mock-acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", launchProfileName: null)
+    var acs = builder.AddDotnetProject("mock-acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", options => options.ExcludeLaunchProfile = true)
         .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
         .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
         .WithEnvironment("AcsMockSettings__FallbackUrl", interceptUrl)
@@ -193,7 +185,7 @@ if (linkMobilityInteractive && !interceptEnabled)
 // Test-only credentials. The mock sends its delivery reports with them, and sms rejects reports that do not have them.
 const string deliveryReportUsername = "linkmobility-mock";
 const string deliveryReportPassword = "linkmobility-mock-test-password";
-var linkMobility = builder.AddProject("wiremock-linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", launchProfileName: null)
+var linkMobility = builder.AddDotnetProject("wiremock-linkmobility", "../src/Altinn.Notifications.Tools.LinkMobilityProxy/Altinn.Notifications.Tools.LinkMobilityProxy.csproj", options => options.ExcludeLaunchProfile = true)
     .WithEnvironment("LinkMobilityProxySettings__Port", linkMobilityPort.ToString())
     .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty)
     .WithEnvironment("LinkMobilityProxySettings__Interactive", linkMobilityInteractive.ToString())
@@ -235,7 +227,7 @@ if (linkMobilityInteractive)
 
 if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m => builder.Configuration.GetValue($"Mocks:{m.Name}:Enabled", true)))
 {
-    var mocks = builder.AddProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
+    var mocks = builder.AddDotnetProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", options => options.ExcludeLaunchProfile = true)
         .WithEnvironment("PlatformMocksSettings__FallbackUrl", interceptUrl)
         .WithParentRelationship(controlPanel.Resource);
 
@@ -451,11 +443,11 @@ static bool IsRunning(string runtime)
 
 // No launch profiles: email and sms hardcode ASPNETCORE_URLS, which collides with Aspire's.
 // Fixed, unproxied ports because the services call each other on hardcoded localhost URLs.
-IResourceBuilder<ProjectResource> AddService(string name, string projectPath, int port, string swaggerPath, string clusterService)
+IResourceBuilder<DotnetProjectResource> AddService(string name, string projectPath, int port, string swaggerPath, string clusterService)
 {
     string swaggerUrl = $"http://localhost:{port}/{swaggerPath}";
 
-    var service = builder.AddProject(name, projectPath, launchProfileName: null)
+    var service = builder.AddDotnetProject(name, projectPath, options => options.ExcludeLaunchProfile = true)
         .WithHttpEndpoint(port: port, targetPort: port, isProxied: false)
         .WithUrl(swaggerUrl, "Swagger")
         .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
@@ -464,7 +456,7 @@ IResourceBuilder<ProjectResource> AddService(string name, string projectPath, in
     return service;
 }
 
-void AddClusterSwitch(IResourceBuilder<ProjectResource> service, string clusterService, int port)
+void AddClusterSwitch(IResourceBuilder<DotnetProjectResource> service, string clusterService, int port)
 {
     Process? forward = null;
 
@@ -531,7 +523,7 @@ static Process StartPortForward(string clusterService, int port, ILogger logger)
     return process;
 }
 
-void AddTests(string name, IResourceBuilder<ProjectResource> service, string solution)
+void AddTests(string name, IResourceBuilder<DotnetProjectResource> service, string solution)
 {
     var tests = builder.AddExecutable(name, "dotnet", ".", "test", $"{Components}/{solution}")
         .WithExplicitStart()
@@ -558,7 +550,7 @@ void AddTests(string name, IResourceBuilder<ProjectResource> service, string sol
 }
 
 // .sql is left out because the API build regenerates a .sql file under src on every run.
-FileSystemWatcher WatchSource(IServiceProvider services, string folder, params IResourceBuilder<ProjectResource>[] affected)
+FileSystemWatcher WatchSource(IServiceProvider services, string folder, params IResourceBuilder<DotnetProjectResource>[] affected)
 {
     string[] extensions = [".cs", ".csproj", ".json"];
     var watcher = new FileSystemWatcher(Path.Combine(builder.AppHostDirectory, Components, folder)) { IncludeSubdirectories = true };
@@ -585,7 +577,7 @@ FileSystemWatcher WatchSource(IServiceProvider services, string folder, params I
     return watcher;
 }
 
-async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service)
+async Task NotifyChangedAsync(IServiceProvider services, DotnetProjectResource service)
 {
     lock (pendingRestarts)
     {
@@ -600,7 +592,7 @@ async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service
     var result = await services.GetRequiredService<IInteractionService>().PromptNotificationAsync(
         $"{service.Name} has changed",
         "Restart it to pick up the changes.",
-        new NotificationInteractionOptions { Intent = MessageIntent.Warning, PrimaryButtonText = "Restart" });
+        new NotificationInteractionOptions { Intent = MessageIntent.Warning, PrimaryButtonText = "Rebuild" });
 
     lock (pendingRestarts)
     {
@@ -609,7 +601,7 @@ async Task NotifyChangedAsync(IServiceProvider services, ProjectResource service
 
     if (!result.Canceled && result.Data)
     {
-        await services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service, KnownResourceCommands.RestartCommand);
+        await services.GetRequiredService<ResourceCommandService>().ExecuteCommandAsync(service, KnownResourceCommands.RebuildCommand);
     }
 }
 
