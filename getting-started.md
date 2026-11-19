@@ -108,7 +108,7 @@ You can run individual services from the command line.
 
 ### Option C: Run Everything with Aspire
 
-Requires the [Aspire CLI](https://aspire.dev/get-started/install-cli/) and Podman or Docker.
+Requires the [Aspire CLI](https://aspire.dev/get-started/install-cli/) 17 or later and Podman or Docker.
 
 The app host in `tools/aspire` starts the Postgres container `notifications-db` and the Service Bus emulator (via `tools/asb-emulator`) in Podman or Docker if they are not already running, then starts the API, Email and SMS services. Logs, traces and metrics from all three services show up in the Aspire dashboard.
 
