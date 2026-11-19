@@ -91,11 +91,14 @@ internal static class InterceptEndpoints
         var pending = store.Pending;
         var history = store.History;
 
-        string[] systems = [.. templates.GetAll().Select(t => t.System).Where(s => s != TemplateStore.Generic)
+        string[] systems =
+        [
+            .. templates.GetAll().Select(t => t.System).Where(s => s != TemplateStore.Generic)
             .Concat(pending.Select(r => r.System))
             .Concat(history.Select(h => h.Request.System))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)];
+            .Order(StringComparer.OrdinalIgnoreCase)
+        ];
 
         return Results.Ok(new
         {

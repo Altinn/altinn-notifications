@@ -14,10 +14,13 @@ namespace Altinn.Notifications.Core.Services;
 /// <param name="config">The sender substitution configuration.</param>
 public class SmsSenderSubstitutionService(IOptions<SmsSenderSubstitutionConfig> config) : ISmsSenderSubstitutionService
 {
-    private readonly CompiledRule[] _rules = [.. config.Value.Rules
+    private readonly CompiledRule[] _rules =
+    [
+        .. config.Value.Rules
             .Where(r => !string.IsNullOrWhiteSpace(r.CountryCodePrefix) && r.NumericSenderByServiceOwner.Count > 0)
             .Select(r => new CompiledRule(r.CountryCodePrefix, FilterToValidNumericSenders(r.NumericSenderByServiceOwner)))
-            .Where(r => r.NumericSenderByServiceOwner.Count > 0)];
+            .Where(r => r.NumericSenderByServiceOwner.Count > 0)
+    ];
 
     /// <inheritdoc/>
     public bool HasRules => _rules.Length > 0;
