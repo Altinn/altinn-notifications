@@ -17,7 +17,12 @@ builder.Configuration
     .AddUserSecrets<Program>(optional: true)
     .AddEnvironmentVariables();
 
-builder.Services.Configure<LinkMobilityProxySettings>(builder.Configuration.GetSection(nameof(LinkMobilityProxySettings)));
+builder.Services.AddOptions<LinkMobilityProxySettings>()
+    .Bind(builder.Configuration.GetSection(nameof(LinkMobilityProxySettings)))
+    .Validate(
+        settings => settings.HasDeliveryReportCredentials(),
+        "Set LinkMobilityProxySettings:DeliveryReportUsername and DeliveryReportPassword to the SMS service's SmsDeliveryReportSettings:UserSettings, or leave DeliveryReportUrl empty. The Aspire app host sets them.")
+    .ValidateOnStart();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IDeliveryReportSender, HttpDeliveryReportSender>();
 builder.Services.AddSingleton<SmsMirror>();

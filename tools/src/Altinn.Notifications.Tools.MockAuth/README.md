@@ -10,7 +10,7 @@ Unlike the other tools this one has no menu: it is a server that runs until you 
 
 | Endpoint | What it does |
 | :--- | :--- |
-| `GET /api/GetEnterpriseToken?org=ttd&scopes=...` | A service owner token, same shape as the Altinn test token generator. Needs basic auth, `mock` / `mock` by default. `orgNumber` is optional. |
+| `GET /api/GetEnterpriseToken?org=ttd&scopes=...` | A service owner token, same shape as the Altinn test token generator. Needs basic auth with `MockAuthSettings:Username` and `Password`. `orgNumber` is optional. |
 | `GET /api/GetPersonalToken?userId=...&partyId=...&pid=...&scopes=...` | An end user token, like the test token generator's personal token. Same basic auth. Every parameter is optional, and `authLvl` defaults to 3. |
 | `GET /authentication/api/v1/openid/.well-known/openid-configuration` | OpenID configuration pointing to the JWKS |
 | `GET /authentication/api/v1/openid/jwks` | The public signing key |
@@ -40,8 +40,10 @@ The [Aspire app host](../../aspire/README.md#authentication) starts it as the `m
 
 ## Run on its own
 
+It needs basic auth credentials, and does not start without them. Pick any:
+
 ```bash
-dotnet run --project tools/src/Altinn.Notifications.Tools.MockAuth
+MockAuthSettings__Username=mock MockAuthSettings__Password=<password> dotnet run --project tools/src/Altinn.Notifications.Tools.MockAuth
 ```
 
 Then start the API with:
@@ -55,11 +57,11 @@ GeneralSettings__OpenIdWellKnownEndpoint=http://localhost:5094/authentication/ap
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | `MockAuthSettings:Port` | `5094` | Port the issuer listens on, on localhost only |
-| `MockAuthSettings:Username` | `mock` | Basic auth username for the token endpoint |
-| `MockAuthSettings:Password` | `mock` | Basic auth password for the token endpoint |
+| `MockAuthSettings:Username` | none, required | Basic auth username for the token endpoints. The Aspire app host sets `mock`. |
+| `MockAuthSettings:Password` | none, required | Basic auth password for the token endpoints. The Aspire app host generates one for the checkout, see [Generated credentials](../../aspire/README.md#generated-credentials). |
 | `MockAuthSettings:SigningKey` | empty | RSA key to sign with, as a base64-encoded PKCS#8 private key. Empty makes a new key each time the issuer starts. The Aspire app host makes one per run, so tokens stay valid when only the issuer restarts. |
 
-There are no secrets in the repository. The signing key is made at startup, and the basic auth credentials only guard a local test issuer. Generating those per run as well is #2017.
+There are no secrets in the repository. The signing key is made at startup or per run of the app host, and the basic auth password is generated for the checkout.
 
 ## Bruno
 

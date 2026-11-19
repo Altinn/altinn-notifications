@@ -2,12 +2,10 @@ import secrets from "k6/secrets";
 import { throwConfigurationError } from "./errorhandler.js";
 import { environment, localEnvironment } from "./shared/variables.js";
 
-// The local Aspire stack needs no real secrets: the mock token issuer takes
-// mock/mock and nothing checks the subscription key. A secret source still
-// wins when one is given.
+// Nothing checks the subscription key on the local Aspire stack. The mock token
+// issuer's credentials are generated for the checkout: the app host writes them
+// to .secrets.aspire in the k6 folder, for --secret-source=file=.secrets.aspire.
 const localSecrets = {
-    tokenGeneratorUserName: __ENV.token_generator_user || "mock",
-    tokenGeneratorUserPwd: __ENV.token_generator_password || "mock",
     subscriptionKey: "local",
 };
 
@@ -68,7 +66,7 @@ async function getLocalSecret(secretName) {
     const localValue = localSecrets[secretName];
     if (!localValue) {
         throwConfigurationError(
-            `Secret ${secretName} has no local default - specify it in a secret source with the --secret-source flag`
+            `Secret ${secretName} is not in a secret source - start the Aspire app host, which writes .secrets.aspire in the k6 folder, and run k6 with --secret-source=file=.secrets.aspire`
         );
     }
     return localValue;

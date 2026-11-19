@@ -77,6 +77,9 @@ var controlPanel = builder.AddTestHarness(
 // Values for the Bruno collection that follow from these settings, on top of the test data in aspire.env. See WriteBrunoEnvironment.
 Dictionary<string, string> brunoVariables = [];
 
+// The mock token issuer's Basic auth, for Bruno and k6. Its password is generated for the checkout, see WriteClientSecretsAsync.
+MockAuthCredentials? tokenCredentials = null;
+
 // mock: the API trusts tokens from a local issuer, so no at23 token is needed. at23: the API validates against at23 as configured in its appsettings.
 var authMode = builder.Configuration["Auth:Mode"] ?? "mock";
 if (authMode == "mock")
@@ -84,11 +87,11 @@ if (authMode == "mock")
     var auth = builder.AddMockAuth("mock-auth", builder.Configuration.GetValue("Auth:Port", 5094), controlPanel);
     api.WithMockAuth(auth);
     controlPanel.WithTestMessageCommands(api, auth);
+    tokenCredentials = auth.GetMockAuthCredentials();
 
     // With at23 these are left out, so Bruno keeps the Altinn test token generator from the user's own .env.
     brunoVariables["TOKEN_GENERATOR_URL"] = "http://localhost:" + builder.Configuration.GetValue("Auth:Port", 5094);
-    brunoVariables["TOKEN_BASIC_AUTH_USER"] = "mock";
-    brunoVariables["TOKEN_BASIC_AUTH_PW"] = "mock";
+    brunoVariables["TOKEN_BASIC_AUTH_USER"] = tokenCredentials.Username;
 }
 else if (authMode != "at23")
 {
@@ -172,7 +175,8 @@ AddTests("sms-tests", sms, "sms-service/Altinn.Notifications.Sms.slnx");
 
 if (builder.ExecutionContext.IsRunMode)
 {
-    WriteBrunoEnvironment(brunoVariables);
+    // Generated parameters only have a value once the app host runs.
+    builder.Eventing.Subscribe<BeforeStartEvent>((_, cancellationToken) => WriteClientSecretsAsync(cancellationToken));
 }
 
 var app = builder.Build();
@@ -191,6 +195,22 @@ app.Run();
 foreach (var watcher in watchers)
 {
     watcher.Dispose();
+}
+
+// Writes the files Bruno and k6 read the mock token issuer's credentials from. Both are git-ignored and written on every start.
+async Task WriteClientSecretsAsync(CancellationToken cancellationToken)
+{
+    if (tokenCredentials is not null)
+    {
+        string password = await tokenCredentials.Password.GetValueAsync(cancellationToken) ?? string.Empty;
+        brunoVariables["TOKEN_BASIC_AUTH_PW"] = password;
+
+        // A k6 secret source for altinn_env=local: k6 run ... --secret-source=file=.secrets.aspire
+        string k6 = Path.Combine(builder.AppHostDirectory, Components, "api", "test", "k6", ".secrets.aspire");
+        await File.WriteAllLinesAsync(k6, ["tokenGeneratorUserName=" + tokenCredentials.Username, "tokenGeneratorUserPwd=" + password], cancellationToken);
+    }
+
+    WriteBrunoEnvironment(brunoVariables);
 }
 
 // Writes ".env.v2 aspire" in the Bruno collection: the test data in aspire.env with the values that follow from these settings.

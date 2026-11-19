@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 
+using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 
 namespace Altinn.Notifications.Aspire.Hosting;
@@ -12,12 +13,10 @@ namespace Altinn.Notifications.Aspire.Hosting;
 /// </summary>
 /// <param name="api">The API's endpoint.</param>
 /// <param name="auth">The mock token issuer's endpoint.</param>
-internal sealed class TestMessageSender(EndpointReference api, EndpointReference auth)
+/// <param name="credentials">The Basic auth the mock token issuer takes.</param>
+internal sealed class TestMessageSender(EndpointReference api, EndpointReference auth, MockAuthCredentials credentials)
 {
     private const string _scopes = "altinn:serviceowner/notifications.create";
-
-    // The mock token issuer's default Basic auth credentials.
-    private static readonly string _tokenCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes("mock:mock"));
 
     public Task<ExecuteCommandResult> SendSmsAsync(HttpClient client, string recipient, string text, CancellationToken cancellationToken)
     {
@@ -57,7 +56,8 @@ internal sealed class TestMessageSender(EndpointReference api, EndpointReference
         try
         {
             using var tokenRequest = new HttpRequestMessage(HttpMethod.Get, $"{auth.Url}/api/GetEnterpriseToken?org=ttd&scopes={Uri.EscapeDataString(_scopes)}");
-            tokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", _tokenCredentials);
+            string? password = await credentials.Password.GetValueAsync(cancellationToken);
+            tokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{credentials.Username}:{password}")));
             using var tokenResponse = await client.SendAsync(tokenRequest, cancellationToken);
             if (!tokenResponse.IsSuccessStatusCode)
             {

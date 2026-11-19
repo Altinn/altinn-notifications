@@ -66,14 +66,17 @@ The [Aspire app host](../../aspire/README.md#email-through-the-acs-mock) starts 
 
 ## Run on its own
 
+Make a base64 key for both. The mock does not start without one:
+
 ```bash
-dotnet run --project tools/src/Altinn.Notifications.Tools.AcsMock
+KEY=$(openssl rand -base64 32)
+AcsMockSettings__AccessKey=$KEY dotnet run --project tools/src/Altinn.Notifications.Tools.AcsMock
 ```
 
 Then start the email service with:
 
 ```bash
-CommunicationServicesSettings__ConnectionString="endpoint=http://localhost:5095/;accesskey=YWx0aW5uLW5vdGlmaWNhdGlvbnMtYWNzLW1vY2stdGVzdC1rZXk=" dotnet run --project components/email-service/src/Altinn.Notifications.Email
+CommunicationServicesSettings__ConnectionString="endpoint=http://localhost:5095/;accesskey=$KEY" dotnet run --project components/email-service/src/Altinn.Notifications.Email
 ```
 
 ## Settings
@@ -81,7 +84,7 @@ CommunicationServicesSettings__ConnectionString="endpoint=http://localhost:5095/
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | `AcsMockSettings:Port` | `5095` | Port the mock listens on, on localhost only |
-| `AcsMockSettings:AccessKey` | a fixed test key | Base64 key requests must be signed with. It is test-only and already in the repository. |
+| `AcsMockSettings:AccessKey` | none, required | Base64 key requests must be signed with. The Aspire app host generates one for the checkout, see [Generated credentials](../../aspire/README.md#generated-credentials). |
 | `AcsMockSettings:RunningSeconds` | `2` | How long a send stays `Running` |
 | `AcsMockSettings:SlowSeconds` | `30` | How long a send to `slow@` stays `Running` |
 | `AcsMockSettings:ThrottleRetryAfterSeconds` | `10` | `Retry-After` for `throttle@` |
@@ -91,7 +94,7 @@ CommunicationServicesSettings__ConnectionString="endpoint=http://localhost:5095/
 | `AcsMockSettings:FallbackUrl` | empty | Where unknown requests go, as `{FallbackUrl}acs/{path}`, e.g. `http://localhost:5096/intercept/` for the test harness control panel |
 | `AcsMockSettings:MirrorUrl` | empty | Where [copies](#copies-to-the-control-panel) of sends and their outcome go, e.g. `http://localhost:5096/mirror/`. Empty means none. |
 
-There are no secrets.
+There are no secrets in the repository. The access key is generated for the checkout.
 
 ## Limits
 

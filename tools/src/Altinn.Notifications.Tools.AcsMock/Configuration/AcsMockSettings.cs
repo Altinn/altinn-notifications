@@ -11,7 +11,8 @@ public class AcsMockSettings
     public int Port { get; set; } = 5095;
 
     /// <summary>
-    /// The base64 access key requests must be signed with, the <c>accesskey</c> in the email service's connection string.
+    /// The base64 access key requests must be signed with, the <c>accesskey</c> in the email service's connection string. Required.
+    /// The Aspire app host generates one for the checkout.
     /// </summary>
     public string AccessKey { get; set; } = string.Empty;
 

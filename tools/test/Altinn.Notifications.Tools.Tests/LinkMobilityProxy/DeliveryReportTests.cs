@@ -17,6 +17,18 @@ namespace Altinn.Notifications.Tools.Tests.LinkMobilityProxy;
 
 public class DeliveryReportTests
 {
+    [Theory]
+    [InlineData("", "", "", true)]
+    [InlineData("http://localhost:5092/notifications/sms/api/v1/reports", "user", "secret", true)]
+    [InlineData("http://localhost:5092/notifications/sms/api/v1/reports", "", "secret", false)]
+    [InlineData("http://localhost:5092/notifications/sms/api/v1/reports", "user", "", false)]
+    public void HasDeliveryReportCredentials_IsNeededOnlyWithAUrl(string url, string username, string password, bool expected)
+    {
+        var settings = new LinkMobilityProxySettings { DeliveryReportUrl = url, DeliveryReportUsername = username, DeliveryReportPassword = password };
+
+        Assert.Equal(expected, settings.HasDeliveryReportCredentials());
+    }
+
     [Fact]
     public async Task HttpSender_PostsXmlWithBasicAuthAndTraceParent()
     {

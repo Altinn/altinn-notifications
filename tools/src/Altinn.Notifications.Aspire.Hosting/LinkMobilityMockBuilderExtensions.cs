@@ -10,9 +10,9 @@ namespace Aspire.Hosting;
 /// </summary>
 public static class LinkMobilityMockBuilderExtensions
 {
-    // Test-only credentials. The mock sends its delivery reports with them, and the SMS service rejects reports that do not have them.
+    // The proxy sends its delivery reports with this user and a password generated for the checkout, and the SMS service rejects
+    // reports that do not have them.
     private const string _deliveryReportUsername = "linkmobility-mock";
-    private const string _deliveryReportPassword = "linkmobility-mock-test-password";
 
     /// <summary>
     /// Adds the LinkMobility proxy on <paramref name="port"/>, as a child of the test harness control panel. It logs the payloads
@@ -45,15 +45,19 @@ public static class LinkMobilityMockBuilderExtensions
             throw new InvalidOperationException("LinkMobility:Interactive needs TestHarness:Intercept.");
         }
 
-        return builder.AddDotnetProject(name, MockProjects.LinkMobilityProxy, options => options.ExcludeLaunchProfile = true)
+        var password = builder.AddGeneratedSecret($"{name}-delivery-report-password", 32);
+        var linkMobility = builder.AddDotnetProject(name, MockProjects.LinkMobilityProxy, options => options.ExcludeLaunchProfile = true)
             .WithEnvironment("LinkMobilityProxySettings__Port", port.ToString())
             .WithEnvironment("LinkMobilityProxySettings__Target", target)
             .WithEnvironment("LinkMobilityProxySettings__Interactive", interactive.ToString())
             .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUsername", _deliveryReportUsername)
-            .WithEnvironment("LinkMobilityProxySettings__DeliveryReportPassword", _deliveryReportPassword)
+            .WithEnvironment("LinkMobilityProxySettings__DeliveryReportPassword", password)
             .WithEnvironment("LinkMobilityProxySettings__DeliveryReportDelaySeconds", deliveryReportDelaySeconds.ToString())
-            .WithAnnotation(new LinkMobilityMockAnnotation(port, interactive ? harness.TimeoutSeconds : null))
+            .WithAnnotation(new LinkMobilityMockAnnotation(port, interactive ? harness.TimeoutSeconds : null, password.Resource))
             .WithTestHarness(testHarness, "LinkMobilityProxySettings", mirror: true);
+
+        password.WithParentRelationship(linkMobility);
+        return linkMobility;
     }
 
     /// <summary>
@@ -73,7 +77,7 @@ public static class LinkMobilityMockBuilderExtensions
 
         sms.WithEnvironment("SmsGatewaySettings__Endpoint", Localhost.Url(mock.Port))
             .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Username", _deliveryReportUsername)
-            .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Password", _deliveryReportPassword)
+            .WithEnvironment("SmsDeliveryReportSettings__UserSettings__Password", mock.DeliveryReportPassword)
             .WaitFor(linkMobility);
 
         if (mock.HoldSeconds is int holdSeconds)
@@ -86,7 +90,7 @@ public static class LinkMobilityMockBuilderExtensions
     }
 
     /// <summary>
-    /// The proxy's port, and with interactive on, how long the control panel holds each send.
+    /// The proxy's port, with interactive on how long the control panel holds each send, and the password on its delivery reports.
     /// </summary>
-    private sealed record LinkMobilityMockAnnotation(int Port, int? HoldSeconds) : IResourceAnnotation;
+    private sealed record LinkMobilityMockAnnotation(int Port, int? HoldSeconds, ParameterResource DeliveryReportPassword) : IResourceAnnotation;
 }

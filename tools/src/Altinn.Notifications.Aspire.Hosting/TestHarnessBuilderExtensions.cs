@@ -167,7 +167,7 @@ public static class TestHarnessBuilderExtensions
     /// <param name="auth">The mock token issuer from <see cref="MockAuthBuilderExtensions.AddMockAuth"/>.</param>
     public static IResourceBuilder<DotnetProjectResource> WithTestMessageCommands(this IResourceBuilder<DotnetProjectResource> testHarness, IResourceBuilder<DotnetProjectResource> api, IResourceBuilder<DotnetProjectResource> auth)
     {
-        var sender = new TestMessageSender(api.GetEndpoint("http"), auth.GetEndpoint("http"));
+        var sender = new TestMessageSender(api.GetEndpoint("http"), auth.GetEndpoint("http"), auth.GetMockAuthCredentials());
 
         return testHarness
             .WithCommand(

@@ -56,9 +56,14 @@ public partial class HostingExtensionsTests
 
         email.WithAcsMock(acs);
 
+        // A key generated for the checkout, valid base64 for the SDK, in both the mock and the connection string.
+        string accessKey = (await EnvironmentOf(acs))["AcsMockSettings__AccessKey"];
+        Assert.Equal(44, accessKey.Length);
+        Assert.NotEmpty(Convert.FromBase64String(accessKey));
+        Assert.True(Secret("mock-acs-access-key").Secret);
+
         var environment = await EnvironmentOf(email);
-        Assert.Equal($"endpoint=http://localhost:5095/;accesskey={AcsMockBuilderExtensions.AccessKey}", environment["CommunicationServicesSettings__ConnectionString"]);
-        Assert.Equal(AcsMockBuilderExtensions.AccessKey, (await EnvironmentOf(acs))["AcsMockSettings__AccessKey"]);
+        Assert.Equal($"endpoint=http://localhost:5095/;accesskey={accessKey}", environment["CommunicationServicesSettings__ConnectionString"]);
         Assert.Contains(email.Resource.Annotations.OfType<WaitAnnotation>(), w => w.Resource == acs.Resource);
     }
 
@@ -75,9 +80,36 @@ public partial class HostingExtensionsTests
         Assert.Equal("http://localhost:5094/authentication/api/v1/openid/", environment["GeneralSettings__OpenIdWellKnownEndpoint"]);
 
         // A signing key for this run, which the issuer can import.
+        var authEnvironment = await EnvironmentOf(auth);
         using var rsa = System.Security.Cryptography.RSA.Create();
-        rsa.ImportPkcs8PrivateKey(Convert.FromBase64String((await EnvironmentOf(auth))["MockAuthSettings__SigningKey"]), out _);
+        rsa.ImportPkcs8PrivateKey(Convert.FromBase64String(authEnvironment["MockAuthSettings__SigningKey"]), out _);
         Assert.Equal(2048, rsa.KeySize);
+
+        // Basic auth with a password generated for the checkout, which Bruno, k6 and the dashboard commands get from GetMockAuthCredentials.
+        var credentials = auth.GetMockAuthCredentials();
+        Assert.Equal(credentials.Username, authEnvironment["MockAuthSettings__Username"]);
+        Assert.Equal(await credentials.Password.GetValueAsync(TestContext.Current.CancellationToken), authEnvironment["MockAuthSettings__Password"]);
+        Assert.Equal(32, authEnvironment["MockAuthSettings__Password"].Length);
+        Assert.True(Secret("mock-auth-password").Secret);
+    }
+
+    [Fact]
+    public void WithAcsMock_WithoutTheAcsMock_Throws()
+    {
+        var email = AddService("email", 5091);
+        var other = AddService("other", 5098);
+
+        var error = Assert.Throws<ArgumentException>(() => email.WithAcsMock(other));
+        Assert.Contains("AddAcsMock", error.Message);
+    }
+
+    [Fact]
+    public void GetMockAuthCredentials_WithoutTheIssuer_Throws()
+    {
+        var other = AddService("other", 5098);
+
+        var error = Assert.Throws<ArgumentException>(() => other.GetMockAuthCredentials());
+        Assert.Contains("AddMockAuth", error.Message);
     }
 
     [Fact]
@@ -104,6 +136,8 @@ public partial class HostingExtensionsTests
         Assert.Equal("130", smsEnvironment["SmsGatewaySettings__TimeoutInSeconds"]);
         Assert.Equal(mockEnvironment["LinkMobilityProxySettings__DeliveryReportUsername"], smsEnvironment["SmsDeliveryReportSettings__UserSettings__Username"]);
         Assert.Equal(mockEnvironment["LinkMobilityProxySettings__DeliveryReportPassword"], smsEnvironment["SmsDeliveryReportSettings__UserSettings__Password"]);
+        Assert.Equal(32, mockEnvironment["LinkMobilityProxySettings__DeliveryReportPassword"].Length);
+        Assert.True(Secret("wiremock-linkmobility-delivery-report-password").Secret);
         Assert.Equal("http://localhost:5092/notifications/sms/api/v1/reports", mockEnvironment["LinkMobilityProxySettings__DeliveryReportUrl"]);
     }
 
@@ -258,6 +292,8 @@ public partial class HostingExtensionsTests
         Assert.DoesNotContain("#:package Aspire.Hosting.AppHost@", appHost);
         Assert.DoesNotContain("#:package Aspire.Hosting.Dotnet@", appHost);
     }
+
+    private ParameterResource Secret(string name) => _builder.Resources.OfType<ParameterResource>().Single(p => p.Name == name);
 
     private IResourceBuilder<DotnetProjectResource> AddService(string name, int port) =>
         _builder.AddDotnetProject(name, Path.Combine(RepositoryRoot(), "components", name, "service.csproj"), options => options.ExcludeLaunchProfile = true)
