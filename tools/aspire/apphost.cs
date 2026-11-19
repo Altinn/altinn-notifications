@@ -81,7 +81,9 @@ var controlPanel = builder.AddDotnetProject("testharness-controlpanel", "../src/
     .WithEnvironment("TriggerSettings__Enabled", triggersEnabled.ToString())
     .WithEnvironment("TriggerSettings__ApiBaseUrl", "http://localhost:5090")
     .WithUrl(controlPanelUrl + "/", "Control panel")
-    .WithUrl(controlPanelUrl + "/#triggers", "Triggers");
+    .WithUrl(controlPanelUrl + "/#triggers", "Triggers")
+    .WithUrl(controlPanelUrl + "/#phone", "Phone")
+    .WithUrl(controlPanelUrl + "/#inbox", "Inbox");
 
 // Triggers:Jobs:<name>:Enabled|IntervalSeconds|Hours override the control panel's defaults for that trigger.
 foreach (var job in builder.Configuration.GetSection("Triggers:Jobs").GetChildren())
@@ -141,7 +143,7 @@ email.WaitFor(serviceBus);
 sms.WaitFor(serviceBus);
 
 // mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts
-// delivery reports on the emulator's queue. real: the email service uses the connection string from its own settings.
+// delivery reports on the emulator's queue. It sends a copy of each email and its outcome to the control panel's Inbox tab. real: the email service uses the connection string from its own settings.
 var acsMode = builder.Configuration["Acs:Mode"] ?? "mock";
 if (acsMode == "mock")
 {
@@ -152,6 +154,7 @@ if (acsMode == "mock")
         .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
         .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
         .WithEnvironment("AcsMockSettings__FallbackUrl", interceptUrl)
+        .WithEnvironment("AcsMockSettings__MirrorUrl", controlPanelUrl + "/mirror/")
         .WithParentRelationship(controlPanel.Resource)
         .WaitFor(serviceBus);
 
@@ -171,6 +174,7 @@ else if (acsMode != "real")
 // SMS goes to a local LinkMobility mock that logs the payloads with the password, recipient numbers and message texts masked.
 // Without LinkMobility:Target it is a stub that answers by recipient number and posts delivery reports to sms, so nothing leaves the
 // machine and no credentials are needed. With LinkMobility:Interactive every send is held in the control panel until an operator answers.
+// It sends a copy of each SMS and its delivery state to the control panel's Phone tab. The copy never holds up the send.
 var linkMobilityPort = builder.Configuration.GetValue("LinkMobility:Port", 5093);
 bool linkMobilityInteractive = builder.Configuration.GetValue("LinkMobility:Interactive", false);
 if (linkMobilityInteractive && !interceptEnabled)
@@ -186,6 +190,7 @@ var linkMobility = builder.AddDotnetProject("wiremock-linkmobility", "../src/Alt
     .WithEnvironment("LinkMobilityProxySettings__Target", builder.Configuration["LinkMobility:Target"] ?? string.Empty)
     .WithEnvironment("LinkMobilityProxySettings__Interactive", linkMobilityInteractive.ToString())
     .WithEnvironment("LinkMobilityProxySettings__FallbackUrl", interceptUrl)
+    .WithEnvironment("LinkMobilityProxySettings__MirrorUrl", controlPanelUrl + "/mirror/")
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUrl", "http://localhost:5092/notifications/sms/api/v1/reports")
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportUsername", deliveryReportUsername)
     .WithEnvironment("LinkMobilityProxySettings__DeliveryReportPassword", deliveryReportPassword)

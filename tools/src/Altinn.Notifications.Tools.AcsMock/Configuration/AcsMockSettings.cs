@@ -50,4 +50,11 @@ public class AcsMockSettings
     /// <c>http://localhost:5096/intercept/</c>. Empty means a plain 404.
     /// </summary>
     public string FallbackUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Where a copy of each send and its outcome goes, e.g. the test harness control panel's <c>http://localhost:5096/mirror/</c>,
+    /// for its Inbox tab. Unmasked, so only point it at localhost. Empty means no copies. A copy that fails is dropped, and never
+    /// holds up or fails a send.
+    /// </summary>
+    public string MirrorUrl { get; set; } = string.Empty;
 }

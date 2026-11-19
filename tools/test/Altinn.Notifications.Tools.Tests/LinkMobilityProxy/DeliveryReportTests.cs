@@ -87,7 +87,7 @@ public class DeliveryReportTests
     private static DeliveryReportService CreateService(CapturingSender sender, ListLogger<DeliveryReportService> logger)
     {
         var settings = new LinkMobilityProxySettings { DeliveryReportUrl = "http://localhost/reports", DeliveryReportDelaySeconds = 0 };
-        return new DeliveryReportService(sender, Options.Create(settings), new InstantTimeProvider(), logger);
+        return new DeliveryReportService(sender, new SmsMirror(Options.Create(settings), new ListLogger<SmsMirror>()), Options.Create(settings), new InstantTimeProvider(), logger);
     }
 
     /// <summary>

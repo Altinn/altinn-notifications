@@ -3,6 +3,7 @@ using System.Threading.Channels;
 
 using Altinn.Notifications.Tools.Shared;
 using Altinn.Notifications.Tools.TestHarness.Configuration;
+using Altinn.Notifications.Tools.TestHarness.Mirror;
 using Altinn.Notifications.Tools.TestHarness.Triggers;
 
 using Microsoft.AspNetCore.Http.Features;
@@ -161,9 +162,9 @@ internal static class InterceptEndpoints
     }
 
     /// <summary>
-    /// Server-sent events that tell the GUI to fetch <c>/api/state</c> and <c>/api/triggers</c> again.
+    /// Server-sent events that tell the GUI to fetch <c>/api/state</c>, <c>/api/triggers</c> and <c>/api/mirror/{channel}</c> again.
     /// </summary>
-    private static async Task EventsAsync(HttpContext context, RequestStore store, TriggerScheduler scheduler)
+    private static async Task EventsAsync(HttpContext context, RequestStore store, TriggerScheduler scheduler, MirrorStores mirrors)
     {
         var cancellationToken = context.RequestAborted;
         context.Response.Headers.ContentType = "text/event-stream";
@@ -173,6 +174,11 @@ internal static class InterceptEndpoints
         void OnChanged() => changes.Writer.TryWrite(true);
         store.Changed += OnChanged;
         scheduler.Changed += OnChanged;
+        foreach (var mirror in mirrors.All)
+        {
+            mirror.Changed += OnChanged;
+        }
+
         try
         {
             await WriteEventAsync("data: changed\n\n");
@@ -199,6 +205,10 @@ internal static class InterceptEndpoints
         {
             store.Changed -= OnChanged;
             scheduler.Changed -= OnChanged;
+            foreach (var mirror in mirrors.All)
+            {
+                mirror.Changed -= OnChanged;
+            }
         }
 
         async Task WriteEventAsync(string text)

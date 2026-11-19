@@ -28,8 +28,9 @@ internal sealed class ProxyHost : IAsyncDisposable
     private ProxyHost(LinkMobilityProxySettings settings)
     {
         Settings = settings;
-        Reports = new DeliveryReportService(Sender, Options.Create(settings), TimeProvider.System, new ListLogger<DeliveryReportService>());
-        Service = new LinkMobilityProxyService(Options.Create(settings), Reports, Logger);
+        Mirror = new SmsMirror(Options.Create(settings), new ListLogger<SmsMirror>());
+        Reports = new DeliveryReportService(Sender, Mirror, Options.Create(settings), TimeProvider.System, new ListLogger<DeliveryReportService>());
+        Service = new LinkMobilityProxyService(Options.Create(settings), Reports, Mirror, Logger);
     }
 
     public LinkMobilityProxySettings Settings { get; }
@@ -39,6 +40,8 @@ internal sealed class ProxyHost : IAsyncDisposable
     public ListLogger<LinkMobilityProxyService> Logger { get; } = new();
 
     public DeliveryReportService Reports { get; }
+
+    public SmsMirror Mirror { get; }
 
     public LinkMobilityProxyService Service { get; }
 
@@ -58,6 +61,7 @@ internal sealed class ProxyHost : IAsyncDisposable
         configure?.Invoke(settings);
 
         var host = new ProxyHost(settings);
+        await host.Mirror.StartAsync(CancellationToken.None);
         await host.Reports.StartAsync(CancellationToken.None);
         await host.Service.StartAsync(CancellationToken.None);
         return host;
@@ -68,7 +72,7 @@ internal sealed class ProxyHost : IAsyncDisposable
     /// </summary>
     public static string SendRequest(string recipient, string id = "1")
     {
-        return $"""<?xml version="1.0" encoding="iso-8859-1"?><SESSION><CLIENT>user</CLIENT><PW>secret</PW><MSGLST><MSG><ID>{id}</ID><TEXT>Hei æøå 123456</TEXT><SND>Altinn</SND><RCV>{recipient}</RCV></MSG></MSGLST></SESSION>""";
+        return $"""<?xml version="1.0" encoding="iso-8859-1"?><SESSION><CLIENT>user</CLIENT><PW>secret</PW><MSGLST><MSG><ID>{id}</ID><TEXT>Hei æøå 123456</TEXT><SND>Altinn</SND><RCV>{recipient}</RCV><TTL>2880</TTL></MSG></MSGLST></SESSION>""";
     }
 
     /// <summary>
@@ -100,9 +104,11 @@ internal sealed class ProxyHost : IAsyncDisposable
         await Service.StopAsync(CancellationToken.None);
         await Reports.StopAsync(CancellationToken.None);
         Reports.Dispose();
+        await Mirror.StopAsync(CancellationToken.None);
+        Mirror.Dispose();
     }
 
-    private static int FreePort()
+    internal static int FreePort()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();

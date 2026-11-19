@@ -20,6 +20,8 @@ builder.Configuration
 builder.Services.Configure<LinkMobilityProxySettings>(builder.Configuration.GetSection(nameof(LinkMobilityProxySettings)));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IDeliveryReportSender, HttpDeliveryReportSender>();
+builder.Services.AddSingleton<SmsMirror>();
+builder.Services.AddHostedService(services => services.GetRequiredService<SmsMirror>());
 builder.Services.AddSingleton<DeliveryReportService>();
 builder.Services.AddHostedService(services => services.GetRequiredService<DeliveryReportService>());
 builder.Services.AddHostedService<LinkMobilityProxyService>();

@@ -48,4 +48,11 @@ public class LinkMobilityProxySettings
     /// How long after an accepted send the delivery report is sent.
     /// </summary>
     public int DeliveryReportDelaySeconds { get; set; } = 2;
+
+    /// <summary>
+    /// Where a copy of each send and its delivery state goes, e.g. the test harness control panel's <c>http://localhost:5096/mirror/</c>,
+    /// for its Phone tab. Unmasked, so only point it at localhost. Empty means no copies. A copy that fails is dropped, and never
+    /// holds up or fails a send.
+    /// </summary>
+    public string MirrorUrl { get; set; } = string.Empty;
 }

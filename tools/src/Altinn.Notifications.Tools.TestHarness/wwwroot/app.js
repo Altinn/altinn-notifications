@@ -6,6 +6,10 @@ const triggers = { apiBaseUrl: "", jobs: [] };
 const templateCache = {};
 let selectedId = null;
 let selectedFrom = null; // "pending" or "history"
+const mirror = { sms: [], email: [] };
+let selectedPhone = null;
+let selectedEmail = null;
+let emailView = "html";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 
@@ -23,11 +27,15 @@ function el(tag, attributes = {}, ...children) {
 }
 
 async function refresh() {
-  const [requests, jobs] = await Promise.all([fetch("api/state"), fetch("api/triggers")]);
+  const [requests, jobs, sms, email] = await Promise.all([fetch("api/state"), fetch("api/triggers"), fetch("api/mirror/sms"), fetch("api/mirror/email")]);
   Object.assign(state, await requests.json());
   Object.assign(triggers, await jobs.json());
+  mirror.sms = await sms.json();
+  mirror.email = await email.json();
   render();
   renderTriggers();
+  renderPhone();
+  renderInbox();
 }
 
 async function templatesFor(system) {
@@ -44,6 +52,7 @@ async function allTemplates() {
 }
 
 function render() {
+  $("#tab-pending-count").textContent = state.pending.length;
   $("#timeout").textContent = state.intercept ? `Requests time out after ${state.timeoutSeconds} s with 504.` : "";
   $("#intercept-off").hidden = state.intercept;
   $("#tab-pending-count").textContent = state.pending.length;
@@ -439,17 +448,159 @@ async function setAllTriggers(enabled) {
   await fetch("api/triggers", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled }) });
 }
 
+// The Phone tab: one conversation per recipient number, newest message last, like a phone's messages app.
+function renderPhone() {
+  const filter = $("#phone-filter").value;
+  const shown = mirror.sms.filter(m => !filter || m.status === filter);
+  $("#tab-phone-count").textContent = mirror.sms.length;
+
+  const conversations = new Map();
+  for (const message of shown) {
+    const recipient = message.content.recipient;
+    if (!conversations.has(recipient)) conversations.set(recipient, []);
+    conversations.get(recipient).push(message);
+  }
+
+  $("#phone-empty").hidden = conversations.size > 0;
+  $("#phone-empty").textContent = mirror.sms.length === 0
+    ? "No SMS yet. Order one, and the copy wiremock-linkmobility sends here shows up."
+    : "No delivered SMS yet. Show all to see the ones still on their way or failed.";
+  if (!conversations.has(selectedPhone)) selectedPhone = conversations.keys().next().value ?? null;
+
+  // The store is newest first, so the first message of each conversation is its latest.
+  $("#conversations").replaceChildren(...[...conversations].map(([recipient, messages]) => el("li",
+    { class: recipient === selectedPhone ? "selected" : "", onclick: () => { selectedPhone = recipient; renderPhone(); } },
+    el("strong", { class: "number" }, recipient),
+    el("span", { class: "count" }, String(messages.length)),
+    el("span", { class: "preview muted" }, messages[0].content.text ?? ""),
+    el("span", { class: "time" }, time(messages[0].receivedAt)))));
+
+  $("#phone-number").textContent = selectedPhone ?? "No conversation";
+  const list = $("#phone-messages");
+  const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+  const messages = (conversations.get(selectedPhone) ?? []).slice().reverse();
+  list.replaceChildren(...messages.map(message => el("div", { class: "sms" },
+    el("div", { class: "sender" }, message.content.sender || "unknown sender"),
+    el("div", { class: "bubble" }, message.content.text ?? ""),
+    el("div", { class: "sms-meta" },
+      el("span", { class: "time" }, time(message.receivedAt)),
+      mirrorStatusBadge(message),
+      el("span", { class: "muted", title: smsDetails(message) }, "ⓘ")))));
+  if (atBottom) list.scrollTop = list.scrollHeight;
+}
+
+function mirrorStatusBadge(message) {
+  const title = message.detail ? `${message.detail} at ${time(message.statusAt)}` : time(message.statusAt);
+  return el("span", { class: `badge mirror-${message.status.toLowerCase()}`, title }, message.status);
+}
+
+function smsDetails(message) {
+  const sms = message.content;
+  return [
+    `Reference: ${sms.reference || "none"}`,
+    `Scenario: ${sms.scenario ?? "-"}`,
+    `TTL: ${sms.ttl ?? "-"} min`,
+    message.detail ? `Gateway state: ${message.detail}` : null,
+  ].filter(Boolean).join("\n");
+}
+
+// The Inbox tab: newest first, and the selected email with its HTML body in an empty sandbox, so it can neither run scripts nor
+// reach this page.
+function renderInbox() {
+  $("#tab-inbox-count").textContent = mirror.email.length;
+  if (!mirror.email.some(m => m.id === selectedEmail)) selectedEmail = mirror.email[0]?.id ?? null;
+
+  $("#emails").replaceChildren(...mirror.email.map(message => {
+    const email = message.content;
+    return el("li", { class: message.id === selectedEmail ? "selected" : "", onclick: () => selectEmail(message.id) },
+      el("strong", { class: "subject" }, email.subject || "(no subject)"),
+      mirrorStatusBadge(message),
+      el("span", { class: "muted address" }, `${email.sender ?? "unknown sender"} → ${recipients(email)}`),
+      el("span", { class: "time" }, time(message.receivedAt)));
+  }));
+
+  const selected = mirror.email.find(m => m.id === selectedEmail);
+  const detail = $("#email-detail");
+  if (!selected) {
+    if (detail.dataset.id !== "") {
+      detail.dataset.id = "";
+      detail.replaceChildren(el("p", { class: "muted" }, mirror.email.length
+        ? "Select an email."
+        : "No email yet. Order one, and the copy mock-acs sends here shows up."));
+    }
+    return;
+  }
+
+  // Only rebuilt when the selection changes, so the body does not reload on every update. The status is updated in place.
+  if (detail.dataset.id !== selected.id) {
+    detail.dataset.id = selected.id;
+    detail.replaceChildren(buildEmail(selected));
+  }
+  $(".status-slot", detail)?.replaceChildren(mirrorStatusBadge(selected));
+}
+
+function buildEmail(message) {
+  const email = message.content;
+  const view = $("#email-template").content.cloneNode(true);
+  $(".subject", view).textContent = email.subject || "(no subject)";
+  fillMeta($(".email-meta", view), [
+    ["From", email.sender],
+    ["To", email.to.join(", ")],
+    ["Cc", email.cc.join(", ")],
+    ["Bcc", email.bcc.join(", ")],
+    ["Received", time(message.receivedAt)],
+    ["Status", el("span", { class: "status-slot" })],
+    ["Operation", email.operationId],
+    ["Scenario", email.scenario],
+  ]);
+
+  const hasHtml = Boolean(email.html);
+  const hasText = Boolean(email.plainText);
+  const show = hasHtml && (emailView === "html" || !hasText) ? "html" : "text";
+  const frame = $(".email-html", view);
+  const text = $(".email-text", view);
+  frame.hidden = show !== "html";
+  text.hidden = show !== "text";
+  if (hasHtml) frame.srcdoc = email.html;
+  text.textContent = email.plainText || (hasHtml ? "" : "(no body)");
+
+  for (const button of view.querySelectorAll(".body-switch button")) {
+    const available = button.dataset.view === "html" ? hasHtml : hasText;
+    button.disabled = !available;
+    button.setAttribute("aria-pressed", String(button.dataset.view === show));
+    button.addEventListener("click", () => {
+      emailView = button.dataset.view;
+      $("#email-detail").dataset.id = "";
+      renderInbox();
+    });
+  }
+  return view;
+}
+
+function selectEmail(id) {
+  selectedEmail = id;
+  renderInbox();
+}
+
+function recipients(email) {
+  return [...email.to, ...email.cc, ...email.bcc].join(", ");
+}
+
 function showTab() {
-  const tab = location.hash === "#triggers" ? "triggers" : "requests";
+  const tab = ["#triggers", "#phone", "#inbox"].includes(location.hash) ? location.hash.slice(1) : "requests";
   for (const link of document.querySelectorAll(".tabs a")) {
     link.setAttribute("aria-selected", String(link.dataset.tab === tab));
   }
   $("#tab-requests").hidden = tab !== "requests";
   $("#tab-triggers").hidden = tab !== "triggers";
+  $("#tab-phone").hidden = tab !== "phone";
+  $("#tab-inbox").hidden = tab !== "inbox";
 }
 
 $("#pause-all").addEventListener("click", () => setAllTriggers(false));
 $("#resume-all").addEventListener("click", () => setAllTriggers(true));
+
+$("#phone-filter").addEventListener("change", renderPhone);
 window.addEventListener("hashchange", showTab);
 showTab();
 setInterval(tick, 1000);

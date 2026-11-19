@@ -20,6 +20,7 @@
 
 	<ItemGroup>
 		<Compile Include="..\Shared\LogSanitizer.cs" Link="Shared\LogSanitizer.cs" />
+		<Compile Include="..\Shared\MirrorSender.cs" Link="Shared\MirrorSender.cs" />
 	</ItemGroup>
 
 </Project>
