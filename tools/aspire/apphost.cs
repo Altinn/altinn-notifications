@@ -67,7 +67,7 @@ if (authMode == "mock")
     string authUrl = "http://localhost:" + authPort;
 
     // The signing key is made for this run, so tokens stay valid when only mock-auth is restarted.
-    var auth = builder.AddProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", launchProfileName: null)
+    var auth = builder.AddDotnetProject("mock-auth", "../src/Altinn.Notifications.Tools.MockAuth/Altinn.Notifications.Tools.MockAuth.csproj", options => options.ExcludeLaunchProfile = true)
         .WithEnvironment("MockAuthSettings__Port", authPort.ToString())
         .WithEnvironment("MockAuthSettings__SigningKey", CreateTokenSigningKey())
         .WithUrl(authUrl + "/authentication/api/v1/openid/.well-known/openid-configuration", "OpenID configuration");
@@ -107,7 +107,7 @@ if (acsMode == "mock")
     // A test-only key. The email service signs with it, and the mock rejects requests that are not signed with it.
     const string acsAccessKey = "YWx0aW5uLW5vdGlmaWNhdGlvbnMtYWNzLW1vY2stdGVzdC1rZXk=";
     var acsPort = builder.Configuration.GetValue("Acs:Port", 5095);
-    var acs = builder.AddProject("mock-acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", launchProfileName: null)
+    var acs = builder.AddDotnetProject("mock-acs", "../src/Altinn.Notifications.Tools.AcsMock/Altinn.Notifications.Tools.AcsMock.csproj", options => options.ExcludeLaunchProfile = true)
         .WithEnvironment("AcsMockSettings__Port", acsPort.ToString())
         .WithEnvironment("AcsMockSettings__AccessKey", acsAccessKey)
         .WithEnvironment("AcsMockSettings__FallbackUrl", simulatorFallbackUrl)
@@ -134,7 +134,7 @@ else if (acsMode != "real")
 
 if (builder.Configuration.GetValue("Mocks:Enabled", true) && platformMocks.Any(m => builder.Configuration.GetValue($"Mocks:{m.Name}:Enabled", true)))
 {
-    var mocks = builder.AddProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", launchProfileName: null)
+    var mocks = builder.AddDotnetProject("wiremock-platform", "../src/Altinn.Notifications.Tools.PlatformMocks/Altinn.Notifications.Tools.PlatformMocks.csproj", options => options.ExcludeLaunchProfile = true)
         .WithEnvironment("PlatformMocksSettings__FallbackUrl", simulatorFallbackUrl);
 
     foreach (var (name, defaultPort, apiSetting, apiPath) in platformMocks)
