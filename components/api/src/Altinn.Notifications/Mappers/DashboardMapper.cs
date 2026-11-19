@@ -29,16 +29,19 @@ public static class DashboardMapper
             RequestedSendTime = notification.RequestedSendTime,
             NotificationChannel = notification.NotificationChannel?.ToString(),
             NotificationType = notification.NotificationType,
-            DeliveryAttempts = [.. notification.DeliveryAttempts.Select(r => new DashboardDeliveryAttemptExt
-            {
-                NationalIdentityNumber = r.NationalIdentityNumber,
-                OrganizationNumber = r.OrganizationNumber,
-                Channel = r.Channel,
-                EmailAddress = r.EmailAddress,
-                MobileNumber = r.MobileNumber,
-                Result = r.Result,
-                ResultTime = r.ResultTime,
-            })],
+            DeliveryAttempts = 
+            [
+                .. notification.DeliveryAttempts.Select(r => new DashboardDeliveryAttemptExt
+                {
+                    NationalIdentityNumber = r.NationalIdentityNumber,
+                    OrganizationNumber = r.OrganizationNumber,
+                    Channel = r.Channel,
+                    EmailAddress = r.EmailAddress,
+                    MobileNumber = r.MobileNumber,
+                    Result = r.Result,
+                    ResultTime = r.ResultTime,
+                })
+            ],
             DialogId = notification.DialogId,
             TransmissionId = notification.TransmissionId,
             SenderAddress = notification.SenderAddress,

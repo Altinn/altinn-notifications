@@ -288,21 +288,27 @@ public class OrderRequestService : IOrderRequestService
         return channel switch
         {
             NotificationChannel.Email =>
-                                [.. recipients
+                                [
+                                    .. recipients
                                     .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)],
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)
+                                ],
 
             NotificationChannel.Sms =>
-                                [.. recipients
+                                [
+                                    .. recipients
                                     .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)],
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)
+                                ],
 
             NotificationChannel.EmailAndSms or
             NotificationChannel.EmailPreferred or
             NotificationChannel.SmsPreferred =>
-                                [.. recipients
+                                [
+                                    .. recipients
                                     .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)],
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber ?? r.ExternalIdentity!)
+                                ],
 
             _ => [],
         };
@@ -349,21 +355,27 @@ public class OrderRequestService : IOrderRequestService
         return channel switch
         {
             NotificationChannel.Sms =>
-                [..recipients
+                [
+                    ..recipients
                 .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-                .Select(r => r.DeepCopy())],
+                .Select(r => r.DeepCopy())
+                ],
 
             NotificationChannel.Email =>
-                [..recipients
+                [
+                    ..recipients
                 .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-                .Select(r => r.DeepCopy())],
+                .Select(r => r.DeepCopy())
+                ],
 
             NotificationChannel.EmailAndSms or
             NotificationChannel.SmsPreferred or
             NotificationChannel.EmailPreferred =>
-                [..recipients
+                [
+                    ..recipients
                 .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                .Select(r => r.DeepCopy())],
+                .Select(r => r.DeepCopy())
+                ],
 
             _ => []
         };

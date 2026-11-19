@@ -2,6 +2,8 @@
 
 Runs the whole Notifications stack locally from one command, with logs, traces and metrics from all services in the Aspire dashboard.
 
+For step-by-step recipes for common tasks, such as sending a test SMS, testing a failed delivery or answering a platform call yourself, see the [how-to](how-to.md).
+
 ## Prerequisites
 
 * [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)

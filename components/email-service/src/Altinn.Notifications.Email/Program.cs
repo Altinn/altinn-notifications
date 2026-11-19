@@ -6,7 +6,6 @@ using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Health;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Extensions;
-using Altinn.Notifications.Email.Telemetry;
 using Altinn.Notifications.Shared.Telemetry;
 
 using Azure.Identity;

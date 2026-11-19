@@ -2,7 +2,9 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Dashboard;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
+
 using Npgsql;
+
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -119,11 +121,14 @@ public class DashboardRepository : IDashboardRepository
             }
         }
 
-        return [.. orderList.Select(id =>
-        {
-            var e = groups[id];
-            return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts, e.DialogId, e.TransmissionId, e.SenderAddress);
-        })];
+        return 
+        [
+            .. orderList.Select(id =>
+            {
+                var e = groups[id];
+                return new DashboardNotification(id, e.CreatorName, e.ResourceId, e.SendersReference, e.RequestedSendTime, e.NotificationChannel, e.NotificationType, e.DeliveryAttempts, e.DialogId, e.TransmissionId, e.SenderAddress);
+            })
+        ];
     }
 
     /// <summary>
