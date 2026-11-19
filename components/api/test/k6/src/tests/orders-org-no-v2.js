@@ -4,7 +4,7 @@
     Command:
     podman compose run k6 run /src/tests/orders-org-no-v2.js \
         --secret-source=file=/.secrets \
-        -e altinn_env={environment: at22, at23, at24, tt02, prod} \
+        -e altinn_env={environment: at22, at23, tt02, prod} \
         -e orgNoRecipient={an organization number to include as a notification recipient} \
         -e resourceId={the resource ID associated with the notification order} \
 

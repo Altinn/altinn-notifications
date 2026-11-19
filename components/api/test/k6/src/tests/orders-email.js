@@ -4,7 +4,7 @@
     Command:
     podman compose run k6 run /src/tests/orders-email.js \
     --secret-source=file=/.secrets \
-    -e altinn_env={environment: at22, at23, at24, tt02, prod} \
+    -e altinn_env={environment: at22, at23, tt02, prod} \
     -e emailRecipient={an email address to add as a notification recipient} \
     -e ninRecipient={a national identity number of a person to include as a notification recipient} \
     -e runFullTestSet=true
