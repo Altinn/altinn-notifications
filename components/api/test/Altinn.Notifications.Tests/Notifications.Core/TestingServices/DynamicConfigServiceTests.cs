@@ -28,7 +28,7 @@ public class DynamicConfigServiceTests
         var repository = new Mock<IDynamicConfigRepository>(MockBehavior.Strict);
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         var podIds = new List<Guid>();
-        repository.Setup(r => r.GetPodCount(It.IsAny<Guid>(), TimeSpan.FromMinutes(2), cancellationToken))
+        repository.Setup(r => r.GetPodCount(It.IsAny<Guid>(), TimeSpan.FromSeconds(90), cancellationToken))
             .Callback<Guid, TimeSpan, CancellationToken>((podId, _, _) => podIds.Add(podId))
             .ReturnsAsync(3);
         repository.SetupSequence(r => r.GetConfig(cancellationToken))

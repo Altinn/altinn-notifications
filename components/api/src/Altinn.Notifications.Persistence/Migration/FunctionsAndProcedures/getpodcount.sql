@@ -1,4 +1,4 @@
-CREATE OR REPLACEFUNCTION notifications.get_pod_count(pod_id uuid, heartbeat_timeout interval)
+CREATE OR REPLACE FUNCTION notifications.get_pod_count(pod_id uuid, heartbeat_timeout interval)
 RETURNS integer
 LANGUAGE plpgsql
 AS $$
