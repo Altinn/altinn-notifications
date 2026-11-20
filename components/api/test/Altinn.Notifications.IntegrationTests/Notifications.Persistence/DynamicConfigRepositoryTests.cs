@@ -51,18 +51,24 @@ public sealed class DynamicConfigRepositoryTests
     {
         string key = $"IntegrationTests:{Guid.NewGuid():N}:TaskCount";
         var repository = new DynamicConfigRepository(ServiceUtil.GetSharedDataSource());
+        NpgsqlDataSource adminDataSource = ServiceUtil.GetSharedAdminDataSource();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using var insert = adminDataSource.CreateCommand("INSERT INTO notifications.config (key, value) VALUES (@key, '24')");
+        insert.Parameters.AddWithValue("key", key);
+        await insert.ExecuteNonQueryAsync(cancellationToken);
 
         try
         {
-            await PostgreUtil.RunSql("INSERT INTO notifications.config (key, value) VALUES (@key, '24')", new NpgsqlParameter("key", key));
-
-            IReadOnlyDictionary<string, string> config = await repository.GetConfig(TestContext.Current.CancellationToken);
+            IReadOnlyDictionary<string, string> config = await repository.GetConfig(cancellationToken);
 
             Assert.Equal("24", config[key.ToLowerInvariant()]);
         }
         finally
         {
-            await PostgreUtil.RunSql("DELETE FROM notifications.config WHERE key = @key", new NpgsqlParameter("key", key));
+            await using var delete = adminDataSource.CreateCommand("DELETE FROM notifications.config WHERE key = @key");
+            delete.Parameters.AddWithValue("key", key);
+            await delete.ExecuteNonQueryAsync(CancellationToken.None);
         }
     }
 }
