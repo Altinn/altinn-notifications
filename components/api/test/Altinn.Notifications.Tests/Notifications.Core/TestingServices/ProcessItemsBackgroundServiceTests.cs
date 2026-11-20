@@ -15,7 +15,83 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class ProcessItemsBackgroundServiceTests
 {
     [Fact]
-    public async Task ExecuteAsync_WhenAnyRequiredTaskCountIsZero_ReturnsWithoutProcessing()
+    public async Task ReconcileAsync_ScaleDownAcceptsWorkerCancellationAndCanScaleUpAgain()
+    {
+        var config = CreateConfig();
+        var loop = config.EmailAnytimeNotificationsProcessLoopConfig;
+        CancellationToken stoppingToken = TestContext.Current.CancellationToken;
+        var startedWorkers = new List<CancellationToken>();
+        var pool = new ProcessItemsBackgroundService.WorkerPool(
+            c => c.EmailAnytimeNotificationsProcessLoopConfig,
+            (_, _, token) =>
+            {
+                startedWorkers.Add(token);
+                return Task.Delay(Timeout.InfiniteTimeSpan, token);
+            });
+
+        try
+        {
+            loop.TaskCount = 1;
+            await pool.ReconcileAsync(config, 1, stoppingToken);
+            CancellationToken firstWorker = Assert.Single(startedWorkers);
+
+            loop.TaskCount = 0;
+            await pool.ReconcileAsync(config, 1, stoppingToken);
+            Assert.True(firstWorker.IsCancellationRequested);
+
+            loop.TaskCount = 1;
+            await pool.ReconcileAsync(config, 1, stoppingToken);
+            Assert.Equal(2, startedWorkers.Count);
+            Assert.False(startedWorkers[1].IsCancellationRequested);
+        }
+        finally
+        {
+            await pool.StopAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_ScaleDownPropagatesUnrelatedCancellation()
+    {
+        var config = CreateConfig();
+        var loop = config.EmailAnytimeNotificationsProcessLoopConfig;
+        CancellationToken stoppingToken = TestContext.Current.CancellationToken;
+        var unrelatedToken = new CancellationToken(canceled: true);
+        var pool = new ProcessItemsBackgroundService.WorkerPool(
+            c => c.EmailAnytimeNotificationsProcessLoopConfig,
+            (_, _, _) => Task.FromCanceled(unrelatedToken));
+
+        loop.TaskCount = 1;
+        await pool.ReconcileAsync(config, 1, stoppingToken);
+
+        loop.TaskCount = 0;
+        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pool.ReconcileAsync(config, 1, stoppingToken));
+        Assert.Equal(unrelatedToken, exception.CancellationToken);
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_ScaleDownPropagatesWorkerFailure()
+    {
+        var config = CreateConfig();
+        var loop = config.EmailAnytimeNotificationsProcessLoopConfig;
+        CancellationToken stoppingToken = TestContext.Current.CancellationToken;
+        var failure = new InvalidOperationException("Worker failed.");
+        var pool = new ProcessItemsBackgroundService.WorkerPool(
+            c => c.EmailAnytimeNotificationsProcessLoopConfig,
+            (_, _, _) => Task.FromException(failure));
+
+        loop.TaskCount = 1;
+        await pool.ReconcileAsync(config, 1, stoppingToken);
+
+        loop.TaskCount = 0;
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => pool.ReconcileAsync(config, 1, stoppingToken));
+        Assert.Same(failure, exception);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    public async Task ExecuteAsync_WhenNoWorkersAreAssignedToPod_DoesNotProcessUntilStopped(int taskCount, int podCount)
     {
         var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
         var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
@@ -23,17 +99,21 @@ public class ProcessItemsBackgroundServiceTests
         var scheduleService = new Mock<INotificationScheduleService>(MockBehavior.Strict);
 
         var config = CreateConfig();
-        config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount = 0;
+        config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount = taskCount;
 
+        using var cts = new CancellationTokenSource();
         var service = new TestableProcessItemsBackgroundService(
             emailService.Object,
             smsService.Object,
             orderService.Object,
-            Options.Create(config),
+            CreateOptionsMonitor(config),
             new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
-            scheduleService.Object);
+            scheduleService.Object,
+            podCount);
 
-        await service.ExecuteForTest(CancellationToken.None);
+        Task execution = service.ExecuteForTest(cts.Token);
+        await cts.CancelAsync();
+        await execution;
 
         emailService.Verify(e => e.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
         emailService.Verify(e => e.SendComposedNotification(It.IsAny<CancellationToken>()), Times.Never);
@@ -71,7 +151,7 @@ public class ProcessItemsBackgroundServiceTests
             emailService.Object,
             smsService.Object,
             orderService.Object,
-            Options.Create(config),
+            CreateOptionsMonitor(config),
             new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
             scheduleService.Object);
 
@@ -112,7 +192,7 @@ public class ProcessItemsBackgroundServiceTests
             emailService.Object,
             smsService.Object,
             orderService.Object,
-            Options.Create(config),
+            CreateOptionsMonitor(config),
             new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
             scheduleService.Object);
 
@@ -152,7 +232,7 @@ public class ProcessItemsBackgroundServiceTests
             emailService.Object,
             smsService.Object,
             orderService.Object,
-            Options.Create(config),
+            CreateOptionsMonitor(config),
             new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
             scheduleService.Object);
 
@@ -191,7 +271,7 @@ public class ProcessItemsBackgroundServiceTests
             emailService.Object,
             smsService.Object,
             orderService.Object,
-            Options.Create(config),
+            CreateOptionsMonitor(config),
             new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
             scheduleService.Object);
 
@@ -229,7 +309,7 @@ public class ProcessItemsBackgroundServiceTests
             emailService.Object,
             new Mock<ISmsNotificationService>(MockBehavior.Strict).Object,
             new Mock<IOrderProcessingService>(MockBehavior.Strict).Object,
-            Options.Create(config),
+            CreateOptionsMonitor(config),
             loggerMock.Object,
             new Mock<INotificationScheduleService>(MockBehavior.Strict).Object);
 
@@ -280,7 +360,7 @@ public class ProcessItemsBackgroundServiceTests
             emailService.Object,
             smsService.Object,
             orderService.Object,
-            Options.Create(CreateConfig()),
+            CreateOptionsMonitor(CreateConfig()),
             new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
             scheduleService.Object);
 
@@ -301,7 +381,7 @@ public class ProcessItemsBackgroundServiceTests
             emailService.Object,
             smsService.Object,
             orderService.Object,
-            Options.Create(CreateConfig()),
+            CreateOptionsMonitor(CreateConfig()),
             new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
             scheduleService.Object);
 
@@ -315,6 +395,13 @@ public class ProcessItemsBackgroundServiceTests
         smsService.Verify(s => s.SendNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
         orderService.Verify(o => o.TryProcessOrder(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
         scheduleService.Verify(s => s.CanSendSmsNow(), Times.Never);
+    }
+
+    private static IOptionsMonitor<NotificationConfig> CreateOptionsMonitor(NotificationConfig config)
+    {
+        var optionsMonitor = new Mock<IOptionsMonitor<NotificationConfig>>();
+        optionsMonitor.Setup(monitor => monitor.CurrentValue).Returns(config);
+        return optionsMonitor.Object;
     }
 
     private static NotificationConfig CreateConfig()
@@ -389,11 +476,20 @@ public class ProcessItemsBackgroundServiceTests
             IEmailNotificationService emailSendingService,
             ISmsNotificationService smsSendingService,
             IOrderProcessingService orderProcessingService,
-            IOptions<NotificationConfig> config,
+            IOptionsMonitor<NotificationConfig> config,
             ILogger<ProcessItemsBackgroundService> logger,
-            INotificationScheduleService notificationScheduleService)
-            : base(emailSendingService, smsSendingService, orderProcessingService, config, logger, notificationScheduleService)
+            INotificationScheduleService notificationScheduleService,
+            int podCount = 1)
+            : base(emailSendingService, smsSendingService, orderProcessingService, config, logger, notificationScheduleService, CreateDynamicConfigService(podCount))
         {
+        }
+
+        private static IDynamicConfigService CreateDynamicConfigService(int podCount)
+        {
+            var service = new Mock<IDynamicConfigService>();
+            service.Setup(s => s.GetDynamicConfig(It.IsAny<NotificationConfig>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((NotificationConfig staticConfig, TimeSpan _, CancellationToken _) => (staticConfig, podCount));
+            return service.Object;
         }
 
         public Task ExecuteForTest(CancellationToken cancellationToken)

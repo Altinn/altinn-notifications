@@ -158,4 +158,9 @@ public class NotificationConfig
         AdditionalTasksIdleDelaySeconds = 5,
         RampUpLimit = 10
     };
+
+    /// <summary>
+    /// Copies the top-level configuration. Replace a process loop configuration before modifying it.
+    /// </summary>
+    internal NotificationConfig Copy() => (NotificationConfig)MemberwiseClone();
 }

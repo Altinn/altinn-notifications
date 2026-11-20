@@ -36,6 +36,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IValidateOptions<SmsSenderSubstitutionConfig>, SmsSenderSubstitutionConfigValidator>();
 
         services
+            .AddSingleton<IDynamicConfigService, DynamicConfigService>()
             .AddHostedService<ProcessItemsBackgroundService>();
 
         // All registrations must resolve to the same singleton instance.
