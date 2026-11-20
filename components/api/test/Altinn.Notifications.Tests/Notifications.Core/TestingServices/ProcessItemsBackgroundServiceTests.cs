@@ -317,6 +317,233 @@ public class ProcessItemsBackgroundServiceTests
         scheduleService.Verify(s => s.CanSendSmsNow(), Times.Never);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_EmailAnytimeRetryLoop_CallsAnytimeRetryWithoutScheduleCheck()
+    {
+        var config = CreateConfig();
+        config.EmailAnytimeRetryNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var scheduleService = new Mock<INotificationScheduleService>(MockBehavior.Strict);
+
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        emailService
+            .Setup(e => e.SendRetryNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>((_, _) =>
+            {
+                cts.Cancel();
+                return Task.FromResult(false);
+            });
+
+        var service = CreateService(emailService, smsService, orderService, scheduleService, config);
+
+        await service.ExecuteForTest(cts.Token);
+
+        emailService.Verify(e => e.SendRetryNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        scheduleService.Verify(s => s.CanSendEmailNow(), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EmailDaytimeRetryLoop_WhenScheduleAllows_CallsDaytimeRetry()
+    {
+        var config = CreateConfig();
+        config.EmailDaytimeRetryNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        emailService
+            .Setup(e => e.SendRetryNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>((_, _) =>
+            {
+                cts.Cancel();
+                return Task.FromResult(false);
+            });
+
+        var scheduleService = new Mock<INotificationScheduleService>();
+        scheduleService.Setup(s => s.CanSendEmailNow()).Returns(true);
+
+        var service = CreateService(emailService, smsService, orderService, scheduleService, config);
+
+        await service.ExecuteForTest(cts.Token);
+
+        emailService.Verify(e => e.SendRetryNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EmailDaytimeRetryLoop_WhenScheduleDisallows_DoesNotCallRetry()
+    {
+        var config = CreateConfig();
+        config.EmailDaytimeRetryNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+
+        var scheduleService = new Mock<INotificationScheduleService>();
+        scheduleService
+            .Setup(s => s.CanSendEmailNow())
+            .Returns(() =>
+            {
+                cts.Cancel();
+                return false;
+            });
+
+        var service = CreateService(emailService, smsService, orderService, scheduleService, config);
+
+        await service.ExecuteForTest(cts.Token);
+
+        emailService.Verify(e => e.SendRetryNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
+        scheduleService.Verify(s => s.CanSendEmailNow(), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ComposedEmailRetryLoop_CallsComposedRetry()
+    {
+        var config = CreateConfig();
+        config.ComposedEmailRetryNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var scheduleService = new Mock<INotificationScheduleService>(MockBehavior.Strict);
+
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        emailService
+            .Setup(e => e.SendComposedRetryNotification(It.IsAny<CancellationToken>()))
+            .Returns<CancellationToken>(_ =>
+            {
+                cts.Cancel();
+                return Task.FromResult(false);
+            });
+
+        var service = CreateService(emailService, smsService, orderService, scheduleService, config);
+
+        await service.ExecuteForTest(cts.Token);
+
+        emailService.Verify(e => e.SendComposedRetryNotification(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SmsAnytimeRetryLoop_CallsAnytimeRetryWithoutScheduleCheck()
+    {
+        var config = CreateConfig();
+        config.SmsAnytimeRetryNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var scheduleService = new Mock<INotificationScheduleService>(MockBehavior.Strict);
+
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+        smsService
+            .Setup(s => s.SendRetryNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>((_, _) =>
+            {
+                cts.Cancel();
+                return Task.FromResult(false);
+            });
+
+        var service = CreateService(emailService, smsService, orderService, scheduleService, config);
+
+        await service.ExecuteForTest(cts.Token);
+
+        smsService.Verify(s => s.SendRetryNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        scheduleService.Verify(s => s.CanSendSmsNow(), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SmsDaytimeRetryLoop_WhenScheduleAllows_CallsDaytimeRetry()
+    {
+        var config = CreateConfig();
+        config.SmsDaytimeRetryNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+        smsService
+            .Setup(s => s.SendRetryNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>((_, _) =>
+            {
+                cts.Cancel();
+                return Task.FromResult(false);
+            });
+
+        var scheduleService = new Mock<INotificationScheduleService>();
+        scheduleService.Setup(s => s.CanSendSmsNow()).Returns(true);
+
+        var service = CreateService(emailService, smsService, orderService, scheduleService, config);
+
+        await service.ExecuteForTest(cts.Token);
+
+        smsService.Verify(s => s.SendRetryNotification(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SmsDaytimeRetryLoop_WhenScheduleDisallows_DoesNotCallRetry()
+    {
+        var config = CreateConfig();
+        config.SmsDaytimeRetryNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var smsService = new Mock<ISmsNotificationService>(MockBehavior.Strict);
+
+        var scheduleService = new Mock<INotificationScheduleService>();
+        scheduleService
+            .Setup(s => s.CanSendSmsNow())
+            .Returns(() =>
+            {
+                cts.Cancel();
+                return false;
+            });
+
+        var service = CreateService(emailService, smsService, orderService, scheduleService, config);
+
+        await service.ExecuteForTest(cts.Token);
+
+        smsService.Verify(s => s.SendRetryNotification(It.IsAny<SendingTimePolicy>(), It.IsAny<CancellationToken>()), Times.Never);
+        scheduleService.Verify(s => s.CanSendSmsNow(), Times.AtLeastOnce);
+    }
+
+    private static TestableProcessItemsBackgroundService CreateService(
+        Mock<IEmailNotificationService> emailService,
+        Mock<ISmsNotificationService> smsService,
+        Mock<IOrderProcessingService> orderService,
+        Mock<INotificationScheduleService> scheduleService,
+        NotificationConfig config)
+    {
+        return new TestableProcessItemsBackgroundService(
+            emailService.Object,
+            smsService.Object,
+            orderService.Object,
+            Options.Create(config),
+            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
+            scheduleService.Object);
+    }
+
     private static NotificationConfig CreateConfig()
     {
         return new NotificationConfig
@@ -346,6 +573,26 @@ public class ProcessItemsBackgroundServiceTests
                 TaskCount = 0
             },
             RetryOrdersProcessLoopConfig = new ProcessLoopConfig
+            {
+                TaskCount = 0
+            },
+            EmailDaytimeRetryNotificationsProcessLoopConfig = new ProcessLoopConfig
+            {
+                TaskCount = 0
+            },
+            EmailAnytimeRetryNotificationsProcessLoopConfig = new ProcessLoopConfig
+            {
+                TaskCount = 0
+            },
+            ComposedEmailRetryNotificationsProcessLoopConfig = new ProcessLoopConfig
+            {
+                TaskCount = 0
+            },
+            SmsDaytimeRetryNotificationsProcessLoopConfig = new ProcessLoopConfig
+            {
+                TaskCount = 0
+            },
+            SmsAnytimeRetryNotificationsProcessLoopConfig = new ProcessLoopConfig
             {
                 TaskCount = 0
             }
@@ -381,6 +628,20 @@ public class ProcessItemsBackgroundServiceTests
         config.RetryOrdersProcessLoopConfig.PrimaryTaskIdleDelaySeconds = 0;
         config.RetryOrdersProcessLoopConfig.AdditionalTasksIdleDelaySeconds = 0;
         config.RetryOrdersProcessLoopConfig.RampUpLimit = 1;
+
+        foreach (var retryConfig in new[]
+        {
+            config.EmailDaytimeRetryNotificationsProcessLoopConfig,
+            config.EmailAnytimeRetryNotificationsProcessLoopConfig,
+            config.ComposedEmailRetryNotificationsProcessLoopConfig,
+            config.SmsDaytimeRetryNotificationsProcessLoopConfig,
+            config.SmsAnytimeRetryNotificationsProcessLoopConfig
+        })
+        {
+            retryConfig.PrimaryTaskIdleDelaySeconds = 0;
+            retryConfig.AdditionalTasksIdleDelaySeconds = 0;
+            retryConfig.RampUpLimit = 1;
+        }
     }
 
     private sealed class TestableProcessItemsBackgroundService : ProcessItemsBackgroundService

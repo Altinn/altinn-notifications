@@ -38,6 +38,21 @@ public interface IEmailNotificationService : INotificationService
     Task<bool> SendComposedNotification(CancellationToken cancellationToken);
 
     /// <summary>
+    /// Claims and sends the next email notification awaiting a retry of its send condition evaluation, if any.
+    /// </summary>
+    /// <param name="sendingTimePolicy">The policy to determine when email notifications should be sent.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendRetryNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Claims and sends the next composed email notification awaiting a retry of its send condition evaluation, if any.
+    /// </summary>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendComposedRetryNotification(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Updates the send status of a notification.
     /// </summary>
     /// <param name="sendOperationResult">The result of the send operation.</param>

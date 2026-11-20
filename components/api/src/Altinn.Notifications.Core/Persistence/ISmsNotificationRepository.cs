@@ -41,6 +41,33 @@ public interface ISmsNotificationRepository : INotificationRepository
     Task<Sms?> GetNewNotification(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>
+    /// Claims an SMS notification in the retrying state that is due for a retry.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to claim in.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="sendingTimePolicy">The sending time policy of the notifications to claim.</param>
+    /// <returns>The claimed SMS, or null if none is due.</returns>
+    Task<Sms?> GetNewRetryNotification(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
+
+    /// <summary>
+    /// Gets the send condition endpoint of the order the notification belongs to.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to query in.</param>
+    /// <param name="notificationId">The notification alternate id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The condition endpoint, or null if the order has none.</returns>
+    Task<Uri?> GetConditionEndpointAsync(UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets the notification to the retrying state and increments its retry count.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to update in.</param>
+    /// <param name="notificationId">The notification alternate id.</param>
+    /// <param name="retryReason">The reason for the retry.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task SetRetryStatusAsync(UnitOfWork unitOfWork, Guid notificationId, string retryReason, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Retrieves all processed SMS recipients for a specified order.
     /// </summary>
     /// <param name="orderId">The unique identifier of the order.</param>

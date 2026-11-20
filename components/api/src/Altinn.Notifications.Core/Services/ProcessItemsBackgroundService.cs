@@ -32,6 +32,11 @@ public class ProcessItemsBackgroundService(
     private readonly ManyItemsLately _manySmsAnytimeNotificationsLately = new();
     private readonly ManyItemsLately _manyPastDueOrdersLately = new();
     private readonly ManyItemsLately _manyRetryOrdersLately = new();
+    private readonly ManyItemsLately _manyEmailDaytimeRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manyEmailAnytimeRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manyComposedEmailRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manySmsDaytimeRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manySmsAnytimeRetryNotificationsLately = new();
 
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -41,6 +46,11 @@ public class ProcessItemsBackgroundService(
             + _config.ComposedEmailNotificationsProcessLoopConfig.TaskCount
             + _config.SmsDaytimeNotificationsProcessLoopConfig.TaskCount
             + _config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount
+            + _config.EmailDaytimeRetryNotificationsProcessLoopConfig.TaskCount
+            + _config.EmailAnytimeRetryNotificationsProcessLoopConfig.TaskCount
+            + _config.ComposedEmailRetryNotificationsProcessLoopConfig.TaskCount
+            + _config.SmsDaytimeRetryNotificationsProcessLoopConfig.TaskCount
+            + _config.SmsAnytimeRetryNotificationsProcessLoopConfig.TaskCount
             + _config.PastDueOrdersProcessLoopConfig.TaskCount
             + _config.RetryOrdersProcessLoopConfig.TaskCount;
         if (totalTasks <= 0)
@@ -138,11 +148,76 @@ public class ProcessItemsBackgroundService(
                         stoppingToken))
                 ];
 
+                Task[] emailDaytimeRetryNotificationTasks =
+                [
+                    .. Enumerable.Range(0, _config.EmailDaytimeRetryNotificationsProcessLoopConfig.TaskCount)
+                    .Select(i => RunProcessItemLoop(
+                        _manyEmailDaytimeRetryNotificationsLately,
+                        ct => emailSendingService.SendRetryNotification(SendingTimePolicy.Daytime, ct),
+                        notificationScheduleService.CanSendEmailNow,
+                        isFirstInstance: i == 0,
+                        _config.EmailDaytimeRetryNotificationsProcessLoopConfig,
+                        stoppingToken))
+                ];
+
+                Task[] emailAnytimeRetryNotificationTasks =
+                [
+                    .. Enumerable.Range(0, _config.EmailAnytimeRetryNotificationsProcessLoopConfig.TaskCount)
+                    .Select(i => RunProcessItemLoop(
+                        _manyEmailAnytimeRetryNotificationsLately,
+                        ct => emailSendingService.SendRetryNotification(SendingTimePolicy.Anytime, ct),
+                        null,
+                        isFirstInstance: i == 0,
+                        _config.EmailAnytimeRetryNotificationsProcessLoopConfig,
+                        stoppingToken))
+                ];
+
+                Task[] composedEmailRetryNotificationTasks =
+                [
+                    .. Enumerable.Range(0, _config.ComposedEmailRetryNotificationsProcessLoopConfig.TaskCount)
+                    .Select(i => RunProcessItemLoop(
+                        _manyComposedEmailRetryNotificationsLately,
+                        emailSendingService.SendComposedRetryNotification,
+                        null,
+                        isFirstInstance: i == 0,
+                        _config.ComposedEmailRetryNotificationsProcessLoopConfig,
+                        stoppingToken))
+                ];
+
+                Task[] smsDaytimeRetryNotificationTasks =
+                [
+                    .. Enumerable.Range(0, _config.SmsDaytimeRetryNotificationsProcessLoopConfig.TaskCount)
+                    .Select(i => RunProcessItemLoop(
+                        _manySmsDaytimeRetryNotificationsLately,
+                        ct => smsSendingService.SendRetryNotification(SendingTimePolicy.Daytime, ct),
+                        notificationScheduleService.CanSendSmsNow,
+                        isFirstInstance: i == 0,
+                        _config.SmsDaytimeRetryNotificationsProcessLoopConfig,
+                        stoppingToken))
+                ];
+
+                Task[] smsAnytimeRetryNotificationTasks =
+                [
+                    .. Enumerable.Range(0, _config.SmsAnytimeRetryNotificationsProcessLoopConfig.TaskCount)
+                    .Select(i => RunProcessItemLoop(
+                        _manySmsAnytimeRetryNotificationsLately,
+                        ct => smsSendingService.SendRetryNotification(SendingTimePolicy.Anytime, ct),
+                        null,
+                        isFirstInstance: i == 0,
+                        _config.SmsAnytimeRetryNotificationsProcessLoopConfig,
+                        stoppingToken))
+                ];
+
                 await Task.WhenAll(emailDaytimeNotificationTasks
                     .Concat(emailAnytimeNotificationTasks)
                     .Concat(composedEmailNotificationTask)
                     .Concat(smsDaytimeNotificationTasks)
                     .Concat(smsAnytimeNotificationTasks)
+                    .Concat(emailDaytimeRetryNotificationTasks)
+                    .Concat(emailAnytimeRetryNotificationTasks)
+                    .Concat(composedEmailRetryNotificationTasks)
+                    .Concat(smsDaytimeRetryNotificationTasks)
+                    .Concat(smsAnytimeRetryNotificationTasks)
                     .Concat(pastDueOrdersTasks)
                     .Concat(retryOrdersTasks));
             }

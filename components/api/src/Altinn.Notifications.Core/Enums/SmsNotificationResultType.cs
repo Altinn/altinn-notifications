@@ -78,5 +78,15 @@ public enum SmsNotificationResultType
     /// <summary>
     /// Indicates that the SMS send operation failed because the message is too large to be queued for sending.
     /// </summary>
-    Failed_ContentTooLarge
+    Failed_ContentTooLarge,
+
+    /// <summary>
+    /// The send condition could not be evaluated and the SMS notification will be claimed again for a retry.
+    /// </summary>
+    Retrying,
+
+    /// <summary>
+    /// The SMS notification was not sent because its send condition was not met.
+    /// </summary>
+    SendConditionNotMet
 }

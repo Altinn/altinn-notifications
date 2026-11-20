@@ -44,6 +44,41 @@ public interface IEmailNotificationRepository : INotificationRepository
     public Task<ComposedEmail?> GetNewComposedNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Claims an email notification in the retrying state that is due for a retry.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to claim in.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="sendingTimePolicy">The sending time policy of the notifications to claim.</param>
+    /// <returns>The claimed email, or null if none is due.</returns>
+    public Task<Email?> GetNewRetryNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime);
+
+    /// <summary>
+    /// Claims a composed email notification in the retrying state that is due for a retry.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to claim in.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The claimed composed email, or null if none is due.</returns>
+    public Task<ComposedEmail?> GetNewComposedRetryNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets the send condition endpoint of the order the notification belongs to.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to query in.</param>
+    /// <param name="notificationId">The notification alternate id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The condition endpoint, or null if the order has none.</returns>
+    public Task<Uri?> GetConditionEndpointAsync(UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets the notification to the retrying state and increments its retry count.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to update in.</param>
+    /// <param name="notificationId">The notification alternate id.</param>
+    /// <param name="retryReason">The reason for the retry.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public Task SetRetryStatusAsync(UnitOfWork unitOfWork, Guid notificationId, string retryReason, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Updates the send status of an email notification within <paramref name="unitOfWork"/> and optionally persists
     /// the operation identifier, delivery report, and total attachment size in bytes.
     /// At least one of <paramref name="notificationId"/> or <paramref name="operationId"/> must be provided.

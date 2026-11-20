@@ -28,6 +28,7 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly IUnitOfWorkRepository _unitOfWorkRepository;
     private readonly ILogger<SmsNotificationService> _logger;
     private readonly ISmsSenderSubstitutionService _senderSubstitutionService;
+    private readonly ISendConditionEvaluator _sendConditionEvaluator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -39,8 +40,10 @@ public class SmsNotificationService : ISmsNotificationService
         ISmsCommandPublisher smsPublisher,
         IUnitOfWorkRepository unitOfWorkRepository,
         ILogger<SmsNotificationService> logger,
-        ISmsSenderSubstitutionService senderSubstitutionService)
+        ISmsSenderSubstitutionService senderSubstitutionService,
+        ISendConditionEvaluator sendConditionEvaluator)
     {
+        _sendConditionEvaluator = sendConditionEvaluator;
         _guidService = guidService;
         _dateTimeService = dateTimeService;
         _repository = repository;
@@ -92,9 +95,37 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime, CancellationToken cancellationToken = default)
+    public Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime, CancellationToken cancellationToken = default)
     {
-        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Policy", sendingTimePolicy);
+        return SendClaimedNotification(
+            (unitOfWork, token) => _repository.GetNewNotification(unitOfWork, token, sendingTimePolicy),
+            nameof(SendNotification),
+            sendingTimePolicy,
+            isRetry: false,
+            cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> SendRetryNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime, CancellationToken cancellationToken = default)
+    {
+        return SendClaimedNotification(
+            (unitOfWork, token) => _repository.GetNewRetryNotification(unitOfWork, token, sendingTimePolicy),
+            nameof(SendRetryNotification),
+            sendingTimePolicy,
+            isRetry: true,
+            cancellationToken);
+    }
+
+    private async Task<bool> SendClaimedNotification(
+        Func<UnitOfWork, CancellationToken, Task<Sms?>> getNewNotification,
+        string operationName,
+        SendingTimePolicy sendingTimePolicy,
+        bool isRetry,
+        CancellationToken cancellationToken)
+    {
+        using Activity? activity = _activitySource.StartActivity("SendNotification");
+        activity?.SetTag("Kind", operationName);
+        activity?.SetTag("Policy", sendingTimePolicy);
         UnitOfWork unitOfWork;
         try
         {
@@ -104,7 +135,7 @@ public class SmsNotificationService : ISmsNotificationService
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(e, "Failed to start a unit of work for {OperationName}.", nameof(SendNotification));
+                _logger.LogError(e, "Failed to start a unit of work for {OperationName}.", operationName);
             }
 
             return false;
@@ -112,7 +143,7 @@ public class SmsNotificationService : ISmsNotificationService
 
         try
         {
-            Sms? newSmsNotification = await _repository.GetNewNotification(unitOfWork, cancellationToken, sendingTimePolicy);
+            Sms? newSmsNotification = await getNewNotification(unitOfWork, cancellationToken);
             activity?.SetTag("Count", newSmsNotification == null ? 0 : 1);
             if (newSmsNotification is null)
             {
@@ -121,9 +152,16 @@ public class SmsNotificationService : ISmsNotificationService
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (!await IsSendConditionMet(unitOfWork, newSmsNotification, isRetry, cancellationToken))
+            {
+                await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+                return true;
+            }
+
             await ApplySenderSubstitution(unitOfWork, newSmsNotification);
 
-            await PublishClaimedNotification(unitOfWork, newSmsNotification, cancellationToken);
+            await PublishClaimedNotification(unitOfWork, newSmsNotification, operationName, cancellationToken);
 
             await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
 
@@ -133,7 +171,7 @@ public class SmsNotificationService : ISmsNotificationService
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(e, "An error occurred while processing {OperationName}.", nameof(SendNotification));
+                _logger.LogError(e, "An error occurred while processing {OperationName}.", operationName);
             }
 
             try
@@ -142,10 +180,39 @@ public class SmsNotificationService : ISmsNotificationService
             }
             catch (Exception rollbackException)
             {
-                _logger.LogError(rollbackException, "Failed to roll back the unit of work for {OperationName}.", nameof(SendNotification));
+                _logger.LogError(rollbackException, "Failed to roll back the unit of work for {OperationName}.", operationName);
             }
 
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Evaluates the send condition of the order the claimed notification belongs to, and records the outcome when the notification should not be published.
+    /// </summary>
+    /// <returns><see langword="true"/> if the notification should be published; otherwise <see langword="false"/>.</returns>
+    private async Task<bool> IsSendConditionMet(UnitOfWork unitOfWork, Sms claimedNotification, bool isRetry, CancellationToken cancellationToken)
+    {
+        Uri? conditionEndpoint = await _repository.GetConditionEndpointAsync(unitOfWork, claimedNotification.NotificationId, cancellationToken);
+        if (conditionEndpoint is null)
+        {
+            return true;
+        }
+
+        var evaluation = await _sendConditionEvaluator.Evaluate(conditionEndpoint, claimedNotification.NotificationId, isRetry);
+
+        switch (evaluation.IsSendConditionMet)
+        {
+            case true:
+                return true;
+
+            case false:
+                await _repository.UpdateSendStatusAsync(unitOfWork, claimedNotification.NotificationId, SmsNotificationResultType.SendConditionNotMet, cancellationToken: cancellationToken);
+                return false;
+
+            default:
+                await _repository.SetRetryStatusAsync(unitOfWork, claimedNotification.NotificationId, "Send condition evaluation inconclusive", cancellationToken);
+                return false;
         }
     }
 
@@ -216,8 +283,9 @@ public class SmsNotificationService : ISmsNotificationService
     /// </summary>
     /// <param name="unitOfWork">The unit of work that holds the claim.</param>
     /// <param name="claimedNotification">The claimed SMS notification to publish.</param>
+    /// <param name="operationName">The name of the calling operation, used for logging.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
-    private async Task PublishClaimedNotification(UnitOfWork unitOfWork, Sms claimedNotification, CancellationToken cancellationToken)
+    private async Task PublishClaimedNotification(UnitOfWork unitOfWork, Sms claimedNotification, string operationName, CancellationToken cancellationToken)
     {
         try
         {
@@ -225,7 +293,7 @@ public class SmsNotificationService : ISmsNotificationService
         }
         catch (NotificationSizeLimitExceededException sizeLimitExceeded)
         {
-            _logger.LogWarning(sizeLimitExceeded, "Notification {NotificationId} is too large to publish for {OperationName}.", claimedNotification.NotificationId, nameof(SendNotification));
+            _logger.LogWarning(sizeLimitExceeded, "Notification {NotificationId} is too large to publish for {OperationName}.", claimedNotification.NotificationId, operationName);
 
             await _repository.UpdateSendStatusAsync(unitOfWork, claimedNotification.NotificationId, SmsNotificationResultType.Failed_ContentTooLarge, cancellationToken: cancellationToken);
         }

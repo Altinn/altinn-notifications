@@ -1,0 +1,41 @@
+meta {
+  name: email - internal condition endpoint (true/false)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{random_idempotency_id}}",
+    "conditionEndpoint": "{{host}}/notifications/api/v1/tests/sendcondition?conditionMet=true",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+        "emailSettings": {
+          "subject": "(TEST) Condition endpoint email",
+          "body": "(TEST) Condition endpoint test (Env.: {{Environment}} - Ref: {{random_idempotency_id}})",
+          "contentType": "Plain",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  Email order whose send condition is evaluated per notification at send time against the internal test endpoint.
+  
+  Change `conditionMet=true` to `conditionMet=false` in the body to test both cases:
+  - true: the email is sent
+  - false: the email notification gets the result SendConditionNotMet and nothing is sent
+  
+  Required environment variables:
+  - TESTDATA_MY_EMAIL: Your email address for testing
+}
