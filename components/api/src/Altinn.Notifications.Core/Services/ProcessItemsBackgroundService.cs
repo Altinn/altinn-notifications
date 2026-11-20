@@ -79,9 +79,9 @@ public class ProcessItemsBackgroundService : BackgroundService
             }
             while (await timer.WaitForNextTickAsync(stoppingToken));
         }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
         {
-            _logger.LogDebug("Process item background service is stopping.");
+            _logger.LogDebug(ex, "Process item background service is stopping.");
         }
         finally
         {
@@ -159,7 +159,7 @@ public class ProcessItemsBackgroundService : BackgroundService
         ];
     }
 
-    private async Task ReconcileWorkerPools(List<WorkerPool> workerPools, NotificationConfig config, int podCount, CancellationToken stoppingToken)
+    private static async Task ReconcileWorkerPools(List<WorkerPool> workerPools, NotificationConfig config, int podCount, CancellationToken stoppingToken)
     {
         foreach (WorkerPool pool in workerPools)
         {
