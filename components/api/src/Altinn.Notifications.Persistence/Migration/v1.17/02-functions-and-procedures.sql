@@ -832,7 +832,7 @@ Returns a table with the following columns:
 
 
 -- getconfig.sql:
-CREATE FUNCTION notifications.get_config()
+CREATE OR REPLACE FUNCTION notifications.get_config()
 RETURNS TABLE (key text, value text)
 LANGUAGE sql STABLE
 AS $$
@@ -1882,7 +1882,7 @@ Returns: JSONB notification order data for the claimed and updated orders.';
 
 
 -- getpodcount.sql:
-CREATE FUNCTION notifications.get_pod_count(pod_id uuid, heartbeat_timeout interval)
+CREATE OR REPLACEFUNCTION notifications.get_pod_count(pod_id uuid, heartbeat_timeout interval)
 RETURNS integer
 LANGUAGE plpgsql
 AS $$

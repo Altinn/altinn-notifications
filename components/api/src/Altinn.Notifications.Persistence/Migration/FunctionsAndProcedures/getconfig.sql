@@ -1,4 +1,4 @@
-CREATE FUNCTION notifications.get_config()
+CREATE OR REPLACE FUNCTION notifications.get_config()
 RETURNS TABLE (key text, value text)
 LANGUAGE sql STABLE
 AS $$
