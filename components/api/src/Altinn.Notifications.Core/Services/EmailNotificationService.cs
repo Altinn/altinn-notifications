@@ -179,7 +179,9 @@ public class EmailNotificationService(
         bool isRetry = false)
         where TNotification : Email
     {
-        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName)?.SetTag("Policy", sendingTimePolicy);
+        using Activity? activity = _activitySource.StartActivity("SendNotification");
+        activity?.SetTag("Kind", operationName);
+        activity?.SetTag("Policy", sendingTimePolicy);
         UnitOfWork unitOfWork;
         try
         {

@@ -916,6 +916,32 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendComposedRetryNotification_ClaimsComposedRetryRowAndEvaluatesAsRetry()
+    {
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewComposedRetryNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_composedEmail);
+        repoMock.Setup(r => r.GetConditionEndpointAsync(It.IsAny<UnitOfWork>(), _composedEmail.NotificationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Uri("https://condition.test"));
+
+        var evaluatorMock = new Mock<ISendConditionEvaluator>();
+        evaluatorMock.Setup(e => e.Evaluate(It.IsAny<Uri>(), _composedEmail.NotificationId, true))
+            .ReturnsAsync(new SendConditionEvaluationResult { IsSendConditionMet = true });
+
+        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(new UnitOfWork());
+
+        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object, sendConditionEvaluator: evaluatorMock.Object);
+
+        bool wasProcessed = await service.SendComposedRetryNotification(TestContext.Current.CancellationToken);
+
+        Assert.True(wasProcessed);
+        publisherMock.Verify(p => p.PublishAsync(_composedEmail, It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(r => r.GetNewComposedNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendComposedNotification_WhenCommitThrows_RollsBackAndReturnsFalse()
     {
         // Arrange
