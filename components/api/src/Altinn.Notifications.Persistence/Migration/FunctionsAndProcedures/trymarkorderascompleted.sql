@@ -61,12 +61,12 @@ BEGIN
         SELECT 1
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
-        AND result IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
+        AND result IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Retrying'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
     ) OR EXISTS(
         SELECT 1
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
-        AND result IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
+        AND result IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Retrying'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
     ) INTO has_pending_notifications;
 
     -- Step 6: Update order status based on notification states
