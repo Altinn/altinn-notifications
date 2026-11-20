@@ -32,6 +32,11 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _claimAnytimeEmailSql = "SELECT * FROM notifications.claim_anytime_email()";
     private const string _claimDaytimeEmailSql = "SELECT * FROM notifications.claim_daytime_email()";
     private const string _getComposedEmailNotificationSql = "SELECT * FROM notifications.claim_composed_email()";
+    private const string _claimRetryAnytimeEmailSql = "SELECT * FROM notifications.claim_retry_anytime_email($1)"; // $1=retry delay
+    private const string _claimRetryDaytimeEmailSql = "SELECT * FROM notifications.claim_retry_daytime_email($1)"; // $1=retry delay
+    private const string _claimRetryComposedEmailSql = "SELECT * FROM notifications.claim_retry_composed_email($1)"; // $1=retry delay
+    private const string _getConditionEndpointSql = "SELECT o.notificationorder->>'ConditionEndpoint' FROM notifications.emailnotifications n JOIN notifications.orders o ON o._id = n._orderid WHERE n.alternateid = $1"; // $1=alternateid
+    private const string _setRetrySql = "CALL notifications.updateemailretry($1, $2)"; // $1=alternateid, $2=retryreason
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v4($1, $2, $3, $4, $5)"; // $1=result, $2=operationid, $3=alternateid, $4=deliveryreport, $5=total_attachment_size_bytes
 
@@ -164,6 +169,40 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     {
         await using NpgsqlCommand pgcom = new(_getComposedEmailNotificationSql, unitOfWork.Connection, unitOfWork.Transaction);
         return await ReadNewComposedNotificationAsync(pgcom, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Email?> GetNewRetryNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime)
+    {
+        string claimSql = sendingTimePolicy switch
+        {
+            SendingTimePolicy.Daytime => _claimRetryDaytimeEmailSql,
+            _ => _claimRetryAnytimeEmailSql,
+        };
+
+        await using NpgsqlCommand pgcom = new(claimSql, unitOfWork.Connection, unitOfWork.Transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Interval, RetryDelay);
+        return await ReadNewNotificationAsync(pgcom, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ComposedEmail?> GetNewComposedRetryNotificationAsync(UnitOfWork unitOfWork, CancellationToken cancellationToken)
+    {
+        await using NpgsqlCommand pgcom = new(_claimRetryComposedEmailSql, unitOfWork.Connection, unitOfWork.Transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Interval, RetryDelay);
+        return await ReadNewComposedNotificationAsync(pgcom, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<Uri?> GetConditionEndpointAsync(UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken)
+    {
+        return ReadConditionEndpointAsync(unitOfWork, _getConditionEndpointSql, notificationId, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task SetRetryStatusAsync(UnitOfWork unitOfWork, Guid notificationId, string retryReason, CancellationToken cancellationToken)
+    {
+        return SetRetryAsync(unitOfWork, _setRetrySql, notificationId, retryReason, cancellationToken);
     }
 
     private static async Task<ComposedEmail?> ReadNewComposedNotificationAsync(NpgsqlCommand pgcom, CancellationToken cancellationToken)

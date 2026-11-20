@@ -83,6 +83,66 @@ public class NotificationConfig
     public int RetryOrdersMaxCount { get; set; } = 10;
 
     /// <summary>
+    /// The number of seconds a notification must have been in the retrying state before it can be claimed for a retry
+    /// </summary>
+    public int RetryNotificationsDBDelaySeconds { get; set; } = 90;
+
+    /// <summary>
+    /// Configuration for the process loop of the email daytime retry notifications background service
+    /// </summary>
+    public ProcessLoopConfig EmailDaytimeRetryNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 1,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the email anytime retry notifications background service
+    /// </summary>
+    public ProcessLoopConfig EmailAnytimeRetryNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 1,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the composed email retry notifications background service
+    /// </summary>
+    public ProcessLoopConfig ComposedEmailRetryNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 1,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the sms daytime retry notifications background service
+    /// </summary>
+    public ProcessLoopConfig SmsDaytimeRetryNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 1,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
+    /// Configuration for the process loop of the sms anytime retry notifications background service
+    /// </summary>
+    public ProcessLoopConfig SmsAnytimeRetryNotificationsProcessLoopConfig { get; set; } = new()
+    {
+        TaskCount = 1,
+        PrimaryTaskIdleDelaySeconds = 30,
+        AdditionalTasksIdleDelaySeconds = 5,
+        RampUpLimit = 10
+    };
+
+    /// <summary>
     /// Configuration for the process loop of the past due orders background service
     /// </summary>
     public ProcessLoopConfig PastDueOrdersProcessLoopConfig { get; set; } = new()

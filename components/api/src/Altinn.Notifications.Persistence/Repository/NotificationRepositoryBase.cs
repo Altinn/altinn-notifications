@@ -63,6 +63,7 @@ public abstract class NotificationRepositoryBase
         _dataSource = dataSource;
         _logger = logger;
         _expiryOffsetSeconds = config.Value.ExpiryOffsetSeconds;
+        RetryDelay = TimeSpan.FromSeconds(config.Value.RetryNotificationsDBDelaySeconds);
 
         if (config.Value.TerminationBatchSize > 0)
         {
@@ -73,6 +74,45 @@ public abstract class NotificationRepositoryBase
             _logger.LogWarning("Invalid TerminationBatchSize configuration value {ConfiguredValue}. Using default value of 100.", config.Value.TerminationBatchSize);
             _terminationBatchSize = 100;
         }
+    }
+
+    /// <summary>
+    /// Gets the minimum time a notification must have been in the retrying state before it can be claimed again.
+    /// </summary>
+    protected TimeSpan RetryDelay { get; }
+
+    /// <summary>
+    /// Reads the send condition endpoint of the order a notification belongs to.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to run the query in.</param>
+    /// <param name="sql">The query, taking the notification alternate id as its only parameter.</param>
+    /// <param name="notificationId">The notification alternate id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The condition endpoint if the order has one; otherwise null.</returns>
+    protected static async Task<Uri?> ReadConditionEndpointAsync(Core.Models.UnitOfWork unitOfWork, string sql, Guid notificationId, CancellationToken cancellationToken)
+    {
+        await using NpgsqlCommand pgcom = new(sql, unitOfWork.Connection, unitOfWork.Transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+
+        object? result = await pgcom.ExecuteScalarAsync(cancellationToken);
+        return result is string endpoint && !string.IsNullOrWhiteSpace(endpoint) ? new Uri(endpoint) : null;
+    }
+
+    /// <summary>
+    /// Marks a notification as retrying.
+    /// </summary>
+    /// <param name="unitOfWork">The unit of work to run the command in.</param>
+    /// <param name="sql">The command, taking alternate id and retry reason as parameters.</param>
+    /// <param name="notificationId">The notification alternate id.</param>
+    /// <param name="retryReason">The reason for the retry.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    protected static async Task SetRetryAsync(Core.Models.UnitOfWork unitOfWork, string sql, Guid notificationId, string retryReason, CancellationToken cancellationToken)
+    {
+        await using NpgsqlCommand pgcom = new(sql, unitOfWork.Connection, unitOfWork.Transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, retryReason);
+
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>

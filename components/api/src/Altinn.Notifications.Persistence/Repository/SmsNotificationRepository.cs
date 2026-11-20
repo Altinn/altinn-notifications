@@ -29,6 +29,10 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _claimAnytimeSmsSql = "select * from notifications.claim_anytime_sms_v2()";
     private const string _claimDaytimeSmsSql = "select * from notifications.claim_daytime_sms_v2()";
+    private const string _claimRetryAnytimeSmsSql = "select * from notifications.claim_retry_anytime_sms($1)"; // (_retry_delay)
+    private const string _claimRetryDaytimeSmsSql = "select * from notifications.claim_retry_daytime_sms($1)"; // (_retry_delay)
+    private const string _getConditionEndpointSql = "select o.notificationorder->>'ConditionEndpoint' from notifications.smsnotifications n join notifications.orders o on o._id = n._orderid where n.alternateid = $1"; // (_alternateid)
+    private const string _setRetrySql = "call notifications.updatesmsretry($1, $2)"; // (_alternateid, _retryreason)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _resulttime, _expirytime)
     private const string _persistSubstitutedSenderSql = "update notifications.smsnotifications set substitutedsender = $2 where alternateid = $1"; // (_alternateid, _substitutedsender)
     private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification_v3($1, $2, $3, $4)"; // (_result, _gatewayreference, _alternateid, _deliveryreport)
@@ -104,7 +108,37 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         };
 
         await using var command = new NpgsqlCommand(claimSmsForSending, unitOfWork.Connection, unitOfWork.Transaction);
+        return await ReadNewSmsAsync(command, cancellationToken);
+    }
 
+    /// <inheritdoc/>
+    public async Task<Sms?> GetNewRetryNotification(UnitOfWork unitOfWork, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
+    {
+        string claimSql = sendingTimePolicy switch
+        {
+            SendingTimePolicy.Anytime => _claimRetryAnytimeSmsSql,
+            _ => _claimRetryDaytimeSmsSql,
+        };
+
+        await using var command = new NpgsqlCommand(claimSql, unitOfWork.Connection, unitOfWork.Transaction);
+        command.Parameters.AddWithValue(NpgsqlDbType.Interval, RetryDelay);
+        return await ReadNewSmsAsync(command, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<Uri?> GetConditionEndpointAsync(UnitOfWork unitOfWork, Guid notificationId, CancellationToken cancellationToken)
+    {
+        return ReadConditionEndpointAsync(unitOfWork, _getConditionEndpointSql, notificationId, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task SetRetryStatusAsync(UnitOfWork unitOfWork, Guid notificationId, string retryReason, CancellationToken cancellationToken)
+    {
+        return SetRetryAsync(unitOfWork, _setRetrySql, notificationId, retryReason, cancellationToken);
+    }
+
+    private static async Task<Sms?> ReadNewSmsAsync(NpgsqlCommand command, CancellationToken cancellationToken)
+    {
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         if (!await reader.ReadAsync(cancellationToken))
