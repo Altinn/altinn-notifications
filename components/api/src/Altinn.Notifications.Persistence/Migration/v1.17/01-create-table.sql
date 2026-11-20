@@ -1,15 +1,15 @@
-CREATE TABLE notifications.podstate (
+CREATE TABLE IF NOT EXISTS notifications.podstate (
 	id uuid PRIMARY KEY,
 	created timestamptz NOT NULL,
 	lastrefreshed timestamptz NOT NULL
 );
 
-CREATE TABLE notifications.config (
+CREATE TABLE IF NOT EXISTS notifications.config (
 	key text PRIMARY KEY,
 	value text NOT NULL
 );
 
-CREATE UNIQUE INDEX config_key_case_insensitive ON notifications.config (lower(key));
+CREATE UNIQUE INDEX IF NOT EXISTS config_key_case_insensitive ON notifications.config (lower(key));
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON notifications.podstate TO platform_notifications;
 GRANT SELECT ON notifications.config TO platform_notifications;
