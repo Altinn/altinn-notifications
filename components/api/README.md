@@ -31,7 +31,7 @@ dotnet test Altinn.Notifications.API.slnx
 
 ## Dynamic worker counts
 
-Each API pod registers a heartbeat in PostgreSQL at startup and once per minute. A pod that has not refreshed for more than two minutes is removed from the count.
+Each API pod registers a heartbeat in PostgreSQL at startup and once per minute. A pod that has not refreshed for more than 90 seconds is removed from the count.
 
 The `TaskCount` settings are cluster-wide. Each pod uses `TaskCount / activePodCount`, rounded down, so a group has no workers when its task count is lower than the number of active pods.
 

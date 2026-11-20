@@ -14,6 +14,80 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class ProcessItemsBackgroundServiceTests
 {
+    [Fact]
+    public async Task ReconcileAsync_ScaleDownAcceptsWorkerCancellationAndCanScaleUpAgain()
+    {
+        var config = CreateConfig();
+        var loop = config.EmailAnytimeNotificationsProcessLoopConfig;
+        CancellationToken stoppingToken = TestContext.Current.CancellationToken;
+        var startedWorkers = new List<CancellationToken>();
+        var pool = new ProcessItemsBackgroundService.WorkerPool(
+            c => c.EmailAnytimeNotificationsProcessLoopConfig,
+            (_, _, token) =>
+            {
+                startedWorkers.Add(token);
+                return Task.Delay(Timeout.InfiniteTimeSpan, token);
+            });
+
+        try
+        {
+            loop.TaskCount = 1;
+            await pool.ReconcileAsync(config, 1, stoppingToken);
+            CancellationToken firstWorker = Assert.Single(startedWorkers);
+
+            loop.TaskCount = 0;
+            await pool.ReconcileAsync(config, 1, stoppingToken);
+            Assert.True(firstWorker.IsCancellationRequested);
+
+            loop.TaskCount = 1;
+            await pool.ReconcileAsync(config, 1, stoppingToken);
+            Assert.Equal(2, startedWorkers.Count);
+            Assert.False(startedWorkers[1].IsCancellationRequested);
+        }
+        finally
+        {
+            await pool.StopAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_ScaleDownPropagatesUnrelatedCancellation()
+    {
+        var config = CreateConfig();
+        var loop = config.EmailAnytimeNotificationsProcessLoopConfig;
+        CancellationToken stoppingToken = TestContext.Current.CancellationToken;
+        var unrelatedToken = new CancellationToken(canceled: true);
+        var pool = new ProcessItemsBackgroundService.WorkerPool(
+            c => c.EmailAnytimeNotificationsProcessLoopConfig,
+            (_, _, _) => Task.FromCanceled(unrelatedToken));
+
+        loop.TaskCount = 1;
+        await pool.ReconcileAsync(config, 1, stoppingToken);
+
+        loop.TaskCount = 0;
+        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pool.ReconcileAsync(config, 1, stoppingToken));
+        Assert.Equal(unrelatedToken, exception.CancellationToken);
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_ScaleDownPropagatesWorkerFailure()
+    {
+        var config = CreateConfig();
+        var loop = config.EmailAnytimeNotificationsProcessLoopConfig;
+        CancellationToken stoppingToken = TestContext.Current.CancellationToken;
+        var failure = new InvalidOperationException("Worker failed.");
+        var pool = new ProcessItemsBackgroundService.WorkerPool(
+            c => c.EmailAnytimeNotificationsProcessLoopConfig,
+            (_, _, _) => Task.FromException(failure));
+
+        loop.TaskCount = 1;
+        await pool.ReconcileAsync(config, 1, stoppingToken);
+
+        loop.TaskCount = 0;
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => pool.ReconcileAsync(config, 1, stoppingToken));
+        Assert.Same(failure, exception);
+    }
+
     [Theory]
     [InlineData(0, 1)]
     [InlineData(1, 2)]

@@ -273,12 +273,18 @@ public class ProcessItemsBackgroundService : BackgroundService
         }
     }
 
-    private sealed class WorkerPool(
+    /// <summary>
+    /// Manages the workers for a single processing loop.
+    /// </summary>
+    internal sealed class WorkerPool(
         Func<NotificationConfig, ProcessLoopConfig> getLoopConfig,
         Func<int, ProcessLoopConfig, CancellationToken, Task> runWorker)
     {
         private readonly List<Worker> _workers = [];
 
+        /// <summary>
+        /// Adjusts the pool to the configured per-pod worker count.
+        /// </summary>
         public async Task ReconcileAsync(NotificationConfig config, int podCount, CancellationToken stoppingToken)
         {
             ProcessLoopConfig loopConfig = getLoopConfig(config);
@@ -300,6 +306,9 @@ public class ProcessItemsBackgroundService : BackgroundService
             }
         }
 
+        /// <summary>
+        /// Stops all workers in the pool.
+        /// </summary>
         public async Task StopAsync()
         {
             while (_workers.Count > 0)
@@ -316,6 +325,12 @@ public class ProcessItemsBackgroundService : BackgroundService
             try
             {
                 await worker.Task;
+            }
+            catch (OperationCanceledException exception) when (
+                worker.CancellationTokenSource.IsCancellationRequested &&
+                exception.CancellationToken == worker.CancellationTokenSource.Token)
+            {
+                // The worker observed the cancellation we requested.
             }
             finally
             {
