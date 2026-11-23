@@ -116,7 +116,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
     }
 }
 
-void ConfigureApplicationLogging(ILoggingBuilder logging)
+static void ConfigureApplicationLogging(ILoggingBuilder logging)
 {
     logging.AddOpenTelemetry(builder =>
     {
