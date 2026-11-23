@@ -3292,6 +3292,29 @@ deliveryreport is always overwritten regardless of expiry.
 total_attachment_size_bytes is overwritten only when _total_attachment_size_bytes IS NOT NULL; otherwise the existing value is preserved.';
 
 
+-- updateemailretry.sql:
+CREATE OR REPLACE PROCEDURE notifications.updateemailretry(
+    _alternateid uuid,
+    _retryreason text
+)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    UPDATE notifications.emailnotifications
+    SET
+        result = 'Retrying'::emailnotificationresulttype,
+        resulttime = now(),
+        retryreason = _retryreason,
+        retrycount = retrycount + 1
+    WHERE alternateid = _alternateid;
+END;
+$BODY$;
+
+COMMENT ON PROCEDURE notifications.updateemailretry(uuid, text) IS
+'Sets an email notification to Retrying, records the reason and increments retrycount.
+resulttime is reset so that the retry claim functions can apply their retry delay.';
+
+
 -- updateexpirednotifications.sql:
 CREATE OR REPLACE FUNCTION notifications.updateexpirednotifications(
     _source TEXT,
@@ -3368,50 +3391,6 @@ Parameters:
 - _limit (INT): maximum number of records to update
 - _expiry_offset_seconds (INT): grace period in seconds before marking as expired (default: 300)
 Returns a set of unique alternateid for the updated records.';
-
-
--- updatenotificationretry.sql:
-CREATE OR REPLACE PROCEDURE notifications.updateemailretry(
-    _alternateid uuid,
-    _retryreason text
-)
-LANGUAGE 'plpgsql'
-AS $BODY$
-BEGIN
-    UPDATE notifications.emailnotifications
-    SET
-        result = 'Retrying'::emailnotificationresulttype,
-        resulttime = now(),
-        retryreason = _retryreason,
-        retrycount = retrycount + 1
-    WHERE alternateid = _alternateid;
-END;
-$BODY$;
-
-COMMENT ON PROCEDURE notifications.updateemailretry(uuid, text) IS
-'Sets an email notification to Retrying, records the reason and increments retrycount.
-resulttime is reset so that the retry claim functions can apply their retry delay.';
-
-CREATE OR REPLACE PROCEDURE notifications.updatesmsretry(
-    _alternateid uuid,
-    _retryreason text
-)
-LANGUAGE 'plpgsql'
-AS $BODY$
-BEGIN
-    UPDATE notifications.smsnotifications
-    SET
-        result = 'Retrying'::smsnotificationresulttype,
-        resulttime = now(),
-        retryreason = _retryreason,
-        retrycount = retrycount + 1
-    WHERE alternateid = _alternateid;
-END;
-$BODY$;
-
-COMMENT ON PROCEDURE notifications.updatesmsretry(uuid, text) IS
-'Sets an SMS notification to Retrying, records the reason and increments retrycount.
-resulttime is reset so that the retry claim functions can apply their retry delay.';
 
 
 -- updateorderretry.sql:
@@ -3525,5 +3504,28 @@ identifies at most one row when non-null.
 Overwrite policy: result, resulttime, and gatewayreference are conditionally overwritten when not expired;
 gatewayreference is only set when a non-null _gatewayreference is supplied and notification is not expired;
 deliveryreport is always overwritten regardless of expiry.';
+
+
+-- updatesmsretry.sql:
+CREATE OR REPLACE PROCEDURE notifications.updatesmsretry(
+    _alternateid uuid,
+    _retryreason text
+)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    UPDATE notifications.smsnotifications
+    SET
+        result = 'Retrying'::smsnotificationresulttype,
+        resulttime = now(),
+        retryreason = _retryreason,
+        retrycount = retrycount + 1
+    WHERE alternateid = _alternateid;
+END;
+$BODY$;
+
+COMMENT ON PROCEDURE notifications.updatesmsretry(uuid, text) IS
+'Sets an SMS notification to Retrying, records the reason and increments retrycount.
+resulttime is reset so that the retry claim functions can apply their retry delay.';
 
 
