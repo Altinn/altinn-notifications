@@ -115,7 +115,7 @@ namespace Altinn.Notifications.Telemetry
 
         private static bool IsRequestDbOwner(Activity activity)
         {
-            return (activity.Kind == ActivityKind.Server || activity.Kind == ActivityKind.Internal) && activity.Parent == null;
+            return activity.Kind != ActivityKind.Client && activity.Parent == null;
         }
 
         private static bool IsNpgsqlActivity(Activity a)
