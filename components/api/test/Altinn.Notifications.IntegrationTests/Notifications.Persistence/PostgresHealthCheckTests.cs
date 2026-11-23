@@ -8,7 +8,7 @@ using Npgsql;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations;
+namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public sealed class PostgresHealthCheckTests : IAsyncDisposable
 {
@@ -37,14 +37,28 @@ public sealed class PostgresHealthCheckTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task CheckHealthAsync_InvalidConnectionString_ReturnsUnhealthyResult()
+    public async Task CheckHealthAsync_UnreachableDatabase_ReturnsUnhealthyResult()
     {
-        var tempDataSource = new NpgsqlDataSourceBuilder("Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb").Build();
+        await using var unreachable = new NpgsqlDataSourceBuilder("Host=127.0.0.1;Port=1;Username=u;Password=p;Database=d;Timeout=1").Build();
 
-        PostgresHealthCheck healthCheck = new(tempDataSource);
+        PostgresHealthCheck healthCheck = new(unreachable);
         HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
+        Assert.NotNull(res.Exception);
         Assert.Equal(HealthStatus.Unhealthy, res.Status);
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_WhenCancelled_ReturnsUnhealthyResult()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        PostgresHealthCheck healthCheck = new(_dataSource);
+        HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext(), cts.Token);
+
+        Assert.Equal(HealthStatus.Unhealthy, res.Status);
+        Assert.IsType<OperationCanceledException>(res.Exception, exactMatch: false);
     }
 
     public async ValueTask DisposeAsync()
