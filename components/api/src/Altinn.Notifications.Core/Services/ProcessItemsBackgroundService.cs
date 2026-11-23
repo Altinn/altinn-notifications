@@ -21,7 +21,8 @@ public class ProcessItemsBackgroundService(
     IOrderProcessingService orderProcessingService,
     IOptions<NotificationConfig> config,
     ILogger<ProcessItemsBackgroundService> logger,
-    INotificationScheduleService notificationScheduleService)
+    INotificationScheduleService notificationScheduleService,
+    IHostApplicationLifetime applicationLifetime)
     : BackgroundService
 {
     private readonly NotificationConfig _config = config.Value;
@@ -35,6 +36,13 @@ public class ProcessItemsBackgroundService(
 
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // Stop claiming new items as soon as the host begins shutting down, before any hosted service is stopped.
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, applicationLifetime.ApplicationStopping);
+        await RunLoopsAsync(linkedCts.Token);
+    }
+
+    private async Task RunLoopsAsync(CancellationToken stoppingToken)
     {
         int totalTasks = _config.EmailDaytimeNotificationsProcessLoopConfig.TaskCount
             + _config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount
@@ -150,10 +158,17 @@ public class ProcessItemsBackgroundService(
             {
                 if (stoppingToken.IsCancellationRequested)
                 {
-                    throw;
+                    return;
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken); // Wait before restarting
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken); // Wait before restarting
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    return;
+                }
             }
         }
     }
@@ -178,7 +193,8 @@ public class ProcessItemsBackgroundService(
                 bool shouldDelay = false;
                 if (shouldAttemptProcessing)
                 {
-                    bool gotItem = await processItem(stoppingToken);
+                    // Already-claimed items are allowed to finish during shutdown; only claiming is stopped by the loop guard.
+                    bool gotItem = await processItem(CancellationToken.None);
                     if (!gotItem && !stoppingToken.IsCancellationRequested)
                     {
                         consecutiveRunsWithItemReturned = 0;
