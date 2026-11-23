@@ -16,6 +16,7 @@
 		<PackageReference Include="Npgsql" />
 		<PackageReference Include="WolverineFx" />
 		<PackageReference Include="WolverineFx.AzureServiceBus" />
+		<PackageReference Include="WolverineFx.HealthChecks" />
 		<PackageReference Include="WolverineFx.RuntimeCompilation" />
 	</ItemGroup>
 

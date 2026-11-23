@@ -96,6 +96,7 @@
 		<!-- Wolverine -->
 		<PackageVersion Include="WolverineFx" Version="6.64.1" />
 		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.64.1" />
+		<PackageVersion Include="WolverineFx.HealthChecks" Version="6.64.1" />
 		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.64.1" />
 
 		<!-- xUnit -->
