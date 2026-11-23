@@ -247,7 +247,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         // Lifecycle checks flip during every rollout and would otherwise look like dependency failures in monitoring.
         options.Predicate = check => !check.Tags.Contains(HealthCheckTags.Lifecycle);
     });
-    services.AddPostgresHealthChecks(config);
+    services.AddPostgresHealthChecks();
 
     services.AddSingleton(config);
 
