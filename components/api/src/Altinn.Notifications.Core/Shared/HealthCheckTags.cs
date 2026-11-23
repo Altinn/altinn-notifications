@@ -7,8 +7,9 @@ namespace Altinn.Notifications.Core.Shared;
 public static class HealthCheckTags
 {
     /// <summary>
-    /// Identifies a check of an external dependency that the application can operate without.
-    /// The result is reported in the health check metric and on <c>/health</c>, but does not affect <c>/health/ready</c>.
+    /// Identifies a check of an external dependency that the application can operate without, such as the Wolverine listeners
+    /// and the Azure Service Bus queues. The result is reported in the health check metric (only <c>Healthy</c> counts as healthy)
+    /// and on <c>/health</c>, but does not affect <c>/health/ready</c>.
     /// </summary>
     public const string Dependency = "dependency";
 
