@@ -44,21 +44,7 @@ public static class WolverineServiceCollectionExtensions
             .AddSingleton<DeliveryReportMetrics>()
             .Configure<WolverineSettings>(wolverineSection);
 
-        services.AddHealthChecks()
-            .AddWolverineListeners(
-                name: "notifications_wolverine_health_check",
-                tags: [HealthCheckTags.Dependency],
-                timeout: TimeSpan.FromSeconds(5));
-
-        foreach (string queueName in GetListenQueueNames(wolverineSettings))
-        {
-            services.AddHealthChecks().AddAzureServiceBusQueue(
-                wolverineSettings.ServiceBusConnectionString,
-                queueName,
-                name: $"notifications_service_bus_{queueName}_health_check",
-                tags: [HealthCheckTags.Dependency],
-                timeout: TimeSpan.FromSeconds(5));
-        }
+        AddWolverineHealthChecks(services, wolverineSettings);
 
         services.AddWolverine(opts =>
         {
@@ -84,19 +70,44 @@ public static class WolverineServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers dependency health checks for the Wolverine listeners and for each Azure Service Bus queue the API listens to.
+    /// </summary>
+    private static void AddWolverineHealthChecks(IServiceCollection services, WolverineSettings settings)
+    {
+        TimeSpan timeout = TimeSpan.FromSeconds(5);
+        string[] tags = [HealthCheckTags.Dependency];
+
+        // Check Wolverine’s in-process listener state—whether listeners are accepting, busy, stopped, or otherwise unhealthy. 
+        IHealthChecksBuilder healthChecks = services
+            .AddHealthChecks()
+            .AddWolverineListeners(name: "notifications_wolverine_health_check", tags: tags, timeout: timeout);
+
+        string[] listenQueueNames =
+        [
+            settings.SmsSendResultQueueName,
+            settings.EmailSendResultQueueName,
+            settings.SmsDeliveryReportQueueName,
+            settings.EmailDeliveryReportQueueName,
+            settings.EmailServiceRateLimitQueueName
+        ];
+
+        // Check each Azure Service Bus queue the API listens to, to ensure the queue is reachable and healthy.
+        foreach (string queueName in listenQueueNames)
+        {
+            healthChecks.AddAzureServiceBusQueue(
+                settings.ServiceBusConnectionString,
+                queueName,
+                name: $"notifications_service_bus_{queueName}_health_check",
+                tags: tags,
+                timeout: timeout);
+        }
+    }
+
+    /// <summary>
     /// Registers the Wolverine listener for the Azure Service Bus email send result queue,
     /// enabling the API to consume <see cref="EmailSendResultCommand"/> messages
     /// published by the email service.
     /// </summary>
-    private static string[] GetListenQueueNames(WolverineSettings settings) =>
-    [
-        settings.SmsSendResultQueueName,
-        settings.EmailSendResultQueueName,
-        settings.SmsDeliveryReportQueueName,
-        settings.EmailDeliveryReportQueueName,
-        settings.EmailServiceRateLimitQueueName
-    ];
-
     private static void AddEmailSendResultListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (wolverineSettings.EmailSendResultListenerCount <= 0)
