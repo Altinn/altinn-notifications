@@ -11,6 +11,11 @@ namespace Altinn.Notifications.Integrations.Telemetry;
 public sealed class HealthCheckMetricsPublisher : IHealthCheckPublisher, IDisposable
 {
     /// <summary>
+    /// The name of the tag that holds the health check name.
+    /// </summary>
+    public const string CheckTagName = "check";
+
+    /// <summary>
     /// The name of the meter that holds the health check metrics.
     /// </summary>
     public const string MeterName = "Altinn.Notifications.HealthCheck";
@@ -36,10 +41,9 @@ public sealed class HealthCheckMetricsPublisher : IHealthCheckPublisher, IDispos
     /// <inheritdoc />
     public Task PublishAsync(HealthReport report, CancellationToken cancellationToken)
     {
-        foreach (var entry in report.Entries)
+        foreach ((string name, HealthReportEntry entry) in report.Entries)
         {
-            int value = entry.Value.Status == HealthStatus.Healthy ? 1 : 0;
-            _statusGauge.Record(value, new KeyValuePair<string, object?>("check", entry.Key));
+            _statusGauge.Record(ToGaugeValue(entry.Status), new KeyValuePair<string, object?>(CheckTagName, name));
         }
 
         return Task.CompletedTask;
@@ -50,4 +54,6 @@ public sealed class HealthCheckMetricsPublisher : IHealthCheckPublisher, IDispos
     {
         _meter.Dispose();
     }
+
+    private static int ToGaugeValue(HealthStatus status) => status == HealthStatus.Healthy ? 1 : 0;
 }
