@@ -1,4 +1,4 @@
-using Altinn.Notifications.Health;
+using Altinn.Notifications.Shared.Health;
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -7,7 +7,7 @@ using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Health;
+namespace Altinn.Notifications.Shared.Tests.Health;
 
 public class ShutdownHealthCheckTests
 {

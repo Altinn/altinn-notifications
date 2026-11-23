@@ -1,7 +1,6 @@
 using System.Net;
 
-using Altinn.Notifications.Core.Shared;
-using Altinn.Notifications.Health;
+using Altinn.Notifications.Shared.Health;
 
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;

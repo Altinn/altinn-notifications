@@ -10,6 +10,7 @@ using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Sms;
+using Altinn.Notifications.Shared.Extensions;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using AltinnCore.Authentication.JwtCookie;
 
@@ -114,7 +115,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             {
                 // The Wolverine runtime and the Service Bus transport are removed above, so their checks cannot run.
                 options.Registrations
-                    .Where(r => r.Name == "notifications_wolverine_health_check" || r.Name.StartsWith("notifications_service_bus_"))
+                    .Where(r => r.Name == HealthCheckExtensions.ListenerHealthCheckName || r.Name.StartsWith(HealthCheckExtensions.QueueHealthCheckNamePrefix))
                     .ToList()
                     .ForEach(r => options.Registrations.Remove(r));
             });

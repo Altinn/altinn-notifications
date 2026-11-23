@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Linq;
 
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Shared.Health;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

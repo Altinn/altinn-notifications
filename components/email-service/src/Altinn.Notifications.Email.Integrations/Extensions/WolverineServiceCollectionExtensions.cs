@@ -34,6 +34,12 @@ public static class WolverineServiceCollectionExtensions
 
         services.Configure<WolverineSettings>(wolverineSection);
 
+        services.AddHealthChecks().AddWolverineDependencyHealthChecks(
+            wolverineSettings.ServiceBusConnectionString,
+            wolverineSettings.EmailSendQueueName,
+            wolverineSettings.EmailStatusCheckQueueName,
+            wolverineSettings.ComposedEmailSendQueueName);
+
         services.AddWolverine(opts =>
         {
             opts.ConfigureNotificationsDefaults(hostEnvironment, wolverineSettings.ServiceBusConnectionString);

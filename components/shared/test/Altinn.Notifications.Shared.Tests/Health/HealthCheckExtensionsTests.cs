@@ -1,56 +1,53 @@
-using Altinn.Notifications.Core.Shared;
-using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Shared.Extensions;
+using Altinn.Notifications.Shared.Health;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-
-using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Integrations.Wolverine;
+namespace Altinn.Notifications.Shared.Tests.Health;
 
-public class WolverineServiceCollectionExtensionsTests
+public class HealthCheckExtensionsTests
 {
+    private const string ConnectionString = "Endpoint=sb://127.0.0.1;SharedAccessKeyName=key;SharedAccessKey=value;UseDevelopmentEmulator=true;";
+
     [Fact]
-    public void AddWolverineServices_RegistersDependencyHealthChecksForListenerAndEachListenQueue()
+    public void AddWolverineDependencyHealthChecks_RegistersListenerCheckAndOneCheckPerQueue()
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["WolverineSettings:ServiceBusConnectionString"] = "Endpoint=sb://127.0.0.1;SharedAccessKeyName=key;SharedAccessKey=value;UseDevelopmentEmulator=true;",
-                ["WolverineSettings:SendSmsQueueName"] = "sms.send",
-                ["WolverineSettings:EmailSendQueueName"] = "email.send",
-                ["WolverineSettings:ComposedEmailSendQueueName"] = "composedemail.send",
-                ["WolverineSettings:SmsSendResultQueueName"] = "sms.send.result",
-                ["WolverineSettings:EmailSendResultQueueName"] = "email.send.result",
-                ["WolverineSettings:SmsDeliveryReportQueueName"] = "sms.deliveryreports",
-                ["WolverineSettings:EmailDeliveryReportQueueName"] = "email.deliveryreports",
-                ["WolverineSettings:EmailServiceRateLimitQueueName"] = "email.send.ratelimit"
-            })
-            .Build();
-
-        var services = new ServiceCollection();
-        services.AddWolverineServices(configuration, Mock.Of<IHostEnvironment>());
-
-        using ServiceProvider provider = services.BuildServiceProvider();
-        var registrations = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations;
+        var registrations = GetRegistrations(healthChecks => healthChecks.AddWolverineDependencyHealthChecks(ConnectionString, "queue.one", "queue.two"));
 
         string[] expectedNames =
         [
-            "notifications_wolverine_health_check",
-            "notifications_service_bus_sms.send.result_health_check",
-            "notifications_service_bus_email.send.result_health_check",
-            "notifications_service_bus_sms.deliveryreports_health_check",
-            "notifications_service_bus_email.deliveryreports_health_check",
-            "notifications_service_bus_email.send.ratelimit_health_check"
+            HealthCheckExtensions.ListenerHealthCheckName,
+            $"{HealthCheckExtensions.QueueHealthCheckNamePrefix}queue.one_health_check",
+            $"{HealthCheckExtensions.QueueHealthCheckNamePrefix}queue.two_health_check"
         ];
 
         Assert.Equal(expectedNames.Order(), registrations.Select(r => r.Name).Order());
         Assert.All(registrations, r => Assert.Equal([HealthCheckTags.Dependency], r.Tags));
         Assert.All(registrations, r => Assert.Equal(TimeSpan.FromSeconds(5), r.Timeout));
+    }
+
+    [Fact]
+    public void AddLifecycleHealthChecks_RegistersStartupAndShutdownChecksWithProbeTags()
+    {
+        var registrations = GetRegistrations(healthChecks => healthChecks.AddLifecycleHealthChecks());
+
+        var shutdown = Assert.Single(registrations, r => r.Name == "notifications_shutdown_health_check");
+        var startup = Assert.Single(registrations, r => r.Name == "notifications_startup_health_check");
+
+        Assert.Equivalent(new[] { HealthCheckTags.Ready, HealthCheckTags.Lifecycle }, shutdown.Tags);
+        Assert.Equivalent(new[] { HealthCheckTags.Startup, HealthCheckTags.Ready, HealthCheckTags.Lifecycle }, startup.Tags);
+    }
+
+    private static List<HealthCheckRegistration> GetRegistrations(Action<IHealthChecksBuilder> register)
+    {
+        var services = new ServiceCollection();
+        register(services.AddHealthChecks());
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        return provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations.ToList();
     }
 }

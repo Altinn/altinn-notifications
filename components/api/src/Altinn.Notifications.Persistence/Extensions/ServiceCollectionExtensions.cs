@@ -1,8 +1,8 @@
-﻿using Altinn.Notifications.Core.Persistence;
-using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Health;
 using Altinn.Notifications.Persistence.Repository;
+using Altinn.Notifications.Shared.Health;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

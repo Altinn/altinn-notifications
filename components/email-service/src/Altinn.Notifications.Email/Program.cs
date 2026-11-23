@@ -6,6 +6,8 @@ using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Health;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Extensions;
+using Altinn.Notifications.Shared.Extensions;
+using Altinn.Notifications.Shared.Health;
 using Altinn.Notifications.Shared.Telemetry;
 
 using Azure.Identity;
@@ -156,7 +158,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         {
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
-    services.AddHealthChecks().AddCheck<HealthCheck>("notifications_emails_health_check");
+    services.AddHealthChecks()
+        .AddCheck<HealthCheck>("notifications_emails_health_check", tags: [HealthCheckTags.Live])
+        .AddLifecycleHealthChecks();
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
     services.AddWolverineServices(configuration, appBuilder.Environment);
@@ -207,7 +211,7 @@ void Configure()
 {
     app.UseAuthorization();
     app.MapControllers();
-    app.MapHealthChecks("/health");
+    app.MapNotificationsHealthEndpoints();
 }
 
 void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)

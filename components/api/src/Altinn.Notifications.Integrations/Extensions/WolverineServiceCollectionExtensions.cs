@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Integrations.Wolverine;
@@ -17,7 +16,6 @@ using Microsoft.Extensions.Hosting;
 
 using Wolverine;
 using Wolverine.AzureServiceBus;
-using Wolverine.HealthChecks;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -44,7 +42,13 @@ public static class WolverineServiceCollectionExtensions
             .AddSingleton<DeliveryReportMetrics>()
             .Configure<WolverineSettings>(wolverineSection);
 
-        AddWolverineHealthChecks(services, wolverineSettings);
+        services.AddHealthChecks().AddWolverineDependencyHealthChecks(
+            wolverineSettings.ServiceBusConnectionString,
+            wolverineSettings.SmsSendResultQueueName,
+            wolverineSettings.EmailSendResultQueueName,
+            wolverineSettings.SmsDeliveryReportQueueName,
+            wolverineSettings.EmailDeliveryReportQueueName,
+            wolverineSettings.EmailServiceRateLimitQueueName);
 
         services.AddWolverine(opts =>
         {
@@ -67,40 +71,6 @@ public static class WolverineServiceCollectionExtensions
             AddSendComposedEmailPublisher(services, wolverineSettings, opts);
             services.AddSingleton<IWolverinePublisher, WolverinePublisher>();
         });
-    }
-
-    /// <summary>
-    /// Registers dependency health checks for the Wolverine listeners and for each Azure Service Bus queue the API listens to.
-    /// </summary>
-    private static void AddWolverineHealthChecks(IServiceCollection services, WolverineSettings settings)
-    {
-        TimeSpan timeout = TimeSpan.FromSeconds(5);
-        string[] tags = [HealthCheckTags.Dependency];
-
-        // Check Wolverine’s in-process listener state—whether listeners are accepting, busy, stopped, or otherwise unhealthy. 
-        IHealthChecksBuilder healthChecks = services
-            .AddHealthChecks()
-            .AddWolverineListeners(name: "notifications_wolverine_health_check", tags: tags, timeout: timeout);
-
-        string[] listenQueueNames =
-        [
-            settings.SmsSendResultQueueName,
-            settings.EmailSendResultQueueName,
-            settings.SmsDeliveryReportQueueName,
-            settings.EmailDeliveryReportQueueName,
-            settings.EmailServiceRateLimitQueueName
-        ];
-
-        // Check each Azure Service Bus queue the API listens to, to ensure the queue is reachable and healthy.
-        foreach (string queueName in listenQueueNames)
-        {
-            healthChecks.AddAzureServiceBusQueue(
-                settings.ServiceBusConnectionString,
-                queueName,
-                name: $"notifications_service_bus_{queueName}_health_check",
-                tags: tags,
-                timeout: timeout);
-        }
     }
 
     /// <summary>

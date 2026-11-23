@@ -19,6 +19,8 @@ using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Shared.Extensions;
+using Altinn.Notifications.Shared.Health;
 using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
@@ -30,7 +32,6 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -121,22 +122,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHealthChecks("/health");
-
-app.MapHealthChecks("/health/live", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains(HealthCheckTags.Live)
-});
-
-app.MapHealthChecks("/health/startup", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains(HealthCheckTags.Startup)
-});
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains(HealthCheckTags.Ready)
-});
+app.MapNotificationsHealthEndpoints();
 
 app.UseOrgExtractor();
 
@@ -233,8 +219,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddHealthChecks()
         .AddCheck<HealthCheck>("notifications_health_check", tags: [HealthCheckTags.Live])
-        .AddCheck<ShutdownHealthCheck>("notifications_shutdown_health_check", tags: [HealthCheckTags.Ready, HealthCheckTags.Lifecycle])
-        .AddCheck<StartupHealthCheck>("notifications_startup_health_check", tags: [HealthCheckTags.Startup, HealthCheckTags.Ready, HealthCheckTags.Lifecycle]);
+        .AddLifecycleHealthChecks();
 
     // Finish in-flight work before the default Kubernetes terminationGracePeriodSeconds (30s) sends SIGKILL.
     services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(25));
