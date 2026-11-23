@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
-using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Integrations.Wolverine;
 using Altinn.Notifications.Integrations.Wolverine.Policies;
@@ -12,14 +11,13 @@ using Altinn.Notifications.Shared.Commands;
 using Altinn.Notifications.Shared.Extensions;
 using Altinn.Notifications.Shared.Publishers;
 
-using Azure.Messaging.ServiceBus;
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Wolverine;
 using Wolverine.AzureServiceBus;
+using Wolverine.HealthChecks;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -46,21 +44,21 @@ public static class WolverineServiceCollectionExtensions
             .AddSingleton<DeliveryReportMetrics>()
             .Configure<WolverineSettings>(wolverineSection);
 
-        services.AddSingleton(_ => new ServiceBusHealthCheck(
-            new ServiceBusClient(
-                wolverineSettings.ServiceBusConnectionString,
-                new ServiceBusClientOptions { RetryOptions = new ServiceBusRetryOptions { MaxRetries = 0, TryTimeout = TimeSpan.FromSeconds(4) } }),
-            wolverineSettings));
-
         services.AddHealthChecks()
-            .AddCheck<WolverineHealthCheck>(
-                "notifications_wolverine_health_check",
-                timeout: TimeSpan.FromSeconds(5),
-                tags: [HealthCheckTags.Dependency])
-            .AddCheck<ServiceBusHealthCheck>(
-                "notifications_service_bus_health_check",
-                timeout: TimeSpan.FromSeconds(5),
-                tags: [HealthCheckTags.Dependency]);
+            .AddWolverineListeners(
+                name: "notifications_wolverine_health_check",
+                tags: [HealthCheckTags.Dependency],
+                timeout: TimeSpan.FromSeconds(5));
+
+        foreach (string queueName in GetListenQueueNames(wolverineSettings))
+        {
+            services.AddHealthChecks().AddAzureServiceBusQueue(
+                wolverineSettings.ServiceBusConnectionString,
+                queueName,
+                name: $"notifications_service_bus_{queueName}_health_check",
+                tags: [HealthCheckTags.Dependency],
+                timeout: TimeSpan.FromSeconds(5));
+        }
 
         services.AddWolverine(opts =>
         {
@@ -90,6 +88,15 @@ public static class WolverineServiceCollectionExtensions
     /// enabling the API to consume <see cref="EmailSendResultCommand"/> messages
     /// published by the email service.
     /// </summary>
+    private static string[] GetListenQueueNames(WolverineSettings settings) =>
+    [
+        settings.SmsSendResultQueueName,
+        settings.EmailSendResultQueueName,
+        settings.SmsDeliveryReportQueueName,
+        settings.EmailDeliveryReportQueueName,
+        settings.EmailServiceRateLimitQueueName
+    ];
+
     private static void AddEmailSendResultListener(WolverineSettings wolverineSettings, WolverineOptions wolverineOptions)
     {
         if (wolverineSettings.EmailSendResultListenerCount <= 0)
