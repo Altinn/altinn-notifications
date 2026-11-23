@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<IsTestProject>true</IsTestProject>
@@ -13,6 +13,10 @@
 		<PackageReference Include="Testcontainers" />
 		<PackageReference Include="WolverineFx" />
 		<PackageReference Include="xunit.v3.extensibility.core" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\Altinn.Notifications.Shared\Altinn.Notifications.Shared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
