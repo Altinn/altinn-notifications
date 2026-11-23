@@ -60,13 +60,9 @@ public static class ServiceCollectionExtensions
     /// Adds postgresql health checks
     /// </summary>
     /// <param name="services">service collection.</param>
-    /// <param name="config">the configuration collection</param>
-    public static void AddPostgresHealthChecks(this IServiceCollection services, IConfiguration config)
+    public static void AddPostgresHealthChecks(this IServiceCollection services)
     {
         services.AddHealthChecks()
-            .AddCheck<PostgresHealthCheck>(
-                "notifications_postgres_health_check",
-                timeout: TimeSpan.FromSeconds(5),
-                tags: [HealthCheckTags.Ready]);
+            .AddCheck<PostgresHealthCheck>("notifications_postgres_health_check", timeout: TimeSpan.FromSeconds(5), tags: [HealthCheckTags.Ready]);
     }
 }
