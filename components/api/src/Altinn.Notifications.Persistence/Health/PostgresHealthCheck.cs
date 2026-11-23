@@ -7,17 +7,9 @@ namespace Altinn.Notifications.Persistence.Health;
 /// <summary>
 /// Health check service confirming Postgre connenctivity
 /// </summary>
-public class PostgresHealthCheck : IHealthCheck
+public class PostgresHealthCheck(NpgsqlDataSource dataSource) : IHealthCheck
 {
-    private readonly NpgsqlDataSource _dataSource;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PostgresHealthCheck"/> class.
-    /// </summary>
-    public PostgresHealthCheck(NpgsqlDataSource dataSource)
-    {
-        _dataSource = dataSource;
-    }
+    private readonly NpgsqlDataSource _dataSource = dataSource;
 
     /// <inheritdoc />
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)

@@ -124,11 +124,12 @@ namespace Altinn.Notifications.Telemetry
 
         private static bool ExcludeRequest(string localpath)
         {
-            return localpath switch
-            {
-                var path when path.TrimEnd('/').EndsWith("/health", StringComparison.OrdinalIgnoreCase) => true,
-                _ => false
-            };
+            string path = localpath.TrimEnd('/');
+
+            return path.EndsWith("/health", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith("/health/live", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith("/health/ready", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith("/health/startup", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
