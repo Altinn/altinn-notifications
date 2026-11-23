@@ -16,13 +16,13 @@ public class ShutdownHealthCheckTests
     {
         // Arrange
         using var stopping = new CancellationTokenSource();
-        var sut = CreateSut(stopping.Token);
+        var shutdownHealthCheck = CreateShutdownHealthCheck(stopping.Token);
 
         // Act
-        var result = await sut.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
+        var result = await shutdownHealthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
+        Assert.Equal("The host has not signaled that application shutdown is starting.", result.Description);
     }
 
     [Fact]
@@ -31,19 +31,24 @@ public class ShutdownHealthCheckTests
         // Arrange
         using var stopping = new CancellationTokenSource();
         await stopping.CancelAsync();
-        var sut = CreateSut(stopping.Token);
+        var shutdownHealthCheck = CreateShutdownHealthCheck(stopping.Token);
 
         // Act
-        var result = await sut.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
+        var result = await shutdownHealthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
-    private static ShutdownHealthCheck CreateSut(CancellationToken stopping)
+    /// <summary>
+    /// Creates a shutdown health check with the specified application-stopping signal.
+    /// </summary>
+    /// <param name="stopping">The token representing whether the host has started shutting down.</param>
+    /// <returns>A shutdown health check backed by a mocked application lifetime.</returns>
+    private static ShutdownHealthCheck CreateShutdownHealthCheck(CancellationToken stopping)
     {
         var lifetime = new Mock<IHostApplicationLifetime>();
-        lifetime.SetupGet(l => l.ApplicationStopping).Returns(stopping);
+        lifetime.SetupGet(e => e.ApplicationStopping).Returns(stopping);
         return new ShutdownHealthCheck(lifetime.Object);
     }
 }
