@@ -319,7 +319,7 @@ public class ProcessItemsBackgroundServiceTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenStopRequestedDuringProcessing_DoesNotCancelInFlightWork()
+    public async Task ExecuteAsync_WhenStopRequestedDuringProcessing_PassesCancellationToInFlightWork()
     {
         // Arrange
         var config = CreateConfig();
@@ -354,7 +354,7 @@ public class ProcessItemsBackgroundServiceTests
 
         // Assert
         Assert.NotNull(tokenCancelledDuringWork);
-        Assert.False(tokenCancelledDuringWork);
+        Assert.True(tokenCancelledDuringWork);
         smsService.Verify(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.Once);
     }
 

@@ -193,8 +193,7 @@ public class ProcessItemsBackgroundService(
                 bool shouldDelay = false;
                 if (shouldAttemptProcessing)
                 {
-                    // Already-claimed items are allowed to finish during shutdown; only claiming is stopped by the loop guard.
-                    bool gotItem = await processItem(CancellationToken.None);
+                    bool gotItem = await processItem(stoppingToken);
                     if (!gotItem && !stoppingToken.IsCancellationRequested)
                     {
                         consecutiveRunsWithItemReturned = 0;
