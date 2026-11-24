@@ -83,10 +83,15 @@ public enum ProcessingLifecycleExt
     Order_Retrying = 6,
 
     /// <summary>
-    /// The order has failed due to an error in processing after exhausting all retry attempts.
+    /// The order has been manually marked as failed after review confirmed that it cannot be corrected or restarted.
     /// </summary>
     Order_Failed = 7,
-    
+
+    /// <summary>
+    /// All retry attempts have been exhausted and manual intervention is required to resolve the issue.
+    /// </summary>
+    Order_Retry_Exhausted = 8,
+
     /// <summary>
     /// The SMS notification has been received and registered in the system but processing has not yet begun.
     /// </summary>

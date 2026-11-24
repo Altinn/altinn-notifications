@@ -330,6 +330,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
     [Theory]
     [InlineData(ProcessingLifecycle.Order_Retrying, ProcessingLifecycleExt.Order_Retrying)]
+    [InlineData(ProcessingLifecycle.Order_Retry_Exhausted, ProcessingLifecycleExt.Order_Retry_Exhausted)]
     [InlineData(ProcessingLifecycle.Order_Failed, ProcessingLifecycleExt.Order_Failed)]
     public async Task GetById_OrderInGivenStatus_ReturnsOkWithMatchingStatus(ProcessingLifecycle orderStatus, ProcessingLifecycleExt expectedStatus)
     {

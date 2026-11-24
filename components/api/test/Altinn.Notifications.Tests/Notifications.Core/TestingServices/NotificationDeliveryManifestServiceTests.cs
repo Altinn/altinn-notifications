@@ -297,6 +297,45 @@ public class NotificationDeliveryManifestServiceTests
     }
 
     [Fact]
+    public async Task GetDeliveryManifestAsync_WhenRetryExhaustedOrderIsRestarted_ReturnsUpdatedStatus()
+    {
+        string orderCreatorName = "TEST-ORG";
+        Guid orderAlternateId = Guid.NewGuid();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        var exhaustedManifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = orderAlternateId,
+            LastUpdate = DateTime.UtcNow,
+            Status = ProcessingLifecycle.Order_Retry_Exhausted,
+            Recipients = ImmutableList<IDeliveryManifest>.Empty
+        };
+
+        var restartedManifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            ShipmentId = orderAlternateId,
+            LastUpdate = DateTime.UtcNow,
+            Status = ProcessingLifecycle.Order_Retrying,
+            Recipients = ImmutableList<IDeliveryManifest>.Empty
+        };
+
+        _repositoryMock.SetupSequence(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken))
+            .ReturnsAsync(exhaustedManifest)
+            .ReturnsAsync(restartedManifest);
+
+        var firstCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+        var secondCall = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
+
+        Assert.True(firstCall.IsSuccess);
+        Assert.Equal(ProcessingLifecycle.Order_Retry_Exhausted, firstCall.Value.Status);
+        Assert.True(secondCall.IsSuccess);
+        Assert.Equal(ProcessingLifecycle.Order_Retrying, secondCall.Value.Status);
+        _repositoryMock.Verify(r => r.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken), Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task GetDeliveryManifestAsync_WhenOrderIsTerminalAndRecipientIsNotTerminal_DoesNotUseCache()
     {
         // Arrange

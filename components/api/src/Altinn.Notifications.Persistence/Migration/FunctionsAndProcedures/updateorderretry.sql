@@ -12,7 +12,7 @@ BEGIN
         processed = CURRENT_TIMESTAMP,
         retrycount = retrycount + 1,
         processedstatus = CASE
-        WHEN retrycount + 1 > _maxretrycount THEN 'Failed'::orderprocessingstate
+        WHEN retrycount + 1 > _maxretrycount THEN 'RetryExhausted'::orderprocessingstate
         ELSE 'Retrying'::orderprocessingstate
         END
     WHERE alternateid = _alternateid;
