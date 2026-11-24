@@ -1,9 +1,11 @@
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using Moq;
@@ -88,9 +90,40 @@ public class ProcessItemsBackgroundServiceTests
         Assert.Same(failure, exception);
     }
 
+    [Fact]
+    public async Task ReconcileAsync_WhenConfiguredTaskCountIsBelowPodCount_StartsOneWorker()
+    {
+        var config = CreateConfig();
+        config.EmailAnytimeNotificationsProcessLoopConfig.TaskCount = 1;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        var repository = new Mock<IDynamicConfigRepository>(MockBehavior.Strict);
+        repository.Setup(r => r.GetPodCount(It.IsAny<Guid>(), It.IsAny<TimeSpan>(), cancellationToken)).ReturnsAsync(3);
+        repository.Setup(r => r.GetConfig(cancellationToken)).ReturnsAsync(new Dictionary<string, string>());
+        var dynamicConfigService = new DynamicConfigService(repository.Object, NullLogger<DynamicConfigService>.Instance);
+        var (effectiveConfig, podCount) = await dynamicConfigService.GetDynamicConfig(config, TimeSpan.FromMinutes(1), cancellationToken);
+        var startedWorkers = new List<CancellationToken>();
+        var pool = new ProcessItemsBackgroundService.WorkerPool(
+            c => c.EmailAnytimeNotificationsProcessLoopConfig,
+            (_, _, token) =>
+            {
+                startedWorkers.Add(token);
+                return Task.Delay(Timeout.InfiniteTimeSpan, token);
+            });
+
+        try
+        {
+            await pool.ReconcileAsync(effectiveConfig, podCount, cancellationToken);
+            Assert.Single(startedWorkers);
+        }
+        finally
+        {
+            await pool.StopAsync();
+        }
+    }
+
     [Theory]
     [InlineData(0, 1)]
-    [InlineData(1, 2)]
+    [InlineData(0, 2)]
     public async Task ExecuteAsync_WhenNoWorkersAreAssignedToPod_DoesNotProcessUntilStopped(int taskCount, int podCount)
     {
         var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);

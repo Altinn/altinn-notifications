@@ -33,7 +33,7 @@ namespace Altinn.Notifications.Core.Persistence
         Task<(long AnytimeCount, long DaytimeCount)> GetSmsNotificationsMetrics(CancellationToken cancellationToken);
 
         /// <summary>
-        /// Get the current order backlog counts (not due, past due and failed) used for custom metrics.
+        /// Get the current order backlog counts (not due, past due, and retry-exhausted) used for custom metrics.
         /// </summary>
         Task<(long OrdersNotDueCount, long OrdersPastDueCount, long OrdersFailedCount)> GetOrderMetrics(CancellationToken cancellationToken);
 

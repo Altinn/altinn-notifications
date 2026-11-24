@@ -56,7 +56,7 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
     public const string OrdersPastDueGaugeName = "altinn.notifications.orders.past.due";
 
     /// <summary>
-    /// Name of the gauge metric that reports the number of failed notification orders.
+    /// Name of the gauge metric that reports orders requiring intervention after exhausting retries.
     /// </summary>
     public const string OrdersFailedGaugeName = "altinn.notifications.orders.failed";
 
@@ -90,7 +90,7 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
         _smsNotificationsTotalGauge = _meter.CreateGauge<long>(SmsNotificationsTotalGaugeName, description: "Current total number of pending SMS notifications.");
         _ordersNotDueGauge = _meter.CreateGauge<long>(OrdersNotDueGaugeName, description: "Current number of orders not due for processing.");
         _ordersPastDueGauge = _meter.CreateGauge<long>(OrdersPastDueGaugeName, description: "Current number of orders past due for processing.");
-        _ordersFailedGauge = _meter.CreateGauge<long>(OrdersFailedGaugeName, description: "Current number of orders failed for processing.");
+        _ordersFailedGauge = _meter.CreateGauge<long>(OrdersFailedGaugeName, description: "Current number of failed orders and orders with exhausted retries.");
     }
 
     /// <inheritdoc/>
@@ -102,7 +102,7 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
         long smsNotificationsDaytime,
         long ordersNotDue,
         long ordersPastDue,
-        long ordersFailed)
+        long ordersRetryExhausted)
     {
         long emailNotificationsTotal = emailNotificationsAnytime + emailNotificationsDaytime + emailNotificationsComposed;
         long smsNotificationsTotal = smsNotificationsAnytime + smsNotificationsDaytime;
@@ -117,7 +117,7 @@ public sealed class BacklogMetrics : IBacklogMetrics, IDisposable
 
         _ordersNotDueGauge.Record(ordersNotDue, new KeyValuePair<string, object?>(TagKey, "order"));
         _ordersPastDueGauge.Record(ordersPastDue, new KeyValuePair<string, object?>(TagKey, "order"));
-        _ordersFailedGauge.Record(ordersFailed, new KeyValuePair<string, object?>(TagKey, "order"));
+        _ordersFailedGauge.Record(ordersRetryExhausted, new KeyValuePair<string, object?>(TagKey, "order"));
     }
 
     /// <inheritdoc/>

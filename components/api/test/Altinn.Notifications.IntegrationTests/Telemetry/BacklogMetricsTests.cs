@@ -40,7 +40,7 @@ public sealed class BacklogMetricsTests : IDisposable
             smsNotificationsDaytime: 7,
             ordersNotDue: 8,
             ordersPastDue: 9,
-            ordersFailed: 10);
+            ordersRetryExhausted: 10);
 
         // Assert
         Assert.Equal(9, capturedValues.Count);

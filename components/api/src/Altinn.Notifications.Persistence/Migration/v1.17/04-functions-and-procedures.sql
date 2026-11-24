@@ -1701,9 +1701,9 @@ returns table
 language sql
 as $$
 	select
-        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime > now() + INTERVAL '1 minute'),
-        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'),
-        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Failed'::orderprocessingstate);
+		(SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime > now() + INTERVAL '1 minute'),
+		(SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'),
+		(SELECT count(*) FROM notifications.orders WHERE processedstatus = 'RetryExhausted'::orderprocessingstate);
 $$;
 
 

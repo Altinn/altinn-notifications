@@ -24,38 +24,50 @@ public sealed class DynamicConfigService(
         CancellationToken cancellationToken)
     {
         NotificationConfig config = staticConfig.Copy();
-        IReadOnlyDictionary<string, string> overrides;
+        IReadOnlyDictionary<string, string> overrides = new Dictionary<string, string>();
         try
         {
             _podCount = await repository.GetPodCount(_podId, refreshInterval + HeartbeatMargin, cancellationToken);
             overrides = await repository.GetConfig(cancellationToken);
-
-            config.EmailDaytimeNotificationsProcessLoopConfig = ApplyOverride(staticConfig.EmailDaytimeNotificationsProcessLoopConfig, nameof(NotificationConfig.EmailDaytimeNotificationsProcessLoopConfig));
-            config.EmailAnytimeNotificationsProcessLoopConfig = ApplyOverride(staticConfig.EmailAnytimeNotificationsProcessLoopConfig, nameof(NotificationConfig.EmailAnytimeNotificationsProcessLoopConfig));
-            config.ComposedEmailNotificationsProcessLoopConfig = ApplyOverride(staticConfig.ComposedEmailNotificationsProcessLoopConfig, nameof(NotificationConfig.ComposedEmailNotificationsProcessLoopConfig));
-            config.SmsDaytimeNotificationsProcessLoopConfig = ApplyOverride(staticConfig.SmsDaytimeNotificationsProcessLoopConfig, nameof(NotificationConfig.SmsDaytimeNotificationsProcessLoopConfig));
-            config.SmsAnytimeNotificationsProcessLoopConfig = ApplyOverride(staticConfig.SmsAnytimeNotificationsProcessLoopConfig, nameof(NotificationConfig.SmsAnytimeNotificationsProcessLoopConfig));
-            config.PastDueOrdersProcessLoopConfig = ApplyOverride(staticConfig.PastDueOrdersProcessLoopConfig, nameof(NotificationConfig.PastDueOrdersProcessLoopConfig));
-            config.RetryOrdersProcessLoopConfig = ApplyOverride(staticConfig.RetryOrdersProcessLoopConfig, nameof(NotificationConfig.RetryOrdersProcessLoopConfig));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to read dynamic configuration from the database. Using static configuration.");
         }
 
+        config.EmailDaytimeNotificationsProcessLoopConfig = ApplyOverride(staticConfig.EmailDaytimeNotificationsProcessLoopConfig, nameof(NotificationConfig.EmailDaytimeNotificationsProcessLoopConfig));
+        config.EmailAnytimeNotificationsProcessLoopConfig = ApplyOverride(staticConfig.EmailAnytimeNotificationsProcessLoopConfig, nameof(NotificationConfig.EmailAnytimeNotificationsProcessLoopConfig));
+        config.ComposedEmailNotificationsProcessLoopConfig = ApplyOverride(staticConfig.ComposedEmailNotificationsProcessLoopConfig, nameof(NotificationConfig.ComposedEmailNotificationsProcessLoopConfig));
+        config.SmsDaytimeNotificationsProcessLoopConfig = ApplyOverride(staticConfig.SmsDaytimeNotificationsProcessLoopConfig, nameof(NotificationConfig.SmsDaytimeNotificationsProcessLoopConfig));
+        config.SmsAnytimeNotificationsProcessLoopConfig = ApplyOverride(staticConfig.SmsAnytimeNotificationsProcessLoopConfig, nameof(NotificationConfig.SmsAnytimeNotificationsProcessLoopConfig));
+        config.PastDueOrdersProcessLoopConfig = ApplyOverride(staticConfig.PastDueOrdersProcessLoopConfig, nameof(NotificationConfig.PastDueOrdersProcessLoopConfig));
+        config.RetryOrdersProcessLoopConfig = ApplyOverride(staticConfig.RetryOrdersProcessLoopConfig, nameof(NotificationConfig.RetryOrdersProcessLoopConfig));
+
         return (config, _podCount);
 
         ProcessLoopConfig ApplyOverride(ProcessLoopConfig loopConfig, string section)
         {
             string key = $"{nameof(NotificationConfig)}:{section}:{nameof(ProcessLoopConfig.TaskCount)}";
-            if (!overrides.TryGetValue(key, out string? value))
+            int taskCount = loopConfig.TaskCount;
+            if (overrides.TryGetValue(key, out string? value))
             {
-                return loopConfig;
+                if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int overrideTaskCount) && overrideTaskCount >= 0)
+                {
+                    taskCount = overrideTaskCount;
+                }
+                else
+                {
+                    logger.LogWarning("Ignoring dynamic configuration for {ConfigKey}: expected a non-negative integer TaskCount.", key);
+                }
             }
 
-            if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int taskCount) || taskCount < 0)
+            if (taskCount > 0 && taskCount < _podCount)
             {
-                logger.LogWarning("Ignoring dynamic configuration for {ConfigKey}: expected a non-negative integer TaskCount.", key);
+                taskCount = _podCount;
+            }
+
+            if (taskCount == loopConfig.TaskCount)
+            {
                 return loopConfig;
             }
 
