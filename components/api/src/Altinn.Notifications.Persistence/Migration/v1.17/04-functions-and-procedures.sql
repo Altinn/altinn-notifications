@@ -1691,12 +1691,12 @@ $BODY$;
 
 
 -- getordermetrics.sql:
-create or replace function notifications.get_order_metrics()
+create or replace function notifications.get_order_metrics_v2()
 returns table
 (
 	ordersnotduecount bigint,
 	orderspastduecount bigint,
-	ordersfailedcount bigint
+	ordersretryexhaustedcount bigint
 )
 language sql
 as $$

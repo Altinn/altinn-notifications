@@ -35,7 +35,7 @@ namespace Altinn.Notifications.Core.Persistence
         /// <summary>
         /// Get the current order backlog counts (not due, past due, and retry-exhausted) used for custom metrics.
         /// </summary>
-        Task<(long OrdersNotDueCount, long OrdersPastDueCount, long OrdersFailedCount)> GetOrderMetrics(CancellationToken cancellationToken);
+        Task<(long OrdersNotDueCount, long OrdersPastDueCount, long OrdersRetryExhaustedCount)> GetOrderMetrics(CancellationToken cancellationToken);
 
         /// <summary>
         /// Get order-not-due distribution metrics grouped by day.

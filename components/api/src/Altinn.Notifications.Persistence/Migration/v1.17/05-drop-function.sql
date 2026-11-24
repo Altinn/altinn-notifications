@@ -1,0 +1,1 @@
+drop function if exists notifications.get_order_metrics();
