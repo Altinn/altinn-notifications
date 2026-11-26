@@ -29,22 +29,6 @@ dotnet run
 dotnet test Altinn.Notifications.API.slnx
 ```
 
-## Dynamic worker counts
-
-Each API pod registers a heartbeat in PostgreSQL at startup and once per minute. A pod that has not refreshed for more than 90 seconds is removed from the count.
-
-The `TaskCount` settings are cluster-wide. Each pod uses `TaskCount / activePodCount`, rounded down, so a group has no workers when its task count is lower than the number of active pods.
-
-To temporarily override a task count, run the following as a database operator after migration `v1.17` has been applied:
-
-```sql
-INSERT INTO notifications.config (key, value)
-VALUES ('NotificationConfig:PastDueOrdersProcessLoopConfig:TaskCount', '24')
-ON CONFLICT (lower(key)) DO UPDATE SET value = EXCLUDED.value;
-```
-
-Keys are case-insensitive; only non-negative integer `TaskCount` values are supported. Delete the corresponding row to restore the static setting on the next refresh.
-
 ## 🐳 Containerization
 
 To run the API as a container (from the repo root):

@@ -88,11 +88,6 @@ public enum ProcessingLifecycleExt
     Order_Failed = 7,
 
     /// <summary>
-    /// All retry attempts have been exhausted and manual intervention is required to resolve the issue.
-    /// </summary>
-    Order_Retry_Exhausted = 8,
-
-    /// <summary>
     /// The SMS notification has been received and registered in the system but processing has not yet begun.
     /// </summary>
     /// <remarks>

@@ -15,6 +15,7 @@ public sealed class DynamicConfigService(
 {
     private static readonly TimeSpan HeartbeatMargin = TimeSpan.FromSeconds(30);
     private readonly Guid _podId = Guid.CreateVersion7();
+    private IReadOnlyDictionary<string, string> _overrides = new Dictionary<string, string>();
     private int _podCount = 2;
 
     /// <inheritdoc />
@@ -24,15 +25,16 @@ public sealed class DynamicConfigService(
         CancellationToken cancellationToken)
     {
         NotificationConfig config = staticConfig.Copy();
-        IReadOnlyDictionary<string, string> overrides = new Dictionary<string, string>();
+        IReadOnlyDictionary<string, string> overrides = _overrides;
         try
         {
             _podCount = await repository.GetPodCount(_podId, refreshInterval + HeartbeatMargin, cancellationToken);
             overrides = await repository.GetConfig(cancellationToken);
+            _overrides = overrides;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to read dynamic configuration from the database. Using static configuration.");
+            logger.LogError(ex, "Failed to read dynamic configuration from the database. Using the last retrieved overrides, or static configuration if none were retrieved.");
         }
 
         config.EmailDaytimeNotificationsProcessLoopConfig = ApplyOverride(staticConfig.EmailDaytimeNotificationsProcessLoopConfig, nameof(NotificationConfig.EmailDaytimeNotificationsProcessLoopConfig));

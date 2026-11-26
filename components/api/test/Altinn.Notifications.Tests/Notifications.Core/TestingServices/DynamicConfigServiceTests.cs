@@ -159,6 +159,82 @@ public class DynamicConfigServiceTests
     }
 
     [Fact]
+    public async Task GetDynamicConfig_WhenConfigReadFails_UsesLastSuccessfulOverridesUntilRecovery()
+    {
+        var staticConfig = new NotificationConfig();
+        staticConfig.RetryOrdersProcessLoopConfig.TaskCount = 9;
+        staticConfig.PastDueOrdersProcessLoopConfig.TaskCount = 12;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        var repository = new Mock<IDynamicConfigRepository>(MockBehavior.Strict);
+        repository.SetupSequence(r => r.GetPodCount(It.IsAny<Guid>(), It.IsAny<TimeSpan>(), cancellationToken))
+            .ReturnsAsync(2).ReturnsAsync(4).ReturnsAsync(1).ReturnsAsync(1).ReturnsAsync(1).ReturnsAsync(1).ReturnsAsync(1);
+        repository.SetupSequence(r => r.GetConfig(cancellationToken))
+            .ThrowsAsync(new InvalidOperationException())
+            .ReturnsAsync(new Dictionary<string, string>
+            {
+                ["NotificationConfig:RetryOrdersProcessLoopConfig:TaskCount"] = "1",
+                ["NotificationConfig:PastDueOrdersProcessLoopConfig:TaskCount"] = "0"
+            })
+            .ThrowsAsync(new InvalidOperationException())
+            .ReturnsAsync(new Dictionary<string, string>
+            {
+                ["NotificationConfig:RetryOrdersProcessLoopConfig:TaskCount"] = "0"
+            })
+            .ThrowsAsync(new InvalidOperationException())
+            .ReturnsAsync(new Dictionary<string, string>())
+            .ThrowsAsync(new InvalidOperationException());
+        var service = new DynamicConfigService(repository.Object, NullLogger<DynamicConfigService>.Instance);
+
+        var (initial, _) = await service.GetDynamicConfig(staticConfig, TimeSpan.FromMinutes(1), cancellationToken);
+        var (firstSuccess, _) = await service.GetDynamicConfig(staticConfig, TimeSpan.FromMinutes(1), cancellationToken);
+        var (firstFailure, firstFailurePodCount) = await service.GetDynamicConfig(staticConfig, TimeSpan.FromMinutes(1), cancellationToken);
+        var (updated, _) = await service.GetDynamicConfig(staticConfig, TimeSpan.FromMinutes(1), cancellationToken);
+        var (secondFailure, _) = await service.GetDynamicConfig(staticConfig, TimeSpan.FromMinutes(1), cancellationToken);
+        var (removed, _) = await service.GetDynamicConfig(staticConfig, TimeSpan.FromMinutes(1), cancellationToken);
+        var (failureAfterRemoval, _) = await service.GetDynamicConfig(staticConfig, TimeSpan.FromMinutes(1), cancellationToken);
+
+        Assert.Equal(9, initial.RetryOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(12, initial.PastDueOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(4, firstSuccess.RetryOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(0, firstSuccess.PastDueOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(1, firstFailurePodCount);
+        Assert.Equal(1, firstFailure.RetryOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(0, firstFailure.PastDueOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(0, updated.RetryOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(12, updated.PastDueOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(0, secondFailure.RetryOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(12, secondFailure.PastDueOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(9, removed.RetryOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(9, failureAfterRemoval.RetryOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(12, failureAfterRemoval.PastDueOrdersProcessLoopConfig.TaskCount);
+        Assert.Equal(9, staticConfig.RetryOrdersProcessLoopConfig.TaskCount);
+    }
+
+    [Fact]
+    public async Task GetDynamicConfig_WhenPodCountReadFails_UsesLastOverridesAndPodCount()
+    {
+        var staticConfig = new NotificationConfig();
+        staticConfig.RetryOrdersProcessLoopConfig.TaskCount = 9;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        var repository = new Mock<IDynamicConfigRepository>(MockBehavior.Strict);
+        repository.SetupSequence(r => r.GetPodCount(It.IsAny<Guid>(), It.IsAny<TimeSpan>(), cancellationToken))
+            .ReturnsAsync(3)
+            .ThrowsAsync(new InvalidOperationException());
+        repository.Setup(r => r.GetConfig(cancellationToken)).ReturnsAsync(new Dictionary<string, string>
+        {
+            ["NotificationConfig:RetryOrdersProcessLoopConfig:TaskCount"] = "1"
+        });
+        var service = new DynamicConfigService(repository.Object, NullLogger<DynamicConfigService>.Instance);
+
+        await service.GetDynamicConfig(staticConfig, TimeSpan.FromMinutes(1), cancellationToken);
+        var (fallback, podCount) = await service.GetDynamicConfig(staticConfig, TimeSpan.FromMinutes(1), cancellationToken);
+
+        Assert.Equal(3, podCount);
+        Assert.Equal(3, fallback.RetryOrdersProcessLoopConfig.TaskCount);
+        repository.Verify(r => r.GetConfig(cancellationToken), Times.Once);
+    }
+
+    [Fact]
     public async Task GetDynamicConfig_WhenPodCountChanges_RecalculatesFromStaticConfiguration()
     {
         var staticConfig = new NotificationConfig();
