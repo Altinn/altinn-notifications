@@ -2,18 +2,18 @@ DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
-        WHERE schemaname = 'notifications' AND indexname = 'emailnotifications_retrying_idx')
+        WHERE schemaname = 'notifications' AND         indexname = 'notifications_emailnotifications_retrying_idx')
     THEN
-        CREATE INDEX emailnotifications_retrying_idx ON notifications.emailnotifications
+                CREATE INDEX notifications_emailnotifications_retrying_idx ON notifications.emailnotifications
             USING btree (resulttime, _id)
             WHERE (result = 'Retrying'::emailnotificationresulttype);
     END IF;
 
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
-        WHERE schemaname = 'notifications' AND indexname = 'smsnotifications_retrying_idx')
+        WHERE schemaname = 'notifications' AND         indexname = 'notifications_smsnotifications_retrying_idx')
     THEN
-        CREATE INDEX smsnotifications_retrying_idx ON notifications.smsnotifications
+                CREATE INDEX notifications_smsnotifications_retrying_idx ON notifications.smsnotifications
             USING btree (resulttime, _id)
             WHERE (result = 'Retrying'::smsnotificationresulttype);
     END IF;
