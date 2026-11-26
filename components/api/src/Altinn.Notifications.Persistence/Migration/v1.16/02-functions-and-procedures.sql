@@ -69,8 +69,8 @@ $$;
 
 
 -- claimanytimeemail.sql:
-CREATE OR REPLACE FUNCTION notifications.claim_anytime_email_v3()
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text, conditionendpoint text, isconditionretry boolean)
+CREATE OR REPLACE FUNCTION notifications.claim_anytime_email()
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -90,9 +90,7 @@ BEGIN
                NULL::text AS body,
                NULL::text AS fromaddress,
                NULL::text AS toaddress,
-               NULL::text AS contenttype,
-               NULL::text AS conditionendpoint,
-               NULL::boolean AS isconditionretry
+               NULL::text AS contenttype
         WHERE FALSE;
         RETURN;
     END IF;
@@ -117,7 +115,6 @@ BEGIN
             AND email.expirytime >= now()
             AND email.iscomposed = false
             AND email.sendingtimepolicy = 1
-            AND (email.nextattempt IS NULL OR email.nextattempt <= clock_timestamp())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
@@ -133,8 +130,7 @@ BEGIN
             claimed.customizedsubject,
             claimed.customizedbody,
             claimed.toaddress,
-            claimed._orderid,
-            email.nextattempt
+            claimed._orderid
     )
     -- Join with large text data AFTER releasing locks
     SELECT
@@ -143,35 +139,30 @@ BEGIN
         COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
-        txt.contenttype,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint,
-        updated.nextattempt IS NOT NULL AS isconditionretry
+        txt.contenttype
     FROM updated_rows updated
-    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
-    JOIN notifications.orders o ON o._id = updated._orderid;
+    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_anytime_email_v3()
+ALTER FUNCTION notifications.claim_anytime_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_anytime_email_v3()
+COMMENT ON FUNCTION notifications.claim_anytime_email()
     IS 'Claims and returns a single email notification with sending time policy Anytime (sendingtimepolicy = 1), excluding Composed orders (iscomposed = true).
 Composed orders are processed through a dedicated pipeline to prevent head-of-line blocking.
-Daytime notifications (sendingtimepolicy = 2) are claimed by claim_daytime_email_v3.';
+Daytime notifications (sendingtimepolicy = 2) are claimed by claim_daytime_email.';
 
 
 -- claimanytimesms.sql:
--- FUNCTION: notifications.claim_anytime_sms_v4()
-CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_v4 ()
+-- FUNCTION: notifications.claim_anytime_sms_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_anytime_sms_v2 ()
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
   mobilenumber text,
   body text,
-  creatorname text,
-  conditionendpoint text,
-  isconditionretry boolean
+  creatorname text
 )
 LANGUAGE plpgsql
 AS $$
@@ -183,7 +174,6 @@ BEGIN
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
       AND sms.sendingtimepolicy = 1
-      AND (sms.nextattempt IS NULL OR sms.nextattempt <= clock_timestamp())
     ORDER BY sms.expirytime
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT 1
@@ -198,30 +188,26 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody,
-      sms.nextattempt
+      sms.customizedbody
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
     COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    ord.creatorname,
-    ord.notificationorder->>'ConditionEndpoint' AS conditionendpoint,
-    upd.nextattempt IS NOT NULL AS isconditionretry
+    ord.creatorname
   FROM updated_rows upd
   JOIN notifications.smstexts txt ON txt._orderid = upd._orderid
   JOIN notifications.orders ord ON ord._id = upd._orderid;
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_anytime_sms_v4() IS
+COMMENT ON FUNCTION notifications.claim_anytime_sms_v2() IS
 'Claims and returns an SMS notification (sendingtimepolicy = 1).
-Includes the order creatorname to support per-service-owner SMS sender substitution,
-and the order condition endpoint so the send condition can be evaluated at send time.';
+Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
 -- claimcomposedemail.sql:
-CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v3()
+CREATE OR REPLACE FUNCTION notifications.claim_composed_email()
     RETURNS TABLE(
         alternateid  uuid,
         subject      text,
@@ -229,9 +215,7 @@ CREATE OR REPLACE FUNCTION notifications.claim_composed_email_v3()
         fromaddress  text,
         toaddress    text,
         contenttype  text,
-        attachments  jsonb,
-        conditionendpoint text,
-        isconditionretry boolean
+        attachments  jsonb
     )
     LANGUAGE 'plpgsql'
 AS $BODY$
@@ -268,7 +252,6 @@ BEGIN
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
             AND email.iscomposed = true
-            AND (email.nextattempt IS NULL OR email.nextattempt <= clock_timestamp())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
@@ -284,8 +267,7 @@ BEGIN
             claimed.customizedsubject,
             claimed.customizedbody,
             claimed.toaddress,
-            claimed._orderid,
-            email.nextattempt
+            claimed._orderid
     )
     SELECT
         updated.alternateid,
@@ -294,19 +276,17 @@ BEGIN
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype,
-        COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint,
-        updated.nextattempt IS NOT NULL AS isconditionretry
+        COALESCE(o.notificationorder -> 'EmailAttachments', '[]'::jsonb) AS attachments
     FROM updated_rows updated
     JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
     JOIN notifications.orders o       ON o._id = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_composed_email_v3()
+ALTER FUNCTION notifications.claim_composed_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_composed_email_v3()
+COMMENT ON FUNCTION notifications.claim_composed_email()
     IS 'Claims and returns a single email notification for Composed orders (iscomposed = true).
 Returns an empty JSON array when no attachments are present.';
 
@@ -400,8 +380,8 @@ _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 
 
 -- claimdaytimeemail.sql:
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_email_v3()
-    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text, conditionendpoint text, isconditionretry boolean)
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_email()
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text)
     LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -421,9 +401,7 @@ BEGIN
                NULL::text AS body,
                NULL::text AS fromaddress,
                NULL::text AS toaddress,
-               NULL::text AS contenttype,
-               NULL::text AS conditionendpoint,
-               NULL::boolean AS isconditionretry
+               NULL::text AS contenttype
         WHERE FALSE;
         RETURN;
     END IF;
@@ -448,7 +426,6 @@ BEGIN
             AND email.expirytime >= now()
             AND email.iscomposed = false
             AND email.sendingtimepolicy = 2
-            AND (email.nextattempt IS NULL OR email.nextattempt <= clock_timestamp())
         ORDER BY email.expirytime
         FOR UPDATE OF email SKIP LOCKED
         LIMIT 1
@@ -464,8 +441,7 @@ BEGIN
             claimed.customizedsubject,
             claimed.customizedbody,
             claimed.toaddress,
-            claimed._orderid,
-            email.nextattempt
+            claimed._orderid
     )
     -- Join with large text data AFTER releasing locks
     SELECT
@@ -474,34 +450,29 @@ BEGIN
         COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
-        txt.contenttype,
-        o.notificationorder->>'ConditionEndpoint' AS conditionendpoint,
-        updated.nextattempt IS NOT NULL AS isconditionretry
+        txt.contenttype
     FROM updated_rows updated
-    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid
-    JOIN notifications.orders o ON o._id = updated._orderid;
+    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.claim_daytime_email_v3()
+ALTER FUNCTION notifications.claim_daytime_email()
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.claim_daytime_email_v3()
+COMMENT ON FUNCTION notifications.claim_daytime_email()
     IS 'Claims and returns a single email notification with sending time policy Daytime (sendingtimepolicy = 2), excluding Composed orders (iscomposed = true).
-Anytime notifications (sendingtimepolicy = 1) are claimed by claim_anytime_email_v3.';
+Anytime notifications (sendingtimepolicy = 1) are claimed by claim_anytime_email.';
 
 
 -- claimdaytimesms.sql:
--- FUNCTION: notifications.claim_daytime_sms_v4()
-CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_v4 ()
+-- FUNCTION: notifications.claim_daytime_sms_v2()
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_v2 ()
 RETURNS TABLE (
   alternateid uuid,
   sendernumber text,
   mobilenumber text,
   body text,
-  creatorname text,
-  conditionendpoint text,
-  isconditionretry boolean
+  creatorname text
 )
 LANGUAGE plpgsql
 AS $$
@@ -513,7 +484,6 @@ BEGIN
     WHERE sms.result = 'New'::smsnotificationresulttype
       AND sms.expirytime >= now()
       AND sms.sendingtimepolicy = 2
-      AND (sms.nextattempt IS NULL OR sms.nextattempt <= clock_timestamp())
     ORDER BY sms.expirytime
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT 1
@@ -528,27 +498,23 @@ BEGIN
       sms._orderid,
       sms.alternateid,
       sms.mobilenumber,
-      sms.customizedbody,
-      sms.nextattempt
+      sms.customizedbody
   )
   SELECT
     upd.alternateid,
     txt.sendernumber,
     upd.mobilenumber,
     COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body,
-    ord.creatorname,
-    ord.notificationorder->>'ConditionEndpoint' AS conditionendpoint,
-    upd.nextattempt IS NOT NULL AS isconditionretry
+    ord.creatorname
   FROM updated_rows upd
   JOIN notifications.smstexts txt ON txt._orderid = upd._orderid
   JOIN notifications.orders ord ON ord._id = upd._orderid;
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_daytime_sms_v4() IS
+COMMENT ON FUNCTION notifications.claim_daytime_sms_v2() IS
 'Claims and returns an SMS notification (sendingtimepolicy = 2).
-Includes the order creatorname to support per-service-owner SMS sender substitution,
-and the order condition endpoint so the send condition can be evaluated at send time.';
+Includes the order creatorname to support per-service-owner SMS sender substitution.';
 
 -- claimemail.sql:
 CREATE OR REPLACE FUNCTION notifications.claim_email()
