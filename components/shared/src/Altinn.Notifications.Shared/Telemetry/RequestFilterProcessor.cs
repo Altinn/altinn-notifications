@@ -14,7 +14,7 @@ public class RequestFilterProcessor : BaseProcessor<Activity>
 {
     /// <summary>The operation name of inbound HTTP request activities.</summary>
     protected const string RequestKind = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
-    private static readonly string[] _excludedPathSuffixes = ["/health", "/health/live", "/health/ready", "/health/startup"];
+    private static readonly string[] _excludedPaths = ["/health", "/health/live", "/health/ready", "/health/startup"];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RequestFilterProcessor"/> class.
@@ -73,6 +73,6 @@ public class RequestFilterProcessor : BaseProcessor<Activity>
 
         string path = localpath.TrimEnd('/');
 
-        return _excludedPathSuffixes.Any(suffix => path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+        return _excludedPaths.Any(excluded => string.Equals(path, excluded, StringComparison.OrdinalIgnoreCase));
     }
 }

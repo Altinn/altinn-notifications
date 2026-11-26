@@ -23,7 +23,6 @@ public class RequestFilterProcessorTests
     [InlineData("/health/startup")]
     [InlineData("/health/ready")]
     [InlineData("/Health/Ready")]
-    [InlineData("/notifications/api/v1/health/ready")]
     public void OnStart_HealthPath_SuppressesRequest(string path)
     {
         var processor = CreateProcessor(path);
@@ -38,6 +37,8 @@ public class RequestFilterProcessorTests
     [InlineData("/notifications/api/v1/orders")]
     [InlineData("/health/other")]
     [InlineData("/healthy")]
+    [InlineData("/not-a-route/health/ready")]
+    [InlineData("/notifications/api/v1/health")]
     public void OnStart_OtherPath_KeepsRequestRecorded(string path)
     {
         var processor = CreateProcessor(path);
