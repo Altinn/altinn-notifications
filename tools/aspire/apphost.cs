@@ -98,24 +98,62 @@ else if (authMode != "at23")
     throw new InvalidOperationException($"Auth:Mode must be 'mock' or 'at23', not '{authMode}'.");
 }
 
-// The services only use AMQP on 5672. The emulator's HTTP port is just for the health check, so it can move if 5300 is taken.
-var serviceBusHealthPort = builder.Configuration.GetValue("ServiceBus:HealthPort", 5300);
-StartContainer("../asb-emulator", ["compose", "up", "-d"], new() { ["EMULATOR_HOST_HTTP_PORT"] = serviceBusHealthPort.ToString() });
-var serviceBus = builder.AddExecutable("servicebus", containerRuntime, ".", "logs", "-f", "servicebus-emulator")
-    .WithHttpEndpoint(port: serviceBusHealthPort, targetPort: serviceBusHealthPort, name: "management", isProxied: false)
-    .WithHttpHealthCheck("/health", endpointName: "management");
+// Without ServiceBus:ConnectionString the services use the emulator from tools/asb-emulator through the connection string in their own
+// appsettings.Development.json. With it they use another broker instead, e.g. a Service Bus namespace in Azure or OpenServiceBus, and the
+// emulator is not started. ServiceBus:HealthUrl then lets the services wait until that broker is up.
+IResourceBuilder<IResource>? serviceBus = null;
+IResourceBuilder<ParameterResource>? serviceBusConnectionString = null;
+if (string.IsNullOrEmpty(builder.Configuration["ServiceBus:ConnectionString"]))
+{
+    // The services only use AMQP on 5672. The emulator's HTTP port is just for the health check, so it can move if 5300 is taken.
+    var serviceBusHealthPort = builder.Configuration.GetValue("ServiceBus:HealthPort", 5300);
+    StartContainer("../asb-emulator", ["compose", "up", "-d"], new() { ["EMULATOR_HOST_HTTP_PORT"] = serviceBusHealthPort.ToString() });
+    serviceBus = builder.AddExecutable("servicebus", containerRuntime, ".", "logs", "-f", "servicebus-emulator")
+        .WithHttpEndpoint(port: serviceBusHealthPort, targetPort: serviceBusHealthPort, name: "management", isProxied: false)
+        .WithHttpHealthCheck("/health", endpointName: "management");
+}
+else
+{
+    // A secret parameter, so the dashboard masks the key of a real namespace.
+    serviceBusConnectionString = builder.AddParameterFromConfiguration("servicebus-connection-string", "ServiceBus:ConnectionString", secret: true);
+    foreach (var service in new[] { api, email, sms })
+    {
+        service.WithEnvironment("WolverineSettings__ServiceBusConnectionString", serviceBusConnectionString);
+    }
 
-api.WaitFor(serviceBus);
-email.WaitFor(serviceBus);
-sms.WaitFor(serviceBus);
+    string? healthUrl = builder.Configuration["ServiceBus:HealthUrl"];
+    if (!string.IsNullOrEmpty(healthUrl))
+    {
+        var health = new Uri(healthUrl, UriKind.Absolute);
+        serviceBus = builder.AddExternalService("servicebus", health.GetLeftPart(UriPartial.Authority) + "/")
+            .WithHttpHealthCheck(health.PathAndQuery);
+    }
+}
+
+if (serviceBus is not null)
+{
+    api.WaitFor(serviceBus);
+    email.WaitFor(serviceBus);
+    sms.WaitFor(serviceBus);
+}
 
 // mock: the email service sends to a local ACS mock that checks the request signature, answers by recipient address and puts
 // delivery reports on the emulator's queue. It sends a copy of each email and its outcome to the control panel's Inbox tab. real: the email service uses the connection string from its own settings.
 var acsMode = builder.Configuration["Acs:Mode"] ?? "mock";
 if (acsMode == "mock")
 {
-    var acs = builder.AddAcsMock("mock-acs", builder.Configuration.GetValue("Acs:Port", 5095), controlPanel)
-        .WaitFor(serviceBus);
+    var acs = builder.AddAcsMock("mock-acs", builder.Configuration.GetValue("Acs:Port", 5095), controlPanel);
+    if (serviceBus is not null)
+    {
+        acs.WaitFor(serviceBus);
+    }
+
+    // The mock puts delivery reports on the same broker as the services.
+    if (serviceBusConnectionString is not null)
+    {
+        acs.WithEnvironment("AcsMockSettings__ServiceBusConnectionString", serviceBusConnectionString);
+    }
+
     email.WithAcsMock(acs);
 }
 else if (acsMode != "real")
@@ -162,6 +200,7 @@ controlPanel.WithActiveSettings(new Dictionary<string, string>
 {
     ["Auth:Mode"] = authMode,
     ["Acs:Mode"] = acsMode,
+    ["ServiceBus:ConnectionString"] = serviceBusConnectionString is null ? "(emulator)" : "(set)",
     ["LinkMobility:Target"] = linkMobilityTarget.Length > 0 ? linkMobilityTarget : "(stub)",
     ["LinkMobility:Interactive"] = linkMobilityInteractive.ToString(),
     ["Mocks:Enabled"] = mocksEnabled.ToString(),

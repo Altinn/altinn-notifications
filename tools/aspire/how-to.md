@@ -16,6 +16,7 @@ Run the `aspire` commands from `tools/aspire`. Put your own settings in a git-ig
 - [Run a component's tests](#run-a-components-tests)
 - [Compare with a service in the cluster](#compare-with-a-service-in-the-cluster)
 - [Use another database, or run next to localtest](#use-another-database-or-run-next-to-localtest)
+- [Use another Service Bus broker](#use-another-service-bus-broker)
 - [Run the stack from another checkout](#run-the-stack-from-another-checkout)
 - [Start over](#start-over)
 - [Use real ACS, LinkMobility or at23](#use-real-acs-linkmobility-or-at23)
@@ -165,6 +166,21 @@ Set the container name and ports in `appsettings.Local.json`. For example, a sep
 ```
 
 Create the container as in [Prerequisites](README.md#prerequisites), with the name and host port changed. To use a PostgreSQL that is not in a container, set `Postgres:UseContainer` to `false`. All settings are in [Settings](README.md#settings).
+
+## Use another Service Bus broker
+
+Set `ServiceBus:ConnectionString` in `appsettings.Local.json`, for example to OpenServiceBus on port 5682 with its health endpoint on 5310:
+
+```json
+{
+  "ServiceBus": {
+    "ConnectionString": "Endpoint=sb://localhost:5682;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;",
+    "HealthUrl": "http://localhost:5310/health"
+  }
+}
+```
+
+The app host then does not start the emulator. The broker needs the queues from `tools/asb-emulator/config.json`, and the services purge them when they start, so do not point it at a namespace that others use. For a namespace in Azure, leave out `HealthUrl` and `UseDevelopmentEmulator`, and keep the key out of files with `aspire secret set ServiceBus:ConnectionString`, which asks for the value. See [Another Service Bus broker](README.md#another-service-bus-broker).
 
 ## Run the stack from another checkout
 
