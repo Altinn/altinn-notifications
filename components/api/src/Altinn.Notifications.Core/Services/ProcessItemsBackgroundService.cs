@@ -246,7 +246,7 @@ public class ProcessItemsBackgroundService(
     internal class ManyItemsLately
     {
         private bool _manyItemsLately;
-        private readonly object _lock = new();
+        private readonly Lock _lock = new();
 
         /// <summary>
         /// Gets the value of the flag in a thread-safe manner.
