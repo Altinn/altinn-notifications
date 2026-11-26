@@ -10,7 +10,7 @@
 		<PackageVersion Include="Altinn.ApiClients.Maskinporten" Version="10.2.1" />
 		<PackageVersion Include="Altinn.Authorization.ProblemDetails" Version="6.0.0" />
 		<PackageVersion Include="Altinn.Authorization.ProblemDetails.Abstractions" Version="6.0.0" />
-		<PackageVersion Include="Altinn.Common.AccessToken" Version="5.1.19" />
+		<PackageVersion Include="Altinn.Common.AccessToken" Version="5.1.20" />
 		<PackageVersion Include="Altinn.Common.AccessTokenClient" Version="3.2.12" />
 		<PackageVersion Include="Altinn.Common.PEP" Version="5.0.0" />
 		<PackageVersion Include="Altinn.Register.Contracts" Version="1.8.0" />
@@ -58,9 +58,9 @@
 		<PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.15" />
 
 		<!-- Npgsql -->
-		<PackageVersion Include="Npgsql" Version="10.0.3" />
-		<PackageVersion Include="Npgsql.DependencyInjection" Version="10.0.3" />
-		<PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.3" />
+		<PackageVersion Include="Npgsql" Version="10.0.4" />
+		<PackageVersion Include="Npgsql.DependencyInjection" Version="10.0.4" />
+		<PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.4" />
 
 		<!-- OpenTelemetry -->
 		<PackageVersion Include="OpenTelemetry.Api" Version="1.21.0" />
@@ -69,15 +69,20 @@
 		<PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
 		<PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.21.0" />
 
+		<!-- Roslyn: WireMock.Net (via MetadataReferenceService.Abstractions) needs 5.9.0 while WolverineFx.RuntimeCompilation (via JasperFx.RuntimeCompiler) pins 5.0.0.
+		     Pinning the roots keeps the exact-version Roslyn packages aligned (fixes NU1608). Remove when Wolverine/JasperFx bring 5.9.0 or later themselves. -->
+		<PackageVersion Include="Microsoft.CodeAnalysis" Version="5.9.0" />
+		<PackageVersion Include="Microsoft.CodeAnalysis.Scripting" Version="5.9.0" />
+
 		<!-- Other -->
 		<PackageVersion Include="JWTCookieAuthentication" Version="4.0.4" />
-		<PackageVersion Include="libphonenumber-csharp" Version="9.0.43" />
+		<PackageVersion Include="libphonenumber-csharp" Version="9.0.44" />
 		<PackageVersion Include="Parquet.Net" Version="6.1.0" />
 		<PackageVersion Include="RandomString4Net" Version="1.10.0" />
 		<PackageVersion Include="System.IO.Hashing" Version="10.0.15" />
 		<PackageVersion Include="System.Memory.Data" Version="10.0.15" />
-		<PackageVersion Include="Testcontainers" Version="4.16.0" />
-		<PackageVersion Include="WireMock.Net" Version="2.31.0" />
+		<PackageVersion Include="Testcontainers" Version="4.17.0" />
+		<PackageVersion Include="WireMock.Net" Version="2.32.0" />
 		<!-- Pins WireMock.Net's transitive dependency to the version with the fix for CVE-2026-118750 (GHSA-6527-9fp8-r4x6). Remove when WireMock.Net brings 2.3.14 or later itself. -->
 		<PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="2.3.14" />
 
@@ -94,9 +99,9 @@
 		<PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
 
 		<!-- Wolverine -->
-		<PackageVersion Include="WolverineFx" Version="6.64.1" />
-		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.64.1" />
-		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.64.1" />
+		<PackageVersion Include="WolverineFx" Version="6.64.2" />
+		<PackageVersion Include="WolverineFx.AzureServiceBus" Version="6.64.2" />
+		<PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.64.2" />
 
 		<!-- xUnit -->
 		<PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
