@@ -8,7 +8,7 @@ BEGIN
     UPDATE notifications.smsnotifications
     SET
         result = 'Retrying'::smsnotificationresulttype,
-        resulttime = now(),
+        resulttime = clock_timestamp(),
         retryreason = _retryreason,
         retrycount = retrycount + 1
     WHERE alternateid = _alternateid;
