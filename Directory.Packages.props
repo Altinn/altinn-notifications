@@ -91,7 +91,7 @@
 		<!-- Swagger -->
 		<PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.1" />
 		<PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="10.3.1" />
-		<PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
+		<PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="11.0.0" />
 
 		<!-- Wolverine -->
 		<PackageVersion Include="WolverineFx" Version="6.64.1" />
