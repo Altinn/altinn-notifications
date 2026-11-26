@@ -192,6 +192,36 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendRetryNotification_WhenTraced_TagsActivityWithKindAndPolicy()
+    {
+        var tags = new System.Collections.Concurrent.ConcurrentBag<(string? Kind, string? Policy)>();
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = source => source.Name == Altinn.Notifications.Core.Shared.BackgroundActivitySource.Name,
+            Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) => System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity =>
+            {
+                string? kind = activity.GetTagItem("Kind") as string;
+                if (kind == nameof(ISmsNotificationService.SendRetryNotification))
+                {
+                    tags.Add((kind, activity.GetTagItem("Policy")?.ToString()));
+                }
+            }
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo.Setup(r => r.GetNewRetryNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime)).ReturnsAsync((Sms?)null);
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(CreateUnitOfWork());
+        var service = GetService(repository: repo.Object, unitOfWorkRepository: unitOfWorkRepository.Object);
+
+        await service.SendRetryNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+
+        Assert.Contains(tags, t => t.Policy == nameof(SendingTimePolicy.Anytime));
+    }
+
+    [Fact]
     public async Task SendNotification_CancellationRequestedAfterClaim_RollsBackAndReturnsFalse()
     {
         // Arrange
