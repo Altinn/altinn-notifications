@@ -69,6 +69,11 @@
 		<PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
 		<PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.21.0" />
 
+		<!-- Roslyn: WireMock.Net (via MetadataReferenceService.Abstractions) needs 5.9.0 while WolverineFx.RuntimeCompilation (via JasperFx.RuntimeCompiler) pins 5.0.0.
+		     Pinning the roots keeps the exact-version Roslyn packages aligned (fixes NU1608). Remove when Wolverine/JasperFx bring 5.9.0 or later themselves. -->
+		<PackageVersion Include="Microsoft.CodeAnalysis" Version="5.9.0" />
+		<PackageVersion Include="Microsoft.CodeAnalysis.Scripting" Version="5.9.0" />
+
 		<!-- Other -->
 		<PackageVersion Include="JWTCookieAuthentication" Version="4.0.4" />
 		<PackageVersion Include="libphonenumber-csharp" Version="9.0.44" />
