@@ -103,7 +103,8 @@ var serviceBusHealthPort = builder.Configuration.GetValue("ServiceBus:HealthPort
 StartContainer("../asb-emulator", ["compose", "up", "-d"], new() { ["EMULATOR_HOST_HTTP_PORT"] = serviceBusHealthPort.ToString() });
 var serviceBus = builder.AddExecutable("servicebus", containerRuntime, ".", "logs", "-f", "servicebus-emulator")
     .WithHttpEndpoint(port: serviceBusHealthPort, targetPort: serviceBusHealthPort, name: "management", isProxied: false)
-    .WithHttpHealthCheck("/health", endpointName: "management");
+    .WithHttpHealthCheck("/health", endpointName: "management")
+    .WithQueueStatusCommand(Path.Combine(builder.AppHostDirectory, "../asb-emulator/config.json"), serviceBusHealthPort);
 
 api.WaitFor(serviceBus);
 email.WaitFor(serviceBus);

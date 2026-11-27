@@ -7,6 +7,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Dotnet;
 
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Xunit;
@@ -253,6 +254,30 @@ public partial class HostingExtensionsTests
         var commands = harness.Resource.Annotations.OfType<ResourceCommandAnnotation>().ToDictionary(c => c.Name);
         Assert.Equal(["recipient", "text"], commands["send-test-sms"].Arguments.Select(a => a.Name));
         Assert.Equal(["recipient", "subject", "body"], commands["send-test-email"].Arguments.Select(a => a.Name));
+    }
+
+    [Fact]
+    public void WithQueueStatusCommand_OffersTheEmulatorsQueues_AndEveryStatus()
+    {
+        var serviceBus = _builder.AddExecutable("servicebus", "docker", ".", "logs", "-f", "servicebus-emulator");
+
+        serviceBus.WithQueueStatusCommand(Path.Combine(RepositoryRoot(), "tools", "asb-emulator", "config.json"), 5300);
+
+        var command = Assert.Single(serviceBus.Resource.Annotations.OfType<ResourceCommandAnnotation>(), c => c.Name == "set-queue-status");
+        var queue = command.Arguments.Single(a => a.Name == "queue");
+        var status = command.Arguments.Single(a => a.Name == "status");
+        Assert.Contains(queue.Options!, o => o.Key == "altinn.notifications.sms.send");
+        Assert.Equal(["Active", "ReceiveDisabled", "SendDisabled", "Disabled"], status.Options!.Select(o => o.Key));
+        Assert.Equal("ReceiveDisabled", status.Value);
+    }
+
+    [Theory]
+    [InlineData(HealthStatus.Healthy, ResourceCommandState.Enabled)]
+    [InlineData(HealthStatus.Unhealthy, ResourceCommandState.Disabled)]
+    [InlineData(null, ResourceCommandState.Disabled)]
+    public void SetQueueStatus_IsEnabledOnlyWhileTheEmulatorIsHealthy(HealthStatus? health, ResourceCommandState expected)
+    {
+        Assert.Equal(expected, ServiceBusEmulatorBuilderExtensions.IsEnabled(health));
     }
 
     [Fact]
