@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -430,6 +431,96 @@ public class ProcessItemsBackgroundServiceTests
         scheduleService.Verify(s => s.CanSendSmsNow(), Times.Never);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenStopRequestedDuringProcessing_PassesCancellationToInFlightWork()
+    {
+        // Arrange
+        var config = CreateConfig();
+        config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        bool? tokenCancelledDuringWork = null;
+
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var smsService = new Mock<ISmsNotificationService>();
+        smsService
+            .Setup(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>(async (_, token) =>
+            {
+                await cts.CancelAsync();
+                tokenCancelledDuringWork = token.IsCancellationRequested;
+                return false;
+            });
+
+        var service = new TestableProcessItemsBackgroundService(
+            emailService.Object,
+            smsService.Object,
+            orderService.Object,
+            CreateOptionsMonitor(config),
+            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
+            new Mock<INotificationScheduleService>().Object);
+
+        // Act
+        await service.ExecuteForTest(cts.Token);
+
+        // Assert
+        Assert.NotNull(tokenCancelledDuringWork);
+        Assert.True(tokenCancelledDuringWork);
+        smsService.Verify(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenApplicationStoppingFires_StopsClaimingWithoutHostStopToken()
+    {
+        // Arrange
+        var config = CreateConfig();
+        config.SmsAnytimeNotificationsProcessLoopConfig.TaskCount = 1;
+        SetZeroIdleDelays(config);
+
+        using var applicationStopping = new CancellationTokenSource();
+        using var hostStopToken = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+        var lifetime = new Mock<IHostApplicationLifetime>();
+        lifetime.SetupGet(l => l.ApplicationStopping).Returns(applicationStopping.Token);
+
+        int callCount = 0;
+        var orderService = new Mock<IOrderProcessingService>(MockBehavior.Strict);
+        var emailService = new Mock<IEmailNotificationService>(MockBehavior.Strict);
+        var smsService = new Mock<ISmsNotificationService>();
+        smsService
+            .Setup(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
+            .Returns<SendingTimePolicy, CancellationToken>(async (_, _) =>
+            {
+                if (Interlocked.Increment(ref callCount) > 1)
+                {
+                    // The loop ignored ApplicationStopping; end the test now instead of waiting for the watchdog timeout.
+                    await hostStopToken.CancelAsync();
+                    return false;
+                }
+
+                await applicationStopping.CancelAsync();
+                return true;
+            });
+
+        var service = new TestableProcessItemsBackgroundService(
+            emailService.Object,
+            smsService.Object,
+            orderService.Object,
+            CreateOptionsMonitor(config),
+            new Mock<ILogger<ProcessItemsBackgroundService>>().Object,
+            new Mock<INotificationScheduleService>().Object,
+            applicationLifetime: lifetime.Object);
+
+        // Act
+        await service.ExecuteForTest(hostStopToken.Token);
+
+        // Assert
+        Assert.False(hostStopToken.IsCancellationRequested);
+        smsService.Verify(s => s.SendNotification(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static IOptionsMonitor<NotificationConfig> CreateOptionsMonitor(NotificationConfig config)
     {
         var optionsMonitor = new Mock<IOptionsMonitor<NotificationConfig>>();
@@ -512,8 +603,9 @@ public class ProcessItemsBackgroundServiceTests
             IOptionsMonitor<NotificationConfig> config,
             ILogger<ProcessItemsBackgroundService> logger,
             INotificationScheduleService notificationScheduleService,
-            int podCount = 1)
-            : base(emailSendingService, smsSendingService, orderProcessingService, config, logger, notificationScheduleService, CreateDynamicConfigService(podCount))
+            int podCount = 1,
+            IHostApplicationLifetime? applicationLifetime = null)
+            : base(emailSendingService, smsSendingService, orderProcessingService, config, logger, notificationScheduleService, CreateDynamicConfigService(podCount), applicationLifetime ?? new Mock<IHostApplicationLifetime>().Object)
         {
         }
 

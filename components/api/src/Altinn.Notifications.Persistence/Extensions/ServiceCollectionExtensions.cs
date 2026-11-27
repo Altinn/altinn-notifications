@@ -1,7 +1,8 @@
-﻿using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Health;
 using Altinn.Notifications.Persistence.Repository;
+using Altinn.Notifications.Shared.Health;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,10 +61,9 @@ public static class ServiceCollectionExtensions
     /// Adds postgresql health checks
     /// </summary>
     /// <param name="services">service collection.</param>
-    /// <param name="config">the configuration collection</param>
-    public static void AddPostgresHealthChecks(this IServiceCollection services, IConfiguration config)
+    public static void AddPostgresHealthChecks(this IServiceCollection services)
     {
         services.AddHealthChecks()
-            .AddCheck<PostgresHealthCheck>("notifications_postgres_health_check");
+            .AddCheck<PostgresHealthCheck>("notifications_postgres_health_check", timeout: TimeSpan.FromSeconds(5), tags: [HealthCheckTags.Ready]);
     }
 }

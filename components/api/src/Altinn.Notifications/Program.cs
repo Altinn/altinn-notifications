@@ -19,6 +19,8 @@ using Altinn.Notifications.Integrations.Telemetry;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Shared.Extensions;
+using Altinn.Notifications.Shared.Health;
 using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
@@ -30,6 +32,7 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -119,7 +122,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHealthChecks("/health");
+app.MapNotificationsHealthEndpoints();
 
 app.UseOrgExtractor();
 
@@ -172,6 +175,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "System.Net.Http",
                 DeliveryReportMetrics.MeterName,
                 BacklogMetrics.MeterName,
+                HealthCheckMetricsPublisher.MeterName,
                 DeprecatedEndpointAttribute.MeterName);
         })
         .WithTracing(tracing =>
@@ -213,7 +217,22 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     });
     services.AddControllersWithViews();
 
-    services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
+    services.AddHealthChecks()
+        .AddCheck<HealthCheck>("notifications_health_check", tags: [HealthCheckTags.Live])
+        .AddLifecycleHealthChecks();
+
+    // Finish in-flight work before the default Kubernetes terminationGracePeriodSeconds (30s) sends SIGKILL.
+    services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(25));
+    services.AddSingleton<IHealthCheckPublisher, HealthCheckMetricsPublisher>();
+    services.Configure<HealthCheckPublisherOptions>(options =>
+    {
+        options.Delay = TimeSpan.FromSeconds(5);
+        options.Period = TimeSpan.FromSeconds(30);
+
+        // Lifecycle checks flip during every rollout and would otherwise look like dependency failures in monitoring.
+        options.Predicate = check => !check.Tags.Contains(HealthCheckTags.Lifecycle);
+    });
+    services.AddPostgresHealthChecks();
 
     services.AddSingleton(config);
 

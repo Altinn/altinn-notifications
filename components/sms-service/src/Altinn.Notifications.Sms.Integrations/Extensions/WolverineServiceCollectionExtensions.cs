@@ -35,6 +35,10 @@ public static class WolverineServiceCollectionExtensions
             .AddSingleton(wolverineSettings)
             .Configure<WolverineSettings>(wolverineSection);
 
+        services.AddHealthChecks().AddWolverineDependencyHealthChecks(
+            wolverineSettings.ServiceBusConnectionString,
+            wolverineSettings.SendSmsQueueName);
+
         services.AddWolverine(opts =>
         {
             opts.ConfigureNotificationsDefaults(hostEnvironment, wolverineSettings.ServiceBusConnectionString);

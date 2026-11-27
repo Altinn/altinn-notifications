@@ -27,6 +27,7 @@ public class ProcessItemsBackgroundService : BackgroundService
     private readonly ILogger<ProcessItemsBackgroundService> _logger;
     private readonly INotificationScheduleService _notificationScheduleService;
     private readonly IDynamicConfigService _dynamicConfigService;
+    private readonly IHostApplicationLifetime _applicationLifetime;
     private readonly ManyItemsLately _manyEmailDaytimeNotificationsLately = new();
     private readonly ManyItemsLately _manyEmailAnytimeNotificationsLately = new();
     private readonly ManyItemsLately _manyComposedEmailNotificationsLately = new();
@@ -45,8 +46,10 @@ public class ProcessItemsBackgroundService : BackgroundService
         IOptionsMonitor<NotificationConfig> config,
         ILogger<ProcessItemsBackgroundService> logger,
         INotificationScheduleService notificationScheduleService,
-        IDynamicConfigService dynamicConfigService)
+        IDynamicConfigService dynamicConfigService,
+        IHostApplicationLifetime applicationLifetime)
     {
+        _applicationLifetime = applicationLifetime;
         _emailSendingService = emailSendingService;
         _smsSendingService = smsSendingService;
         _orderProcessingService = orderProcessingService;
@@ -58,6 +61,13 @@ public class ProcessItemsBackgroundService : BackgroundService
 
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // Stop claiming new items as soon as the host begins shutting down, before any hosted service is stopped.
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, _applicationLifetime.ApplicationStopping);
+        await RunLoopsAsync(linkedCts.Token);
+    }
+
+    private async Task RunLoopsAsync(CancellationToken stoppingToken)
     {
         List<WorkerPool> workerPools = CreateWorkerPools();
         try
@@ -347,7 +357,7 @@ public class ProcessItemsBackgroundService : BackgroundService
     internal class ManyItemsLately
     {
         private bool _manyItemsLately;
-        private readonly object _lock = new();
+        private readonly Lock _lock = new();
 
         /// <summary>
         /// Gets the value of the flag in a thread-safe manner.

@@ -42,6 +42,14 @@ public static class WolverineServiceCollectionExtensions
             .AddSingleton<DeliveryReportMetrics>()
             .Configure<WolverineSettings>(wolverineSection);
 
+        services.AddHealthChecks().AddWolverineDependencyHealthChecks(
+            wolverineSettings.ServiceBusConnectionString,
+            wolverineSettings.SmsSendResultQueueName,
+            wolverineSettings.EmailSendResultQueueName,
+            wolverineSettings.SmsDeliveryReportQueueName,
+            wolverineSettings.EmailDeliveryReportQueueName,
+            wolverineSettings.EmailServiceRateLimitQueueName);
+
         services.AddWolverine(opts =>
         {
             opts.ConfigureNotificationsDefaults(hostEnvironment, wolverineSettings.ServiceBusConnectionString);

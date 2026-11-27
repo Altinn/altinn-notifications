@@ -1,5 +1,7 @@
 using System.Reflection;
 
+using Altinn.Notifications.Shared.Extensions;
+using Altinn.Notifications.Shared.Health;
 using Altinn.Notifications.Shared.Telemetry;
 using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Configuration;
@@ -114,7 +116,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
     }
 }
 
-void ConfigureApplicationLogging(ILoggingBuilder logging)
+static void ConfigureApplicationLogging(ILoggingBuilder logging)
 {
     logging.AddOpenTelemetry(builder =>
     {
@@ -167,7 +169,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddSingleton(smsDeliveryReportSettings);
     services.AddControllers();
-    services.AddHealthChecks().AddCheck<HealthCheck>("notifications_sms_health_check");
+    services.AddHealthChecks()
+        .AddCheck<HealthCheck>("notifications_sms_health_check", tags: [HealthCheckTags.Live])
+        .AddLifecycleHealthChecks();
 
     services.AddCoreServices();
     services.AddSmsGatewayServices(configuration);
@@ -220,7 +224,7 @@ static void AddAzureMonitorTelemetryExporters(ConfigurationManager config, IServ
 void Configure()
 {
     app.MapControllers();
-    app.MapHealthChecks("/health");
+    app.MapNotificationsHealthEndpoints();
 }
 
 void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)

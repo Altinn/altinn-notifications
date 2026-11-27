@@ -8,9 +8,11 @@
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 
+		<PackageReference Include="AspNetCore.HealthChecks.AzureServiceBus" />
 		<PackageReference Include="OpenTelemetry.Extensions.Hosting" />
 		<PackageReference Include="WolverineFx" />
 		<PackageReference Include="WolverineFx.AzureServiceBus" />
+		<PackageReference Include="WolverineFx.HealthChecks" />
 	</ItemGroup>
 
 </Project>

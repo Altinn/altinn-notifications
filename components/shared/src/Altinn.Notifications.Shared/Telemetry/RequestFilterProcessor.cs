@@ -12,16 +12,22 @@ namespace Altinn.Notifications.Shared.Telemetry;
 /// </summary>
 public class RequestFilterProcessor : BaseProcessor<Activity>
 {
-    private const string RequestKind = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
-    private readonly IHttpContextAccessor? _httpContextAccessor;
+    /// <summary>The operation name of inbound HTTP request activities.</summary>
+    protected const string RequestKind = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
+    private static readonly string[] _excludedPaths = ["/health", "/health/live", "/health/ready", "/health/startup"];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RequestFilterProcessor"/> class.
     /// </summary>
     public RequestFilterProcessor(IHttpContextAccessor? httpContextAccessor = null) : base()
     {
-        _httpContextAccessor = httpContextAccessor;
+        HttpContextAccessor = httpContextAccessor;
     }
+
+    /// <summary>
+    /// Gets the HTTP context accessor.
+    /// </summary>
+    protected IHttpContextAccessor? HttpContextAccessor { get; }
 
     /// <summary>
     /// Determine whether to skip a request
@@ -31,7 +37,7 @@ public class RequestFilterProcessor : BaseProcessor<Activity>
         bool skip = false;
         if (data.OperationName == RequestKind)
         {
-            skip = ExcludeRequest(_httpContextAccessor?.HttpContext?.Request?.Path.Value);
+            skip = ExcludeRequest(HttpContextAccessor?.HttpContext?.Request?.Path.Value);
         }
         else if (!(data.Parent?.ActivityTraceFlags.HasFlag(ActivityTraceFlags.Recorded) ?? true))
         {
@@ -51,8 +57,8 @@ public class RequestFilterProcessor : BaseProcessor<Activity>
     public override void OnEnd(Activity data)
     {
         if (data.OperationName == RequestKind
-            && _httpContextAccessor?.HttpContext is not null
-            && _httpContextAccessor.HttpContext.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues ipAddress))
+            && HttpContextAccessor?.HttpContext is not null
+            && HttpContextAccessor.HttpContext.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues ipAddress))
         {
             data.SetTag("ipAddress", ipAddress.FirstOrDefault());
         }
@@ -65,6 +71,8 @@ public class RequestFilterProcessor : BaseProcessor<Activity>
             return false;
         }
 
-        return localpath.TrimEnd('/').EndsWith("/health", StringComparison.OrdinalIgnoreCase);
+        string path = localpath.TrimEnd('/');
+
+        return _excludedPaths.Any(excluded => string.Equals(path, excluded, StringComparison.OrdinalIgnoreCase));
     }
 }

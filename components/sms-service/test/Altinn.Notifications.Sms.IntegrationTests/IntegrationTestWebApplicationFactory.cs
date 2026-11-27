@@ -67,6 +67,8 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 services.Remove(descriptor);
             }
 
+            services.RemoveBrokerHealthChecks();
+
             RegisterDelegatedService<ISendingService>(services);
             RegisterDelegatedService<IStatusService>(services);
             RegisterDelegatedService<ISmsSendResultDispatcher>(services, _ => Mock.Of<ISmsSendResultDispatcher>());

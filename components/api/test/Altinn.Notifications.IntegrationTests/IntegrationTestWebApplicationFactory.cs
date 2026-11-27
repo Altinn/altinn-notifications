@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Integrations;
@@ -9,9 +10,12 @@ using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Sms;
+using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using AltinnCore.Authentication.JwtCookie;
+
 using FluentValidation;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -19,6 +23,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+
 using Moq;
 
 namespace Altinn.Notifications.IntegrationTests;
@@ -104,6 +109,8 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             {
                 services.Remove(descriptor);
             }
+
+            services.RemoveBrokerHealthChecks();
 
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<ISmsCommandPublisher>()));
             services.Replace(ServiceDescriptor.Singleton(Mock.Of<IEmailCommandPublisher>()));

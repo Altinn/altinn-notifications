@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Shared.TestInfrastructure.Infrastructure;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -41,6 +42,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 services.Remove(descriptor);
             }
 
+            services.RemoveBrokerHealthChecks();
             services.AddSingleton(Mock.Of<IEmailSendResultDispatcher>());
             services.AddSingleton(Mock.Of<IEmailServiceRateLimitDispatcher>());
             services.AddSingleton(Mock.Of<IEmailStatusCheckDispatcher>());
