@@ -1,0 +1,56 @@
+# The backend developer agent for altinn-notifications: it builds the solutions, runs the unit, integration and
+# Service Bus integration tests, runs the services against PostgreSQL and the Service Bus emulator, and opens pull
+# requests that show the results. Apply it with `agentctl apply -f agents/backend-dev/minimal/agent.yaml --wait`.
+apiVersion: agents.platform/v1alpha1
+kind: Agent
+metadata:
+  name: notifications-backend-dev
+spec:
+  sandbox:
+    # Published by .github/workflows/backend-dev-agent-image.yml from agents/backend-dev/Dockerfile, so teammates need no
+    # Docker. The nested-build variant builds it from the checkout instead.
+    image:
+      type: reference
+      reference: ghcr.io/altinn/altinn-notifications/backend-dev-agent-minimal:latest
+    platform:
+      os: linux
+    resources:
+      # SQL Server, the Service Bus emulator and PostgreSQL run beside the test hosts in the ASB integration tests.
+      cpu: "4"
+      memory: "12Gi"
+      rootFilesystem:
+        # NuGet's cache, build output and the test containers' images.
+        capacity: "64Gi"
+        mode: direct
+      # To try a change to its own definition in a nested agent. A host that cannot provide them starts the agent
+      # without them.
+      nestedSandboxes: preferred
+    # systemd, which runs the workspace clone, Podman and the SSH server.
+    initSystem: image
+  instructions:
+    - source: ../instructions.md
+    - source: environment.md
+    - source: ../improving.md
+  skills:
+    - source: ../skills/pr-evidence
+  harnesses:
+    - type: claudeCode
+      default: true
+      # Whichever login you stored, whatever its name. Name one in your own variant, such as `login: work`, to keep the
+      # agent on it.
+      login: any
+    - type: codex
+      login: any
+      # Starts without Codex when the host has no Codex login. `agentctl codex login` adds it at the next reconcile.
+      optional: true
+  # GITHUB_TOKEN and Git's name and email, from `agentctl github login default`.
+  accounts:
+    - type: github
+      login: default
+  access:
+    - type: ssh
+  network:
+    mode: mediated
+    allow: all
+    deny:
+      - metadata.google.internal
