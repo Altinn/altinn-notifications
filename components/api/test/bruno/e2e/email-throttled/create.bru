@@ -1,0 +1,42 @@
+meta {
+  name: create instant email to throttle@
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "e2e-{{senders_reference_guid}}",
+    "recipientEmail": {
+      "emailAddress": "throttle@example.com",
+      "emailSettings": {
+        "subject": "(E2E) Throttled email",
+        "body": "(E2E) Throttled email - {{random_idempotency_id}}",
+        "contentType": "Plain",
+        "senderEmailAddress": "noreply@altinn.no"
+      }
+    }
+  }
+}
+
+script:post-response {
+  // Clear the shipment first, so a failed create never leaves the next request on an older one.
+  bru.setVar("e2e_shipment_id", null);
+  if (res.status === 201) {
+    bru.setVar("e2e_shipment_id", res.body.notification.shipmentId);
+  }
+}
+
+tests {
+  test("returns 201 Created with a shipment", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.notification.shipmentId).to.be.a("string");
+  });
+}

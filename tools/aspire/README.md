@@ -297,6 +297,12 @@ On every start the app host also writes `.env.v2 aspire` next to it: the values 
 
 The condition URLs in `aspire.env` stay on `local.altinn.cloud` also when Bruno runs in Docker, since the API calls them.
 
+The `e2e` folder only runs against this stack. Each flow orders an email or SMS and waits, for two minutes at most, until the recipient has the status that the mocks give its recipient: delivered, bounced, failed, slow, throttled, an invalid or rejected SMS, and a future order that ends in the status feed and can no longer be cancelled. The whole folder takes about two and a half minutes:
+
+```bash
+docker run --rm -v "<repo>/components/api/test/bruno:/bruno:ro" --env-file "<repo>/components/api/test/bruno/.env.v2 aspire"     usebruno/cli:latest run e2e -r     --env "v2 aspire" --env-var host=http://host.docker.internal:5090 --env-var token_generator_url=http://host.docker.internal:5094
+```
+
 Instant SMS and email, future orders to phone numbers, email addresses, persons and organisations, orders with conditions and reminders, and the shipment and status feed lookups all pass. These do not:
 
 * `composed-email`: `new auth token` only asks for `altinn:serviceowner/notifications.create`, not the `notifications.composedemail.create` scope, so they get `403` in every environment. The happy paths also need SAS URLs to real blobs.

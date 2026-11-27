@@ -1,0 +1,17 @@
+meta {
+  name: cancel 409
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{host}}/notifications/api/v1/orders/{{e2e_shipment_id}}/cancel
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("returns 409 Conflict, the order is already processed", function() {
+    expect(res.status).to.equal(409);
+  });
+}

@@ -1,0 +1,54 @@
+meta {
+  name: e2e
+  seq: 8
+}
+
+docs {
+  End-to-end flows that follow an order from the API through the email or SMS service to the mocks and back as a delivery report.
+
+  They need the local Aspire stack (`tools/aspire`) with its mocks, and the `v2 aspire` environment. The recipients pick the outcome in the ACS mock and the LinkMobility proxy, see `tools/aspire/how-to.md`.
+
+  Run the folder with the runner, or each flow from its first request. A request with the request variable `expected_status` waits until the shipment's recipient has that status, for two minutes at most, and then fetches the shipment once more for its tests.
+}
+
+script:pre-request {
+  // Get a token when there is none, it is for another environment, or it is older than 15 minutes.
+  const jwt = bru.getEnvVar("jwt");
+  const jwtFrom = Number(bru.getEnvVar("jwt_from"));
+  if (
+    !jwt || jwt === "null" ||
+    bru.getEnvVar("jwt_env") !== bru.getEnvVar("Environment") ||
+    Number.isNaN(jwtFrom) || jwtFrom + 15 * 60 * 1000 < Date.now()
+  ) {
+    const tokenResponse = await bru.runRequest("test-util/new-auth-token");
+    if (tokenResponse.status !== 200) {
+      throw new Error(`Could not get a token: ${tokenResponse.status}`);
+    }
+  }
+
+  const expectedStatus = bru.getRequestVar("expected_status");
+  if (expectedStatus) {
+    const shipmentId = bru.getVar("e2e_shipment_id");
+    if (!shipmentId) {
+      throw new Error("No shipment to wait for. Run the flow from its first request.");
+    }
+
+    const deadline = Date.now() + 120 * 1000;
+    while (Date.now() < deadline) {
+      try {
+        const response = await bru.sendRequest({
+          method: "GET",
+          url: `${bru.getEnvVar("host")}/notifications/api/v1/future/shipment/${shipmentId}`,
+          headers: { Authorization: `Bearer ${bru.getEnvVar("jwt")}` }
+        });
+        if ((response.data.recipients || []).some(r => r.status === expectedStatus)) {
+          break;
+        }
+      } catch (error) {
+        // Not there yet, or a short outage. Try again until the deadline.
+      }
+
+      await bru.sleep(2000);
+    }
+  }
+}

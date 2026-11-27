@@ -99,7 +99,7 @@ The **Swagger** link on `api` lists the endpoints. [Email through the ACS mock](
 
 Start the app host first. On every start it writes the token issuer's user and password where Bruno and k6 read them, so neither needs at23 credentials.
 
-- **Bruno**: open `components/api/test/bruno` from the checkout the app host runs from, select the `v2 aspire` environment, run `test-util/new auth token`, and then the requests or folders you want. The app host writes the credentials to `.env.v2 aspire`. A Bruno app that only reads `.env` needs that file copied to `.env` first. See [Bruno](README.md#bruno), also for the Bruno CLI.
+- **Bruno**: open `components/api/test/bruno` from the checkout the app host runs from, select the `v2 aspire` environment, run `test-util/new auth token`, and then the requests or folders you want. The app host writes the credentials to `.env.v2 aspire`. A Bruno app that only reads `.env` needs that file copied to `.env` first. The `e2e` folder follows orders through to their delivery reports, for each outcome of the mocks. See [Bruno](README.md#bruno), also for the Bruno CLI.
 - **k6**: from `components/api/test/k6`, run a test with the secret source the app host writes:
 
   ```bash

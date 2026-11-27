@@ -1,0 +1,41 @@
+meta {
+  name: create instant SMS
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "e2e-{{senders_reference_guid}}",
+    "recipientSms": {
+      "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+      "timeToLiveInSeconds": 300,
+      "smsSettings": {
+        "sender": "E2E",
+        "body": "(E2E) Instant SMS - {{random_idempotency_id}}"
+      }
+    }
+  }
+}
+
+script:post-response {
+  // Clear the shipment first, so a failed create never leaves the next request on an older one.
+  bru.setVar("e2e_shipment_id", null);
+  if (res.status === 201) {
+    bru.setVar("e2e_shipment_id", res.body.notification.shipmentId);
+  }
+}
+
+tests {
+  test("returns 201 Created with a shipment", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.notification.shipmentId).to.be.a("string");
+  });
+}
