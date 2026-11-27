@@ -94,10 +94,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Arrange
             _metricsRepositoryMock
                 .Setup(r => r.GetEmailNotificationsMetrics(It.IsAny<CancellationToken>()))
-                .ReturnsAsync((5, 3, 2));
+                .ReturnsAsync((5, 3, 2, 23));
             _metricsRepositoryMock
                 .Setup(r => r.GetSmsNotificationsMetrics(It.IsAny<CancellationToken>()))
-                .ReturnsAsync((7, 11));
+                .ReturnsAsync((7, 11, 29));
             _metricsRepositoryMock
                 .Setup(r => r.GetOrderMetrics(It.IsAny<CancellationToken>()))
                 .ReturnsAsync((13, 17, 19));
@@ -114,7 +114,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             _metricsRepositoryMock.Verify(r => r.GetEmailNotificationsMetrics(It.IsAny<CancellationToken>()), Times.Once);
             _metricsRepositoryMock.Verify(r => r.GetSmsNotificationsMetrics(It.IsAny<CancellationToken>()), Times.Once);
             _metricsRepositoryMock.Verify(r => r.GetOrderMetrics(It.IsAny<CancellationToken>()), Times.Once);
-            _backlogMetricsMock.Verify(m => m.RecordBacklogMetrics(5, 3, 2, 7, 11, 13, 17, 19), Times.Once);
+            _backlogMetricsMock.Verify(m => m.RecordBacklogMetrics(5, 3, 2, 23, 7, 11, 29, 13, 17, 19), Times.Once);
         }
 
         [Fact]

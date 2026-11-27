@@ -20,15 +20,23 @@ public sealed class BacklogMetricsTests : IDisposable
         _sut.Dispose();
     }
 
-    [Fact]
-    public void RecordBacklogMetrics_EmitsAllExpectedGaugesWithTotals()
+    [Theory]
+    [InlineData(11L, 12L)]
+    [InlineData(0L, 0L)]
+    public void RecordBacklogMetrics_EmitsAllExpectedGaugesWithTotals(long emailSending, long smsSending)
     {
         // Arrange
         var capturedValues = new Dictionary<string, long>();
 
-        using var listener = CreateListener((instrument, value, _) =>
+        using var listener = CreateListener((instrument, value, tags) =>
         {
             capturedValues[instrument.Name] = value;
+            if (instrument.Name == BacklogMetrics.EmailNotificationsSendingGaugeName || instrument.Name == BacklogMetrics.SmsNotificationsSendingGaugeName)
+            {
+                KeyValuePair<string, object?> tag = Assert.Single(tags.ToArray());
+                Assert.Equal(BacklogMetrics.TagKey, tag.Key);
+                Assert.Equal(instrument.Name == BacklogMetrics.EmailNotificationsSendingGaugeName ? "email" : "sms", tag.Value);
+            }
         });
 
         // Act
@@ -36,20 +44,24 @@ public sealed class BacklogMetricsTests : IDisposable
             emailNotificationsAnytime: 3,
             emailNotificationsDaytime: 4,
             emailNotificationsComposed: 5,
+            emailNotificationsSending: emailSending,
             smsNotificationsAnytime: 6,
             smsNotificationsDaytime: 7,
+            smsNotificationsSending: smsSending,
             ordersNotDue: 8,
             ordersPastDue: 9,
             ordersRetryExhausted: 10);
 
         // Assert
-        Assert.Equal(9, capturedValues.Count);
+        Assert.Equal(11, capturedValues.Count);
         Assert.Equal(3L, capturedValues[BacklogMetrics.EmailNotificationsAnytimeGaugeName]);
         Assert.Equal(4L, capturedValues[BacklogMetrics.EmailNotificationsDaytimeGaugeName]);
         Assert.Equal(12L, capturedValues[BacklogMetrics.EmailNotificationsTotalGaugeName]);
+        Assert.Equal(emailSending, capturedValues[BacklogMetrics.EmailNotificationsSendingGaugeName]);
         Assert.Equal(6L, capturedValues[BacklogMetrics.SmsNotificationsAnytimeGaugeName]);
         Assert.Equal(7L, capturedValues[BacklogMetrics.SmsNotificationsDaytimeGaugeName]);
         Assert.Equal(13L, capturedValues[BacklogMetrics.SmsNotificationsTotalGaugeName]);
+        Assert.Equal(smsSending, capturedValues[BacklogMetrics.SmsNotificationsSendingGaugeName]);
         Assert.Equal(8L, capturedValues[BacklogMetrics.OrdersNotDueGaugeName]);
         Assert.Equal(9L, capturedValues[BacklogMetrics.OrdersPastDueGaugeName]);
         Assert.Equal(10L, capturedValues[BacklogMetrics.OrdersRetryExhaustedGaugeName]);

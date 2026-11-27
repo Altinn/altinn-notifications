@@ -18,8 +18,8 @@ namespace Altinn.Notifications.Persistence.Repository
         private const string _getMonthlytMetric = "SELECT * FROM notifications.get_metrics_v2($1, $2);";  // month, year
         private const string _getDailySmsMetric = "SELECT * FROM notifications.get_sms_metrics_v2($1, $2, $3);";  // day, month, year
         private const string _getDailyEmailMetric = "SELECT * FROM notifications.get_email_metrics_v2($1, $2, $3);";  // day, month, year
-        private const string _getEmailNotificationsMetricsSql = "SELECT anytimecount, daytimecount, composedcount FROM notifications.get_email_notifications_metrics()";
-        private const string _getSmsNotificationsMetricsSql = "SELECT anytimecount, daytimecount FROM notifications.get_sms_notifications_metrics()";
+        private const string _getEmailNotificationsMetricsSql = "SELECT anytimecount, daytimecount, composedcount, sendingcount FROM notifications.get_email_notifications_metrics_v2()";
+        private const string _getSmsNotificationsMetricsSql = "SELECT anytimecount, daytimecount, sendingcount FROM notifications.get_sms_notifications_metrics_v2()";
         private const string _getOrderMetricsSql = "SELECT ordersnotduecount, orderspastduecount, ordersretryexhaustedcount FROM notifications.get_order_metrics_v2()";
         private const string _getOrderNotDueDistributionMetricsSql = "SELECT day, count FROM notifications.get_orders_notdue_distribution_metrics()";
 
@@ -151,34 +151,36 @@ namespace Altinn.Notifications.Persistence.Repository
         }
 
         /// <inheritdoc/>
-        public async Task<(long AnytimeCount, long DaytimeCount, long ComposedCount)> GetEmailNotificationsMetrics(CancellationToken cancellationToken)
+        public async Task<(long AnytimeCount, long DaytimeCount, long ComposedCount, long SendingCount)> GetEmailNotificationsMetrics(CancellationToken cancellationToken)
         {
             await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsMetricsSql);
             await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken))
             {
-                return (0, 0, 0);
+                throw new InvalidOperationException("Email notification metrics query returned no row.");
             }
 
             long anytimeCount = reader.GetValue<long?>("anytimecount") ?? 0;
             long daytimeCount = reader.GetValue<long?>("daytimecount") ?? 0;
             long composedCount = reader.GetValue<long?>("composedcount") ?? 0;
-            return (anytimeCount, daytimeCount, composedCount);
+            long sendingCount = reader.GetFieldValue<long>(reader.GetOrdinal("sendingcount"));
+            return (anytimeCount, daytimeCount, composedCount, sendingCount);
         }
 
         /// <inheritdoc/>
-        public async Task<(long AnytimeCount, long DaytimeCount)> GetSmsNotificationsMetrics(CancellationToken cancellationToken)
+        public async Task<(long AnytimeCount, long DaytimeCount, long SendingCount)> GetSmsNotificationsMetrics(CancellationToken cancellationToken)
         {
             await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsNotificationsMetricsSql);
             await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken))
             {
-                return (0, 0);
+                throw new InvalidOperationException("SMS notification metrics query returned no row.");
             }
 
             long anytimeCount = reader.GetValue<long?>("anytimecount") ?? 0;
             long daytimeCount = reader.GetValue<long?>("daytimecount") ?? 0;
-            return (anytimeCount, daytimeCount);
+            long sendingCount = reader.GetFieldValue<long>(reader.GetOrdinal("sendingcount"));
+            return (anytimeCount, daytimeCount, sendingCount);
         }
 
         /// <inheritdoc/>

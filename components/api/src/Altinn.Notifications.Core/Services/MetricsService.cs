@@ -86,16 +86,18 @@ namespace Altinn.Notifications.Core.Services
         /// <inheritdoc/>
         public async Task TriggerGetMetrics(CancellationToken cancellationToken)
         {
-            var (emailNotificationsAnytime, emailNotificationsDaytime, emailNotificationsComposed) = await _metricsRepository.GetEmailNotificationsMetrics(cancellationToken);
-            var (smsNotificationsAnytime, smsNotificationsDaytime) = await _metricsRepository.GetSmsNotificationsMetrics(cancellationToken);
+            var (emailNotificationsAnytime, emailNotificationsDaytime, emailNotificationsComposed, emailNotificationsSending) = await _metricsRepository.GetEmailNotificationsMetrics(cancellationToken);
+            var (smsNotificationsAnytime, smsNotificationsDaytime, smsNotificationsSending) = await _metricsRepository.GetSmsNotificationsMetrics(cancellationToken);
             var (ordersNotDue, ordersPastDue, ordersRetryExhausted) = await _metricsRepository.GetOrderMetrics(cancellationToken);
 
             _backlogMetrics.RecordBacklogMetrics(
                 emailNotificationsAnytime,
                 emailNotificationsDaytime,
                 emailNotificationsComposed,
+                emailNotificationsSending,
                 smsNotificationsAnytime,
                 smsNotificationsDaytime,
+                smsNotificationsSending,
                 ordersNotDue,
                 ordersPastDue,
                 ordersRetryExhausted);
