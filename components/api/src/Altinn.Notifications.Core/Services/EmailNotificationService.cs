@@ -86,6 +86,7 @@ public class EmailNotificationService(
             (unitOfWork, token) => _emailNotificationRepository.GetNewNotificationAsync(unitOfWork, token, sendingTimePolicy),
             (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
             nameof(SendNotification),
+            "SendNotificationEmailBasic",
             cancellationToken,
             sendingTimePolicy);
     }
@@ -97,6 +98,7 @@ public class EmailNotificationService(
             _emailNotificationRepository.GetNewComposedNotificationAsync,
             _composedEmailCommandPublisher.PublishAsync,
             nameof(SendComposedNotification),
+            "SendNotificationEmailComposed",
             cancellationToken);
     }
 
@@ -107,6 +109,7 @@ public class EmailNotificationService(
             (unitOfWork, token) => _emailNotificationRepository.GetNewRetryNotificationAsync(unitOfWork, token, sendingTimePolicy),
             (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
             nameof(SendRetryNotification),
+            "SendNotificationEmailBasic",
             cancellationToken,
             sendingTimePolicy,
             isRetry: true);
@@ -119,6 +122,7 @@ public class EmailNotificationService(
             _emailNotificationRepository.GetNewComposedRetryNotificationAsync,
             _composedEmailCommandPublisher.PublishAsync,
             nameof(SendComposedRetryNotification),
+            "SendNotificationEmailComposed",
             cancellationToken,
             isRetry: true);
     }
@@ -166,6 +170,7 @@ public class EmailNotificationService(
     /// <param name="getNewNotification">Claims the next pending notification on the given unit of work, or returns <see langword="null"/> if none is pending.</param>
     /// <param name="publishNotification">Publishes the claimed notification.</param>
     /// <param name="operationName">The name of the calling operation, used for logging and tracing.</param>
+    /// <param name="activityName">The name of the trace activity.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
     /// <param name="sendingTimePolicy">The sending time policy the claim is restricted to, added as a tag on the trace activity. <see langword="null"/> when the claim is not policy-specific.</param>
     /// <param name="isRetry">Whether the claimed notification is being retried after an inconclusive send condition evaluation.</param>
@@ -174,14 +179,23 @@ public class EmailNotificationService(
         Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
         Func<TNotification, CancellationToken, Task> publishNotification,
         string operationName,
+        string activityName,
         CancellationToken cancellationToken,
         SendingTimePolicy? sendingTimePolicy = null,
         bool isRetry = false)
         where TNotification : Email
     {
-        using Activity? activity = _activitySource.StartActivity("SendNotification");
-        activity?.SetTag("Kind", operationName);
-        activity?.SetTag("Policy", sendingTimePolicy);
+        using Activity? activity = _activitySource.StartActivity(activityName);
+        if (sendingTimePolicy.HasValue)
+        {
+            activity?.SetTag("Policy", sendingTimePolicy.Value);
+        }
+
+        if (isRetry)
+        {
+            activity?.SetTag("Retry", true);
+        }
+
         UnitOfWork unitOfWork;
         try
         {

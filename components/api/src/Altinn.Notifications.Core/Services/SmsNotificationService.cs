@@ -123,9 +123,13 @@ public class SmsNotificationService : ISmsNotificationService
         bool isRetry,
         CancellationToken cancellationToken)
     {
-        using Activity? activity = _activitySource.StartActivity("SendNotification");
-        activity?.SetTag("Kind", operationName);
+        using Activity? activity = _activitySource.StartActivity("SendNotificationSms");
         activity?.SetTag("Policy", sendingTimePolicy);
+        if (isRetry)
+        {
+            activity?.SetTag("Retry", true);
+        }
+
         UnitOfWork unitOfWork;
         try
         {

@@ -461,17 +461,16 @@ public class EmailNotificationServiceTests
     [Fact]
     public async Task SendRetryNotification_WhenTraced_TagsActivityWithKindAndPolicy()
     {
-        var tags = new System.Collections.Concurrent.ConcurrentBag<(string? Kind, string? Policy)>();
+        var tags = new System.Collections.Concurrent.ConcurrentBag<(string? Retry, string? Policy)>();
         using var listener = new System.Diagnostics.ActivityListener
         {
             ShouldListenTo = source => source.Name == Altinn.Notifications.Core.Shared.BackgroundActivitySource.Name,
             Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) => System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = activity =>
             {
-                string? kind = activity.GetTagItem("Kind") as string;
-                if (kind == nameof(IEmailNotificationService.SendRetryNotification))
+                if (activity.OperationName == "SendNotificationEmailBasic")
                 {
-                    tags.Add((kind, activity.GetTagItem("Policy")?.ToString()));
+                    tags.Add((activity.GetTagItem("Retry")?.ToString(), activity.GetTagItem("Policy")?.ToString()));
                 }
             }
         };
@@ -484,7 +483,7 @@ public class EmailNotificationServiceTests
 
         await service.SendRetryNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
 
-        Assert.Contains(tags, t => t.Policy == nameof(SendingTimePolicy.Anytime));
+        Assert.Contains(tags, t => t.Policy == nameof(SendingTimePolicy.Anytime) && t.Retry == "True");
     }
 
     [Fact]
