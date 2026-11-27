@@ -15,7 +15,7 @@
     Command:
     podman compose run k6 run /src/tests/order-with-reminders-for-organizations.js \
     --secret-source=file=/.secrets \
-    -e altinn_env={the environment to run this script within: at22, at23, at24, yt01, tt02, prod} \
+    -e altinn_env={the environment to run this script within: at22, at23, yt01, tt02, prod} \
     -e orgNoRecipient={an organization number to include as a notification recipient} \
     -e orderTypes={types of orders to test, e.g., valid, invalid, duplicate, missingResource} \
 */
