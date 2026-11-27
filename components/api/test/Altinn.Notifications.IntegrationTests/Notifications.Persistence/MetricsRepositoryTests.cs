@@ -133,12 +133,13 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(MetricsRepository));
 
         // Act
-        var (anytimeCount, daytimeCount, composedCount) = await sut.GetEmailNotificationsMetrics(TestContext.Current.CancellationToken);
+        var (anytimeCount, daytimeCount, composedCount, sendingCount) = await sut.GetEmailNotificationsMetrics(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(anytimeCount >= 0);
         Assert.True(daytimeCount >= 0);
         Assert.True(composedCount >= 0);
+        Assert.True(sendingCount >= 0);
     }
 
     [Fact]
@@ -150,11 +151,74 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(MetricsRepository));
 
         // Act
-        var (anytimeCount, daytimeCount) = await sut.GetSmsNotificationsMetrics(TestContext.Current.CancellationToken);
+        var (anytimeCount, daytimeCount, sendingCount) = await sut.GetSmsNotificationsMetrics(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(anytimeCount >= 0);
         Assert.True(daytimeCount >= 0);
+        Assert.True(sendingCount >= 0);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetNotificationMetrics_CountsSendingWithoutChangingPendingTotals(bool email)
+    {
+        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications($"SendingMetrics-{Guid.NewGuid():N}");
+        _orderIdsToDelete.Add(order.Id);
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using NpgsqlConnection connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
+        await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
+
+        string table = email ? "emailnotifications" : "smsnotifications";
+        string resultType = email ? "emailnotificationresulttype" : "smsnotificationresulttype";
+        string function = email ? "get_email_notifications_metrics_v2" : "get_sms_notifications_metrics_v2";
+        var baseline = await GetCounts();
+
+        await SetState("New", 1);
+        Assert.Equal((baseline.Anytime + 2, baseline.Daytime, baseline.Composed, baseline.Sending), await GetCounts());
+
+        await SetState("Sending", 1);
+        Assert.Equal((baseline.Anytime, baseline.Daytime, baseline.Composed, baseline.Sending + 2), await GetCounts());
+
+        await SetState("New", 2);
+        Assert.Equal((baseline.Anytime, baseline.Daytime + 2, baseline.Composed, baseline.Sending), await GetCounts());
+
+        if (email)
+        {
+            await using var command = new NpgsqlCommand("UPDATE notifications.emailnotifications SET iscomposed = true WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = @id)", connection, transaction);
+            command.Parameters.AddWithValue("id", order.Id);
+            Assert.Equal(2, await command.ExecuteNonQueryAsync(cancellationToken));
+            Assert.Equal((baseline.Anytime, baseline.Daytime, baseline.Composed + 2, baseline.Sending), await GetCounts());
+        }
+
+        await SetState("Sending", 2);
+        Assert.Equal((baseline.Anytime, baseline.Daytime, baseline.Composed, baseline.Sending + 2), await GetCounts());
+
+        await SetState("Sending", 1);
+        Assert.Equal((baseline.Anytime, baseline.Daytime, baseline.Composed, baseline.Sending + 2), await GetCounts());
+
+        await SetState("Delivered", 1);
+        Assert.Equal(baseline, await GetCounts());
+
+        async Task<(long Anytime, long Daytime, long Composed, long Sending)> GetCounts()
+        {
+            await using var command = new NpgsqlCommand($"SELECT * FROM notifications.{function}()", connection, transaction);
+            await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+            Assert.True(await reader.ReadAsync(cancellationToken));
+            var counts = (reader.GetInt64(reader.GetOrdinal("anytimecount")), reader.GetInt64(reader.GetOrdinal("daytimecount")), email ? reader.GetInt64(reader.GetOrdinal("composedcount")) : 0L, reader.GetInt64(reader.GetOrdinal("sendingcount")));
+            Assert.False(await reader.ReadAsync(cancellationToken));
+            return counts;
+        }
+
+        async Task SetState(string result, int policy)
+        {
+            await using var command = new NpgsqlCommand($"UPDATE notifications.{table} SET result = @result::{resultType}, sendingtimepolicy = @policy WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = @id)", connection, transaction);
+            command.Parameters.AddWithValue("result", result);
+            command.Parameters.AddWithValue("policy", policy);
+            command.Parameters.AddWithValue("id", order.Id);
+            Assert.Equal(2, await command.ExecuteNonQueryAsync(cancellationToken));
+        }
     }
 
     [Fact]
