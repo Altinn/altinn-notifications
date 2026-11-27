@@ -3835,7 +3835,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SetRetryStatus_WhenRetryThresholdExceeded_SetsFailed()
+    public async Task SetRetryStatus_WhenRetryThresholdExceeded_SetsRetryExhausted()
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
@@ -3869,7 +3869,11 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         // Assert
         string statusSql = $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'";
         string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
-        Assert.Equal(OrderProcessingStatus.Failed.ToString(), actualStatus);
+        Assert.Equal(OrderProcessingStatus.RetryExhausted.ToString(), actualStatus);
+
+        NotificationOrderWithStatus? persistedOrder = await repo.GetOrderWithStatusById(order.Id, "ttd");
+        Assert.NotNull(persistedOrder);
+        Assert.Equal(OrderProcessingStatus.RetryExhausted, persistedOrder.ProcessingStatus.Status);
 
         string retryCountSql = $"SELECT retrycount FROM notifications.orders WHERE alternateid = '{order.Id}'";
         int retryCount = await PostgreUtil.RunSqlReturnOutput<int>(retryCountSql);
@@ -3877,7 +3881,7 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SetRetryStatus_MaxRetryCountBoundary_KeepsRetryingAtLimitAndFailsAboveLimit()
+    public async Task SetRetryStatus_MaxRetryCountBoundary_KeepsRetryingAtLimitAndExhaustsAboveLimit()
     {
         // Arrange
         OrderRepository repo = (OrderRepository)ServiceUtil
@@ -3913,12 +3917,16 @@ public sealed class OrderRepositoryTests : IAsyncLifetime
         string statusAtLimit = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
         Assert.Equal(OrderProcessingStatus.Retrying.ToString(), statusAtLimit);
 
-        // Act - one more retry moves to Failed (retrycount + 1 > _maxretrycount)
         await SetRetryStatusWithUnitOfWork(repo, order.Id, "retry-over-limit", TestContext.Current.CancellationToken);
 
-        // Assert - above max retry count, state is Failed
         string statusAboveLimit = await PostgreUtil.RunSqlReturnOutput<string>(statusSql);
-        Assert.Equal(OrderProcessingStatus.Failed.ToString(), statusAboveLimit);
+        Assert.Equal(OrderProcessingStatus.RetryExhausted.ToString(), statusAboveLimit);
+
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.Failed);
+
+        NotificationOrderWithStatus? reviewedOrder = await repo.GetOrderWithStatusById(order.Id, "ttd");
+        Assert.NotNull(reviewedOrder);
+        Assert.Equal(OrderProcessingStatus.Failed, reviewedOrder.ProcessingStatus.Status);
     }
 
     [Fact]

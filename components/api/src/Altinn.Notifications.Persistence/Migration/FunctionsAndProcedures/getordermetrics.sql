@@ -1,14 +1,14 @@
-create or replace function notifications.get_order_metrics()
+create or replace function notifications.get_order_metrics_v2()
 returns table
 (
 	ordersnotduecount bigint,
 	orderspastduecount bigint,
-	ordersfailedcount bigint
+	ordersretryexhaustedcount bigint
 )
 language sql
 as $$
 	select
-        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime > now() + INTERVAL '1 minute'),
-        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'),
-        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Failed'::orderprocessingstate);
+		(SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime > now() + INTERVAL '1 minute'),
+		(SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'),
+		(SELECT count(*) FROM notifications.orders WHERE processedstatus = 'RetryExhausted'::orderprocessingstate);
 $$;

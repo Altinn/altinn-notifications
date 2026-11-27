@@ -40,7 +40,7 @@ public sealed class BacklogMetricsTests : IDisposable
             smsNotificationsDaytime: 7,
             ordersNotDue: 8,
             ordersPastDue: 9,
-            ordersFailed: 10);
+            ordersRetryExhausted: 10);
 
         // Assert
         Assert.Equal(9, capturedValues.Count);
@@ -52,7 +52,7 @@ public sealed class BacklogMetricsTests : IDisposable
         Assert.Equal(13L, capturedValues[BacklogMetrics.SmsNotificationsTotalGaugeName]);
         Assert.Equal(8L, capturedValues[BacklogMetrics.OrdersNotDueGaugeName]);
         Assert.Equal(9L, capturedValues[BacklogMetrics.OrdersPastDueGaugeName]);
-        Assert.Equal(10L, capturedValues[BacklogMetrics.OrdersFailedGaugeName]);
+        Assert.Equal(10L, capturedValues[BacklogMetrics.OrdersRetryExhaustedGaugeName]);
     }
 
     private static MeterListener CreateListener(

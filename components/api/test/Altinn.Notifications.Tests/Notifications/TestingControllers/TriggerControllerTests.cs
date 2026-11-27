@@ -9,6 +9,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Moq;
@@ -167,6 +168,34 @@ public class TriggerControllerTests
         // Assert
         _statusFeedServiceMock.Verify(x => x.DeleteOldStatusFeedRecords(It.IsAny<CancellationToken>()), Times.Once);
         Assert.IsType<OkResult>(result);
+    }
+
+    [Theory]
+    [InlineData(42, LogLevel.Information)]
+    [InlineData(0, LogLevel.Debug)]
+    public async Task Trigger_DeleteOldStatusFeedRecords_LogsDeletedCountAtInformationOnlyWhenRecordsWereDeleted(int deletedCount, LogLevel expectedLevel)
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<TriggerController>>();
+        _statusFeedServiceMock
+            .Setup(x => x.DeleteOldStatusFeedRecords(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(deletedCount);
+
+        var controller = new TriggerController(
+            loggerMock.Object,
+            _statusFeedServiceMock.Object,
+            _smsNotificationServiceMock.Object,
+            _notificationScheduleMock.Object,
+            _orderProcessingServiceMock.Object,
+            _emailNotificationServiceMock.Object,
+            new TerminateExpiredService(_emailNotificationServiceMock.Object, _smsNotificationServiceMock.Object));
+
+        // Act
+        await controller.Trigger_DeleteOldStatusFeedRecords(TestContext.Current.CancellationToken);
+
+        // Assert
+        loggerMock.Verify(e => e.Log(expectedLevel, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+        loggerMock.Verify(e => e.Log(It.Is<LogLevel>(l => l != expectedLevel), It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Never);
     }
 
     [Fact]

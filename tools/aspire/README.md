@@ -353,6 +353,25 @@ Use **Rebuild**, not **Restart**, to pick up a change. **Restart** starts the se
 * A port-forward only carries HTTP. Service Bus messages still go to the local emulator, so a forwarded service does not see messages from your local services, and the other way round.
 * Use **Use local** to switch back. The normal **Start** or **Restart** fails while the forward holds the port.
 
+### Set queue status
+
+`servicebus` has a **Set queue status** command that [suspends a queue](https://learn.microsoft.com/azure/service-bus-messaging/entity-suspend), to see how the services handle it. Pick a queue from `tools/asb-emulator/config.json` and a status:
+
+| Status | Send | Receive |
+| :--- | :--- | :--- |
+| `Active` | ✓ | ✓ |
+| `ReceiveDisabled` | ✓ | `MessagingEntityDisabled` |
+| `SendDisabled` | `MessagingEntityDisabled` | ✓ |
+| `Disabled` | `MessagingEntityDisabled` | `MessagingEntityDisabled` |
+
+* Listeners that are already connected start failing right away, and pick up the waiting messages as soon as the queue is `Active` again.
+* The emulator resets every queue to `Active` when it restarts.
+* From the terminal, in `tools/aspire`:
+
+  ```bash
+  aspire resource servicebus set-queue-status --queue altinn.notifications.sms.send --status ReceiveDisabled
+  ```
+
 ## Hosting extensions
 
 The mocks are wired up by the extensions in [Altinn.Notifications.Aspire.Hosting](../src/Altinn.Notifications.Aspire.Hosting/README.md), e.g. `builder.AddAcsMock(...)` and `email.WithAcsMock(acs)`, so `apphost.cs` only reads the settings and connects the resources. The app host references the library with `#:project`. Aspire compiles against it and does not start it, since only `AddDotnetProject` makes a project a resource.

@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IMetricsRepository, MetricsRepository>()
             .AddSingleton<IStatusFeedRepository, StatusFeedRepository>()
             .AddSingleton<IServiceOwnerRepository, ServiceOwnerRepository>()
+            .AddSingleton<IDynamicConfigRepository, DynamicConfigRepository>()
             .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
             .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
             .AddSingleton<INotificationLogRepository, NotificationLogRepository>()

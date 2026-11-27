@@ -1,7 +1,13 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
+﻿using System.Data;
+
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
+
+using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -166,6 +172,51 @@ public sealed class MetricsRepositoryTests : IAsyncLifetime
         Assert.True(ordersNotDue >= 0);
         Assert.True(ordersPastDue >= 0);
         Assert.True(ordersFailed >= 0);
+    }
+
+    [Fact]
+    public async Task GetOrderMetrics_CountsFailedAndRetryExhaustedOrders()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using NpgsqlConnection connection = await ServiceUtil.GetSharedDataSource().OpenConnectionAsync(cancellationToken);
+        await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
+
+        NotificationOrder failedOrder = await PostgreUtil.PopulateDBWithEmailOrder();
+        _orderIdsToDelete.Add(failedOrder.Id);
+        NotificationOrder exhaustedOrder = await PostgreUtil.PopulateDBWithEmailOrder();
+        _orderIdsToDelete.Add(exhaustedOrder.Id);
+        NotificationOrder retryingOrder = await PostgreUtil.PopulateDBWithEmailOrder();
+        _orderIdsToDelete.Add(retryingOrder.Id);
+
+        long baseline = await GetOrdersRetryExhaustedCount();
+        await SetStatus(failedOrder.Id, OrderProcessingStatus.Failed);
+        Assert.Equal(baseline, await GetOrdersRetryExhaustedCount());
+
+        await SetStatus(exhaustedOrder.Id, OrderProcessingStatus.RetryExhausted);
+        Assert.Equal(baseline + 1, await GetOrdersRetryExhaustedCount());
+
+        await SetStatus(retryingOrder.Id, OrderProcessingStatus.Retrying);
+        Assert.Equal(baseline + 1, await GetOrdersRetryExhaustedCount());
+
+        await SetStatus(exhaustedOrder.Id, OrderProcessingStatus.Failed);
+        Assert.Equal(baseline, await GetOrdersRetryExhaustedCount());
+
+        await SetStatus(exhaustedOrder.Id, OrderProcessingStatus.Retrying);
+        Assert.Equal(baseline, await GetOrdersRetryExhaustedCount());
+
+        async Task<long> GetOrdersRetryExhaustedCount()
+        {
+            await using var command = new NpgsqlCommand("SELECT ordersretryexhaustedcount FROM notifications.get_order_metrics_v2()", connection, transaction);
+            return (long)(await command.ExecuteScalarAsync(cancellationToken))!;
+        }
+
+        async Task SetStatus(Guid orderId, OrderProcessingStatus status)
+        {
+            await using var command = new NpgsqlCommand("UPDATE notifications.orders SET processedstatus = @status::orderprocessingstate WHERE alternateid = @id", connection, transaction);
+            command.Parameters.AddWithValue("status", status.ToString());
+            command.Parameters.AddWithValue("id", orderId);
+            Assert.Equal(1, await command.ExecuteNonQueryAsync(cancellationToken));
+        }
     }
 
     [Fact]

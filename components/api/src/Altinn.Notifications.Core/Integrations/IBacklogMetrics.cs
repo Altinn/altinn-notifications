@@ -15,7 +15,7 @@ public interface IBacklogMetrics
     /// <param name="smsNotificationsDaytime">Pending SMS notifications for daytime policy.</param>
     /// <param name="ordersNotDue">Orders not yet due for processing.</param>
     /// <param name="ordersPastDue">Orders past due for processing.</param>
-    /// <param name="ordersFailed">Orders failed for processing.</param>
+    /// <param name="ordersRetryExhausted">Orders marked with exhausted retries.</param>
     void RecordBacklogMetrics(
         long emailNotificationsAnytime,
         long emailNotificationsDaytime,
@@ -24,5 +24,5 @@ public interface IBacklogMetrics
         long smsNotificationsDaytime,
         long ordersNotDue,
         long ordersPastDue,
-        long ordersFailed);
+        long ordersRetryExhausted);
 }

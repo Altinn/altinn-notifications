@@ -88,7 +88,7 @@ namespace Altinn.Notifications.Core.Services
         {
             var (emailNotificationsAnytime, emailNotificationsDaytime, emailNotificationsComposed) = await _metricsRepository.GetEmailNotificationsMetrics(cancellationToken);
             var (smsNotificationsAnytime, smsNotificationsDaytime) = await _metricsRepository.GetSmsNotificationsMetrics(cancellationToken);
-            var (ordersNotDue, ordersPastDue, ordersFailed) = await _metricsRepository.GetOrderMetrics(cancellationToken);
+            var (ordersNotDue, ordersPastDue, ordersRetryExhausted) = await _metricsRepository.GetOrderMetrics(cancellationToken);
 
             _backlogMetrics.RecordBacklogMetrics(
                 emailNotificationsAnytime,
@@ -98,7 +98,7 @@ namespace Altinn.Notifications.Core.Services
                 smsNotificationsDaytime,
                 ordersNotDue,
                 ordersPastDue,
-                ordersFailed);
+                ordersRetryExhausted);
 
             await TraceOrderDistribution(cancellationToken);
         }
