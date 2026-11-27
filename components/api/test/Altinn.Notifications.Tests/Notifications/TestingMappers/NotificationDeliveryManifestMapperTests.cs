@@ -261,6 +261,9 @@ public class NotificationDeliveryManifestMapperTests
     [InlineData(ProcessingLifecycle.Order_Registered, ProcessingLifecycleExt.Order_Registered)]
     [InlineData(ProcessingLifecycle.Order_Processing, ProcessingLifecycleExt.Order_Processing)]
     [InlineData(ProcessingLifecycle.Order_SendConditionNotMet, ProcessingLifecycleExt.Order_SendConditionNotMet)]
+    [InlineData(ProcessingLifecycle.Order_Retrying, ProcessingLifecycleExt.Order_Retrying)]
+    [InlineData(ProcessingLifecycle.Order_Retry_Exhausted, ProcessingLifecycleExt.Order_Retrying)]
+    [InlineData(ProcessingLifecycle.Order_Failed, ProcessingLifecycleExt.Order_Failed)]
     public void MapToNotificationDeliveryManifestExt_WithVariousOrderStatuses_MapsToCorrespondingExtendedEnums(ProcessingLifecycle status, ProcessingLifecycleExt expected)
     {
         // Arrange

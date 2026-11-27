@@ -77,9 +77,14 @@ public enum ProcessingLifecycle
     Order_Retrying,
 
     /// <summary>
-    /// The order has failed and will not be retried.
+    /// The order has been manually marked as failed after review confirmed that it cannot be corrected or restarted.
     /// </summary>
     Order_Failed,
+
+    /// <summary>
+    /// All retry attempts have been exhausted and manual intervention is required to resolve the issue.
+    /// </summary>
+    Order_Retry_Exhausted,
 
     /// <summary>
     /// The SMS notification has been received and registered in the system but processing has not yet begun.

@@ -12,6 +12,7 @@
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting" />
 		<PackageReference Include="Aspire.Hosting.Dotnet" />
+		<PackageReference Include="Azure.Messaging.ServiceBus" />
 	</ItemGroup>
 
 	<!-- The app host starts the mocks from source, so the extensions need to know where the tools are. -->

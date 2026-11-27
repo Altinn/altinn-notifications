@@ -34,6 +34,7 @@ The extensions add the mocks with `AddDotnetProject` and return `IResourceBuilde
 | `AddTestHarness` | The control panel, with links to its tabs and the **Clear Phone** and **Clear Inbox** commands. With intercept on, a dashboard notification for each request it holds. |
 | `WithTriggers` | Lets the control panel call the API's trigger endpoints, and adds **Run trigger**, **Pause triggers** and **Resume triggers**. |
 | `WithTestMessageCommands` | **Send test SMS** and **Send test email**, which order an instant message from the API with a token from the mock token issuer. |
+| `WithQueueStatusCommand` | **Set queue status** on the Service Bus emulator's resource, which suspends a queue. It is enabled while the emulator is healthy. |
 | `WithActiveSettings` | Shows settings and their values as properties of a resource in the dashboard. |
 | `AddMockAuth` / `WithMockAuth` | The mock token issuer, and makes a service trust its tokens. |
 | `AddAcsMock` / `WithAcsMock` | The ACS mock, and makes the email service send to it with the mock's access key. |

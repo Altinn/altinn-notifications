@@ -70,6 +70,7 @@ public static class ProcessingLifecycleMapper
         { "processing", ProcessingLifecycle.Order_Processing },
         { "sendconditionnotmet", ProcessingLifecycle.Order_SendConditionNotMet },
         { "retrying", ProcessingLifecycle.Order_Retrying },
+        { "retryexhausted", ProcessingLifecycle.Order_Retry_Exhausted },
         { "failed", ProcessingLifecycle.Order_Failed }
     };
 

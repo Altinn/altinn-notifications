@@ -138,6 +138,9 @@ public class GetOrderServiceTests
     [InlineData(OrderProcessingStatus.Completed, "Order processing is completed. All notifications have a final status.")]
     [InlineData(OrderProcessingStatus.SendConditionNotMet, "Order processing was stopped due to send condition not being met.")]
     [InlineData(OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing.")]
+    [InlineData(OrderProcessingStatus.Retrying, "Order is being retried after a previous failure.")]
+    [InlineData(OrderProcessingStatus.RetryExhausted, "Order has failed and all retry attempts have been exhausted. Manual intervention is required to resolve the issue.")]
+    [InlineData(OrderProcessingStatus.Failed, "Order has been manually marked as failed after review confirmed that it cannot be corrected or restarted.")]
     public void GetStatusDescription_ExpectedDescription(OrderProcessingStatus status, string expected)
     {
         string actual = GetOrderService.GetStatusDescription(status);

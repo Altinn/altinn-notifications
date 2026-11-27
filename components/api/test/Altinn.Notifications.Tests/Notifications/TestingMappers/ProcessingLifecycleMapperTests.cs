@@ -89,6 +89,10 @@ public class ProcessingLifecycleMapperTests
     [InlineData("registered", ProcessingLifecycle.Order_Registered)]
     [InlineData("processing", ProcessingLifecycle.Order_Processing)]
     [InlineData("sendconditionnotmet", ProcessingLifecycle.Order_SendConditionNotMet)]
+    [InlineData("retrying", ProcessingLifecycle.Order_Retrying)]
+    [InlineData("retryexhausted", ProcessingLifecycle.Order_Retry_Exhausted)]
+    [InlineData("RetryExhausted", ProcessingLifecycle.Order_Retry_Exhausted)]
+    [InlineData("failed", ProcessingLifecycle.Order_Failed)]
     public void GetOrderLifecycleStage_WithValidStatus_ReturnsExpectedEnum(string status, ProcessingLifecycle expected)
     {
         // Act

@@ -1,0 +1,1 @@
+﻿create index if not exists notifications_requestedsendtime_filter_retryexhausted on notifications.orders (requestedsendtime) where processedstatus = 'RetryExhausted';

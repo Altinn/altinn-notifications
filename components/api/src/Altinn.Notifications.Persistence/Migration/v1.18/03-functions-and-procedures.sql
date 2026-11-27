@@ -1184,6 +1184,17 @@ Returns a table with the following columns:
 - senders_reference: The sender''s reference for the main notification order (may be null).';
 
 
+-- getconfig.sql:
+CREATE OR REPLACE FUNCTION notifications.get_config()
+RETURNS TABLE (key text, value text)
+LANGUAGE sql STABLE
+AS $$
+	SELECT config.key, config.value FROM notifications.config;
+$$;
+
+GRANT EXECUTE ON FUNCTION notifications.get_config() TO platform_notifications;
+
+
 -- getemailmetrics.sql:
 -- New version v2 introduced in https://github.com/Altinn/altinn-notifications/issues/1880
 -- FUNCTION: notifications.get_email_metrics_v2(integer, integer, integer)
@@ -2033,19 +2044,19 @@ $BODY$;
 
 
 -- getordermetrics.sql:
-create or replace function notifications.get_order_metrics()
+create or replace function notifications.get_order_metrics_v2()
 returns table
 (
 	ordersnotduecount bigint,
 	orderspastduecount bigint,
-	ordersfailedcount bigint
+	ordersretryexhaustedcount bigint
 )
 language sql
 as $$
 	select
-        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime > now() + INTERVAL '1 minute'),
-        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'),
-        (SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Failed'::orderprocessingstate);
+		(SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime > now() + INTERVAL '1 minute'),
+		(SELECT count(*) FROM notifications.orders WHERE processedstatus = 'Registered'::orderprocessingstate AND requestedsendtime <= now() + INTERVAL '1 minute'),
+		(SELECT count(*) FROM notifications.orders WHERE processedstatus = 'RetryExhausted'::orderprocessingstate);
 $$;
 
 
@@ -2221,6 +2232,32 @@ Uses row-level locking with SKIP LOCKED to handle concurrent executions safely -
 instances can run simultaneously without conflicts, each processing different orders.
 
 Returns: JSONB notification order data for the claimed and updated orders.';
+
+
+-- getpodcount.sql:
+CREATE OR REPLACE FUNCTION notifications.get_pod_count(pod_id uuid, heartbeat_timeout interval)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+	refreshed_at timestamptz;
+BEGIN
+	-- Keep concurrent heartbeats and stale-row cleanup in the same order across pods.
+	LOCK TABLE notifications.podstate IN SHARE ROW EXCLUSIVE MODE;
+	refreshed_at := clock_timestamp();
+
+	INSERT INTO notifications.podstate (id, created, lastrefreshed)
+	VALUES (pod_id, refreshed_at, refreshed_at)
+	ON CONFLICT (id) DO UPDATE SET lastrefreshed = EXCLUDED.lastrefreshed;
+
+	DELETE FROM notifications.podstate
+	WHERE lastrefreshed < refreshed_at - heartbeat_timeout;
+
+	RETURN (SELECT count(*)::integer FROM notifications.podstate);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION notifications.get_pod_count(uuid, interval) TO platform_notifications;
 
 
 -- getshipmentforstatusfeed.sql:
@@ -3408,7 +3445,7 @@ BEGIN
         processed = CURRENT_TIMESTAMP,
         retrycount = retrycount + 1,
         processedstatus = CASE
-        WHEN retrycount + 1 > _maxretrycount THEN 'Failed'::orderprocessingstate
+        WHEN retrycount + 1 > _maxretrycount THEN 'RetryExhausted'::orderprocessingstate
         ELSE 'Retrying'::orderprocessingstate
         END
     WHERE alternateid = _alternateid;
