@@ -1,1 +1,7 @@
-CREATE INDEX if not exists notifications_emailnotifications_sending_filtered ON notifications.emailnotifications USING btree (resulttime, _id) WHERE (result = 'Sending'::emailnotificationresulttype);
+create index if not exists
+    notifications_emailnotifications_result_resulttime
+    on notifications.emailnotifications (result, resulttime);
+
+create index if not exists
+    notifications_smsnotifications_result_resulttime
+    on notifications.smsnotifications (result, resulttime);
