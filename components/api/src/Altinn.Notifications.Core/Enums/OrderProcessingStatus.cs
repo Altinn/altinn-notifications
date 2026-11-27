@@ -41,7 +41,12 @@ public enum OrderProcessingStatus
     Retrying,
 
     /// <summary>
-    /// The notification order has failed to be processed after all retry attempts have been exhausted.
+    /// The order has been manually marked as failed after review confirmed that it cannot be corrected or restarted.
     /// </summary>
-    Failed
+    Failed,
+
+    /// <summary>
+    /// All retry attempts have been exhausted and manual intervention is required to resolve the issue.
+    /// </summary>
+    RetryExhausted
 }
