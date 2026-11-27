@@ -35,6 +35,7 @@ public class NotificationDeliveryManifestService : INotificationDeliveryManifest
         ProcessingLifecycle.SMS_Failed_TTL,
         ProcessingLifecycle.SMS_Failed_Rejected,
         ProcessingLifecycle.SMS_Failed_ContentTooLarge,
+        ProcessingLifecycle.SMS_SendConditionNotMet,
         ProcessingLifecycle.Email_Delivered,
         ProcessingLifecycle.Email_Failed,
         ProcessingLifecycle.Email_Failed_RecipientReserved,
@@ -48,7 +49,8 @@ public class NotificationDeliveryManifestService : INotificationDeliveryManifest
         ProcessingLifecycle.Email_Failed_TTL,
         ProcessingLifecycle.Email_Failed_InvalidSasUrl,
         ProcessingLifecycle.Email_Failed_PayloadTooLarge,
-        ProcessingLifecycle.Email_Failed_ContentTooLarge
+        ProcessingLifecycle.Email_Failed_ContentTooLarge,
+        ProcessingLifecycle.Email_SendConditionNotMet
     ];
 
     private readonly INotificationDeliveryManifestRepository _notificationDeliveryManifestRepository;

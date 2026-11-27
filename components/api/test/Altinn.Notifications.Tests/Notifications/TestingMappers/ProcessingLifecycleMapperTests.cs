@@ -12,6 +12,8 @@ public class ProcessingLifecycleMapperTests
     [InlineData("accepted", ProcessingLifecycle.SMS_Accepted)]
     [InlineData("delivered", ProcessingLifecycle.SMS_Delivered)]
     [InlineData("failed_contenttoolarge", ProcessingLifecycle.SMS_Failed_ContentTooLarge)]
+    [InlineData("retrying", ProcessingLifecycle.SMS_Sending)]
+    [InlineData("sendconditionnotmet", ProcessingLifecycle.SMS_SendConditionNotMet)]
     public void GetSmsLifecycleStage_WithValidStatus_ReturnsExpectedEnum(string status, ProcessingLifecycle expected)
     {
         // Act
@@ -55,6 +57,8 @@ public class ProcessingLifecycleMapperTests
     [InlineData("new", ProcessingLifecycle.Email_New)]
     [InlineData("failed", ProcessingLifecycle.Email_Failed)]
     [InlineData("sending", ProcessingLifecycle.Email_Sending)]
+    [InlineData("retrying", ProcessingLifecycle.Email_Sending)]
+    [InlineData("sendconditionnotmet", ProcessingLifecycle.Email_SendConditionNotMet)]
     [InlineData("succeeded", ProcessingLifecycle.Email_Succeeded)]
     [InlineData("delivered", ProcessingLifecycle.Email_Delivered)]
     [InlineData("failed_ttl", ProcessingLifecycle.Email_Failed_TTL)]

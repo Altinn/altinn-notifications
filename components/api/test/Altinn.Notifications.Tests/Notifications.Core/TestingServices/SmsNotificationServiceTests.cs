@@ -5,6 +5,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -115,6 +116,108 @@ public class SmsNotificationServiceTests
         Assert.False(result);
         unitOfWorkRepository.Verify(r => r.RollbackUnitOfWork(unitOfWork), Times.Once);
         unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotification_WhenSendConditionNotMet_SetsSendConditionNotMetAndDoesNotPublish()
+    {
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd");
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo.Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime)).ReturnsAsync(sms);
+        repo.Setup(r => r.GetConditionEndpointAsync(It.IsAny<UnitOfWork>(), sms.NotificationId, It.IsAny<CancellationToken>())).ReturnsAsync(new Uri("https://condition.test"));
+
+        var evaluator = new Mock<ISendConditionEvaluator>();
+        evaluator.Setup(e => e.Evaluate(It.IsAny<Uri>(), sms.NotificationId, false)).ReturnsAsync(new SendConditionEvaluationResult { IsSendConditionMet = false });
+
+        var publisher = new Mock<ISmsCommandPublisher>();
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(CreateUnitOfWork());
+
+        var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, sendConditionEvaluator: evaluator.Object);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), sms.NotificationId, SmsNotificationResultType.SendConditionNotMet, null, null, It.IsAny<CancellationToken>()), Times.Once);
+        unitOfWorkRepository.Verify(r => r.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendNotification_WhenSendConditionInconclusive_SetsRetryStatusAndDoesNotPublish()
+    {
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd");
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo.Setup(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime)).ReturnsAsync(sms);
+        repo.Setup(r => r.GetConditionEndpointAsync(It.IsAny<UnitOfWork>(), sms.NotificationId, It.IsAny<CancellationToken>())).ReturnsAsync(new Uri("https://condition.test"));
+
+        var evaluator = new Mock<ISendConditionEvaluator>();
+        evaluator.Setup(e => e.Evaluate(It.IsAny<Uri>(), sms.NotificationId, false)).ReturnsAsync(new SendConditionEvaluationResult { IsSendConditionMet = null });
+
+        var publisher = new Mock<ISmsCommandPublisher>();
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(CreateUnitOfWork());
+
+        var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, sendConditionEvaluator: evaluator.Object);
+
+        var result = await service.SendNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<Sms>(), It.IsAny<CancellationToken>()), Times.Never);
+        repo.Verify(r => r.SetRetryStatusAsync(It.IsAny<UnitOfWork>(), sms.NotificationId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendRetryNotification_ClaimsRetryRowAndEvaluatesAsRetry()
+    {
+        var sms = new Sms(Guid.NewGuid(), "Altinn", "+4799991111", "message", "ttd");
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo.Setup(r => r.GetNewRetryNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime)).ReturnsAsync(sms);
+        repo.Setup(r => r.GetConditionEndpointAsync(It.IsAny<UnitOfWork>(), sms.NotificationId, It.IsAny<CancellationToken>())).ReturnsAsync(new Uri("https://condition.test"));
+
+        var evaluator = new Mock<ISendConditionEvaluator>();
+        evaluator.Setup(e => e.Evaluate(It.IsAny<Uri>(), sms.NotificationId, true)).ReturnsAsync(new SendConditionEvaluationResult { IsSendConditionMet = true });
+
+        var publisher = new Mock<ISmsCommandPublisher>();
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(CreateUnitOfWork());
+
+        var service = GetService(repository: repo.Object, commandPublisher: publisher.Object, unitOfWorkRepository: unitOfWorkRepository.Object, sendConditionEvaluator: evaluator.Object);
+
+        var result = await service.SendRetryNotification(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        publisher.Verify(p => p.PublishAsync(sms, It.IsAny<CancellationToken>()), Times.Once);
+        repo.Verify(r => r.GetNewNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendRetryNotification_WhenTraced_TagsActivityWithKindAndPolicy()
+    {
+        var tags = new System.Collections.Concurrent.ConcurrentBag<(string? Retry, string? Policy)>();
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = source => source.Name == Altinn.Notifications.Core.Shared.BackgroundActivitySource.Name,
+            Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) => System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity =>
+            {
+                if (activity.OperationName == "SendNotificationSms")
+                {
+                    tags.Add((activity.GetTagItem("Retry")?.ToString(), activity.GetTagItem("Policy")?.ToString()));
+                }
+            }
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo.Setup(r => r.GetNewRetryNotification(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime)).ReturnsAsync((Sms?)null);
+        var unitOfWorkRepository = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepository.Setup(r => r.StartUnitOfWork()).ReturnsAsync(CreateUnitOfWork());
+        var service = GetService(repository: repo.Object, unitOfWorkRepository: unitOfWorkRepository.Object);
+
+        await service.SendRetryNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+
+        Assert.Contains(tags, t => t.Policy == nameof(SendingTimePolicy.Anytime) && t.Retry == "True");
     }
 
     [Fact]
@@ -645,7 +748,8 @@ public class SmsNotificationServiceTests
         ISmsCommandPublisher? commandPublisher = null,
         IUnitOfWorkRepository? unitOfWorkRepository = null,
         ISmsSenderSubstitutionService? senderSubstitutionService = null,
-        ILogger<SmsNotificationService>? logger = null)
+        ILogger<SmsNotificationService>? logger = null,
+        ISendConditionEvaluator? sendConditionEvaluator = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService.Setup(g => g.NewGuid()).Returns(guidOutput ?? Guid.NewGuid());
@@ -665,6 +769,7 @@ public class SmsNotificationServiceTests
             commandPublisher,
             unitOfWorkRepository,
             logger ?? new Mock<ILogger<SmsNotificationService>>().Object,
-            senderSubstitutionService);
+            senderSubstitutionService,
+            sendConditionEvaluator ?? new Mock<ISendConditionEvaluator>().Object);
     }
 }

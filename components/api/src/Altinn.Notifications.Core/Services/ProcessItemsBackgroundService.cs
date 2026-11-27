@@ -34,6 +34,11 @@ public class ProcessItemsBackgroundService : BackgroundService
     private readonly ManyItemsLately _manySmsAnytimeNotificationsLately = new();
     private readonly ManyItemsLately _manyPastDueOrdersLately = new();
     private readonly ManyItemsLately _manyRetryOrdersLately = new();
+    private readonly ManyItemsLately _manyEmailDaytimeRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manyEmailAnytimeRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manyComposedEmailRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manySmsDaytimeRetryNotificationsLately = new();
+    private readonly ManyItemsLately _manySmsAnytimeRetryNotificationsLately = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProcessItemsBackgroundService"/> class.
@@ -152,6 +157,51 @@ public class ProcessItemsBackgroundService : BackgroundService
                 (i, loopConfig, ct) => RunProcessItemLoop(
                     _manyRetryOrdersLately,
                     token => _orderProcessingService.TryProcessOrder(processRetry: true, token),
+                    null,
+                    i == 0,
+                    loopConfig,
+                    ct)),
+            new(
+                config => config.EmailDaytimeRetryNotificationsProcessLoopConfig,
+                (i, loopConfig, ct) => RunProcessItemLoop(
+                    _manyEmailDaytimeRetryNotificationsLately,
+                    token => _emailSendingService.SendRetryNotification(SendingTimePolicy.Daytime, token),
+                    _notificationScheduleService.CanSendEmailNow,
+                    i == 0,
+                    loopConfig,
+                    ct)),
+            new(
+                config => config.EmailAnytimeRetryNotificationsProcessLoopConfig,
+                (i, loopConfig, ct) => RunProcessItemLoop(
+                    _manyEmailAnytimeRetryNotificationsLately,
+                    token => _emailSendingService.SendRetryNotification(SendingTimePolicy.Anytime, token),
+                    null,
+                    i == 0,
+                    loopConfig,
+                    ct)),
+            new(
+                config => config.ComposedEmailRetryNotificationsProcessLoopConfig,
+                (i, loopConfig, ct) => RunProcessItemLoop(
+                    _manyComposedEmailRetryNotificationsLately,
+                    _emailSendingService.SendComposedRetryNotification,
+                    null,
+                    i == 0,
+                    loopConfig,
+                    ct)),
+            new(
+                config => config.SmsDaytimeRetryNotificationsProcessLoopConfig,
+                (i, loopConfig, ct) => RunProcessItemLoop(
+                    _manySmsDaytimeRetryNotificationsLately,
+                    token => _smsSendingService.SendRetryNotification(SendingTimePolicy.Daytime, token),
+                    _notificationScheduleService.CanSendSmsNow,
+                    i == 0,
+                    loopConfig,
+                    ct)),
+            new(
+                config => config.SmsAnytimeRetryNotificationsProcessLoopConfig,
+                (i, loopConfig, ct) => RunProcessItemLoop(
+                    _manySmsAnytimeRetryNotificationsLately,
+                    token => _smsSendingService.SendRetryNotification(SendingTimePolicy.Anytime, token),
                     null,
                     i == 0,
                     loopConfig,

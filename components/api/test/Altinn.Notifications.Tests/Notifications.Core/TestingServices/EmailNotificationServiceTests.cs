@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -386,6 +387,103 @@ public class EmailNotificationServiceTests
         unitOfWorkRepositoryMock.Verify(u => u.CommitUnitOfWork(It.IsAny<UnitOfWork>()), Times.Once);
         unitOfWorkRepositoryMock.Verify(u => u.RollbackUnitOfWork(It.IsAny<UnitOfWork>()), Times.Never);
         repoMock.Verify(r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotification_WhenSendConditionNotMet_SetsSendConditionNotMetAndDoesNotPublish()
+    {
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
+            .ReturnsAsync(_email);
+        repoMock.Setup(r => r.GetConditionEndpointAsync(It.IsAny<UnitOfWork>(), _email.NotificationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Uri("https://condition.test"));
+
+        var evaluatorMock = new Mock<ISendConditionEvaluator>();
+        evaluatorMock.Setup(e => e.Evaluate(It.IsAny<Uri>(), _email.NotificationId, false))
+            .ReturnsAsync(new SendConditionEvaluationResult { IsSendConditionMet = false });
+
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, sendConditionEvaluator: evaluatorMock.Object);
+
+        bool wasProcessed = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+
+        Assert.True(wasProcessed);
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+        repoMock.Verify(r => r.UpdateSendStatusAsync(It.IsAny<UnitOfWork>(), _email.NotificationId, EmailNotificationResultType.SendConditionNotMet, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendNotification_WhenSendConditionInconclusive_SetsRetryStatusAndDoesNotPublish()
+    {
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
+            .ReturnsAsync(_email);
+        repoMock.Setup(r => r.GetConditionEndpointAsync(It.IsAny<UnitOfWork>(), _email.NotificationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Uri("https://condition.test"));
+
+        var evaluatorMock = new Mock<ISendConditionEvaluator>();
+        evaluatorMock.Setup(e => e.Evaluate(It.IsAny<Uri>(), _email.NotificationId, false))
+            .ReturnsAsync(new SendConditionEvaluationResult { IsSendConditionMet = null });
+
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, sendConditionEvaluator: evaluatorMock.Object);
+
+        bool wasProcessed = await service.SendNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+
+        Assert.True(wasProcessed);
+        publisherMock.Verify(p => p.PublishAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+        repoMock.Verify(r => r.SetRetryStatusAsync(It.IsAny<UnitOfWork>(), _email.NotificationId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendRetryNotification_ClaimsRetryRowAndEvaluatesAsRetry()
+    {
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewRetryNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime))
+            .ReturnsAsync(_email);
+        repoMock.Setup(r => r.GetConditionEndpointAsync(It.IsAny<UnitOfWork>(), _email.NotificationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Uri("https://condition.test"));
+
+        var evaluatorMock = new Mock<ISendConditionEvaluator>();
+        evaluatorMock.Setup(e => e.Evaluate(It.IsAny<Uri>(), _email.NotificationId, true))
+            .ReturnsAsync(new SendConditionEvaluationResult { IsSendConditionMet = true });
+
+        var publisherMock = new Mock<IEmailCommandPublisher>();
+        var service = GetTestService(repo: repoMock.Object, emailCommandPublisher: publisherMock.Object, sendConditionEvaluator: evaluatorMock.Object);
+
+        bool wasProcessed = await service.SendRetryNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+
+        Assert.True(wasProcessed);
+        publisherMock.Verify(p => p.PublishAsync(_email, It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(r => r.GetNewNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendRetryNotification_WhenTraced_TagsActivityWithKindAndPolicy()
+    {
+        var tags = new System.Collections.Concurrent.ConcurrentBag<(string? Retry, string? Policy)>();
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = source => source.Name == Altinn.Notifications.Core.Shared.BackgroundActivitySource.Name,
+            Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) => System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity =>
+            {
+                if (activity.OperationName == "SendNotificationEmailBasic")
+                {
+                    tags.Add((activity.GetTagItem("Retry")?.ToString(), activity.GetTagItem("Policy")?.ToString()));
+                }
+            }
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewRetryNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime))
+            .ReturnsAsync((Email?)null);
+        var service = GetTestService(repo: repoMock.Object);
+
+        await service.SendRetryNotification(SendingTimePolicy.Anytime, TestContext.Current.CancellationToken);
+
+        Assert.Contains(tags, t => t.Policy == nameof(SendingTimePolicy.Anytime) && t.Retry == "True");
     }
 
     [Fact]
@@ -846,6 +944,32 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendComposedRetryNotification_ClaimsComposedRetryRowAndEvaluatesAsRetry()
+    {
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewComposedRetryNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_composedEmail);
+        repoMock.Setup(r => r.GetConditionEndpointAsync(It.IsAny<UnitOfWork>(), _composedEmail.NotificationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Uri("https://condition.test"));
+
+        var evaluatorMock = new Mock<ISendConditionEvaluator>();
+        evaluatorMock.Setup(e => e.Evaluate(It.IsAny<Uri>(), _composedEmail.NotificationId, true))
+            .ReturnsAsync(new SendConditionEvaluationResult { IsSendConditionMet = true });
+
+        var publisherMock = new Mock<IComposedEmailCommandPublisher>();
+        var unitOfWorkRepositoryMock = new Mock<IUnitOfWorkRepository>();
+        unitOfWorkRepositoryMock.Setup(u => u.StartUnitOfWork()).ReturnsAsync(new UnitOfWork());
+
+        var service = GetTestService(repo: repoMock.Object, composedEmailCommandPublisher: publisherMock.Object, unitOfWorkRepository: unitOfWorkRepositoryMock.Object, sendConditionEvaluator: evaluatorMock.Object);
+
+        bool wasProcessed = await service.SendComposedRetryNotification(TestContext.Current.CancellationToken);
+
+        Assert.True(wasProcessed);
+        publisherMock.Verify(p => p.PublishAsync(_composedEmail, It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(r => r.GetNewComposedNotificationAsync(It.IsAny<UnitOfWork>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendComposedNotification_WhenCommitThrows_RollsBackAndReturnsFalse()
     {
         // Arrange
@@ -1185,7 +1309,7 @@ public class EmailNotificationServiceTests
             Times.Never);
     }
 
-    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null, IComposedEmailCommandPublisher? composedEmailCommandPublisher = null, IUnitOfWorkRepository? unitOfWorkRepository = null, ILogger<EmailNotificationService>? logger = null)
+    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IEmailCommandPublisher? emailCommandPublisher = null, IComposedEmailCommandPublisher? composedEmailCommandPublisher = null, IUnitOfWorkRepository? unitOfWorkRepository = null, ILogger<EmailNotificationService>? logger = null, ISendConditionEvaluator? sendConditionEvaluator = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService
@@ -1222,6 +1346,7 @@ public class EmailNotificationServiceTests
             repo,
             composedEmailCommandPublisher,
             unitOfWorkRepository,
+            sendConditionEvaluator ?? new Mock<ISendConditionEvaluator>().Object,
             logger ?? new Mock<ILogger<EmailNotificationService>>().Object);
     }
 }

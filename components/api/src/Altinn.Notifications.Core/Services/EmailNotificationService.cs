@@ -25,9 +25,11 @@ public class EmailNotificationService(
     IEmailNotificationRepository emailNotificationRepository,
     IComposedEmailCommandPublisher composedEmailCommandPublisher,
     IUnitOfWorkRepository unitOfWorkRepository,
+    ISendConditionEvaluator sendConditionEvaluator,
     ILogger<EmailNotificationService> logger) : IEmailNotificationService
 {
     private static readonly ActivitySource _activitySource = new(BackgroundActivitySource.Name);
+    private readonly ISendConditionEvaluator _sendConditionEvaluator = sendConditionEvaluator;
     private readonly IGuidService _guidService = guidService;
     private readonly ILogger<EmailNotificationService> _logger = logger;
     private readonly IDateTimeService _dateTimeService = dateTimeService;
@@ -84,6 +86,7 @@ public class EmailNotificationService(
             (unitOfWork, token) => _emailNotificationRepository.GetNewNotificationAsync(unitOfWork, token, sendingTimePolicy),
             (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
             nameof(SendNotification),
+            "SendNotificationEmailBasic",
             cancellationToken,
             sendingTimePolicy);
     }
@@ -95,7 +98,33 @@ public class EmailNotificationService(
             _emailNotificationRepository.GetNewComposedNotificationAsync,
             _composedEmailCommandPublisher.PublishAsync,
             nameof(SendComposedNotification),
+            "SendNotificationEmailComposed",
             cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> SendRetryNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Anytime, CancellationToken cancellationToken = default)
+    {
+        return SendClaimedNotification(
+            (unitOfWork, token) => _emailNotificationRepository.GetNewRetryNotificationAsync(unitOfWork, token, sendingTimePolicy),
+            (notification, token) => _emailCommandPublisher.PublishAsync(notification, token),
+            nameof(SendRetryNotification),
+            "SendNotificationEmailBasic",
+            cancellationToken,
+            sendingTimePolicy,
+            isRetry: true);
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> SendComposedRetryNotification(CancellationToken cancellationToken)
+    {
+        return SendClaimedNotification(
+            _emailNotificationRepository.GetNewComposedRetryNotificationAsync,
+            _composedEmailCommandPublisher.PublishAsync,
+            nameof(SendComposedRetryNotification),
+            "SendNotificationEmailComposed",
+            cancellationToken,
+            isRetry: true);
     }
 
     /// <inheritdoc/>
@@ -141,18 +170,32 @@ public class EmailNotificationService(
     /// <param name="getNewNotification">Claims the next pending notification on the given unit of work, or returns <see langword="null"/> if none is pending.</param>
     /// <param name="publishNotification">Publishes the claimed notification.</param>
     /// <param name="operationName">The name of the calling operation, used for logging and tracing.</param>
+    /// <param name="activityName">The name of the trace activity.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
     /// <param name="sendingTimePolicy">The sending time policy the claim is restricted to, added as a tag on the trace activity. <see langword="null"/> when the claim is not policy-specific.</param>
+    /// <param name="isRetry">Whether the claimed notification is being retried after an inconclusive send condition evaluation.</param>
     /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
     private async Task<bool> SendClaimedNotification<TNotification>(
         Func<UnitOfWork, CancellationToken, Task<TNotification?>> getNewNotification,
         Func<TNotification, CancellationToken, Task> publishNotification,
         string operationName,
+        string activityName,
         CancellationToken cancellationToken,
-        SendingTimePolicy? sendingTimePolicy = null)
+        SendingTimePolicy? sendingTimePolicy = null,
+        bool isRetry = false)
         where TNotification : Email
     {
-        using Activity? activity = _activitySource.StartActivity("SendNotification")?.SetTag("Kind", operationName)?.SetTag("Policy", sendingTimePolicy);
+        using Activity? activity = _activitySource.StartActivity(activityName);
+        if (sendingTimePolicy.HasValue)
+        {
+            activity?.SetTag("Policy", sendingTimePolicy.Value);
+        }
+
+        if (isRetry)
+        {
+            activity?.SetTag("Retry", true);
+        }
+
         UnitOfWork unitOfWork;
         try
         {
@@ -180,6 +223,12 @@ public class EmailNotificationService(
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (!await IsSendConditionMet(unitOfWork, claimedNotification, isRetry, cancellationToken))
+            {
+                await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
+                return true;
+            }
+
             await PublishClaimedNotification(unitOfWork, claimedNotification, publishNotification, operationName, cancellationToken);
 
             await _unitOfWorkRepository.CommitUnitOfWork(unitOfWork);
@@ -203,6 +252,35 @@ public class EmailNotificationService(
             }
 
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Evaluates the send condition of the order the claimed notification belongs to, and records the outcome when the notification should not be published.
+    /// </summary>
+    /// <returns><see langword="true"/> if the notification should be published; otherwise <see langword="false"/>.</returns>
+    private async Task<bool> IsSendConditionMet(UnitOfWork unitOfWork, Email claimedNotification, bool isRetry, CancellationToken cancellationToken)
+    {
+        Uri? conditionEndpoint = await _emailNotificationRepository.GetConditionEndpointAsync(unitOfWork, claimedNotification.NotificationId, cancellationToken);
+        if (conditionEndpoint is null)
+        {
+            return true;
+        }
+
+        var evaluation = await _sendConditionEvaluator.Evaluate(conditionEndpoint, claimedNotification.NotificationId, isRetry);
+
+        switch (evaluation.IsSendConditionMet)
+        {
+            case true:
+                return true;
+
+            case false:
+                await _emailNotificationRepository.UpdateSendStatusAsync(unitOfWork, claimedNotification.NotificationId, EmailNotificationResultType.SendConditionNotMet, cancellationToken: cancellationToken);
+                return false;
+
+            default:
+                await _emailNotificationRepository.SetRetryStatusAsync(unitOfWork, claimedNotification.NotificationId, "Send condition evaluation inconclusive", cancellationToken);
+                return false;
         }
     }
 

@@ -30,7 +30,9 @@ namespace Altinn.Notifications.Core.Services
                 { EmailNotificationResultType.Failed_TTL, "The email was in indefinite state Succeeded for too long (TTL), and was subsequently set to failed." },
                 { EmailNotificationResultType.Failed_InvalidSasUrl, "The email was not sent because one or more attachment SAS URLs are invalid, expired, or inaccessible." },
                 { EmailNotificationResultType.Failed_PayloadTooLarge, "The email was not sent because the total size of the attachments exceeds the allowed limit." },
-                { EmailNotificationResultType.Failed_ContentTooLarge, "The email was not sent because the email message is too large to be queued for sending." }
+                { EmailNotificationResultType.Failed_ContentTooLarge, "The email was not sent because the email message is too large to be queued for sending." },
+                { EmailNotificationResultType.Retrying, "The email is being processed and will be attempted sent shortly." },
+                { EmailNotificationResultType.SendConditionNotMet, "The email was not sent because the send condition was not met." }
             };
 
         private readonly static List<EmailNotificationResultType> _successResults = new()

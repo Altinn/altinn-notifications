@@ -22,6 +22,14 @@ public interface ISmsNotificationService : INotificationService
     Task<bool> SendNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Claims and sends the next SMS notification awaiting a retry of its send condition evaluation, if any.
+    /// </summary>
+    /// <param name="sendingTimePolicy">The policy to determine when SMS notifications should be sent.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    /// <returns><see langword="true"/> if a notification was claimed and processed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendRetryNotification(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Updates the send status of an SMS notification based on the provided send operation result.
     /// </summary>
     /// <param name="sendOperationResult">The result of the send operation.</param>
